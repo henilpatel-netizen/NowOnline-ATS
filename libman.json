@@ -1,0 +1,25 @@
+{
+  "version": "1.0",
+  "defaultProvider": "unpkg",
+  "libraries": [
+    {
+      "library": "bootstrap-icons@1.11.3",
+      "destination": "src/Ats.Web/wwwroot/lib/bootstrap-icons",
+      "files": [
+        "font/bootstrap-icons.min.css",
+        "font/fonts/bootstrap-icons.woff",
+        "font/fonts/bootstrap-icons.woff2"
+      ]
+    },
+    {
+      "library": "htmx.org@2.0.4",
+      "destination": "src/Ats.Web/wwwroot/lib/htmx",
+      "files": [ "dist/htmx.min.js" ]
+    },
+    {
+      "library": "sortablejs@1.15.6",
+      "destination": "src/Ats.Web/wwwroot/lib/sortablejs",
+      "files": [ "Sortable.min.js" ]
+    }
+  ]
+}

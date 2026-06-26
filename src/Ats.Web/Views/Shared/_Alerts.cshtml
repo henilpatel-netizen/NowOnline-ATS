@@ -1,0 +1,8 @@
+@{
+    var success = TempData["Success"] as string;
+    var error = TempData["Error"] as string;
+    var info = TempData["Info"] as string;
+}
+@if (!string.IsNullOrEmpty(success)) { <div class="alert alert-success" role="alert">@success</div> }
+@if (!string.IsNullOrEmpty(error)) { <div class="alert alert-danger" role="alert">@error</div> }
+@if (!string.IsNullOrEmpty(info)) { <div class="alert alert-info" role="alert">@info</div> }

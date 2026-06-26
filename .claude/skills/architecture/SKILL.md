@@ -30,6 +30,7 @@ Infrastructure wiring is centralised in `Ats.Infrastructure/DependencyInjection.
   `Ats.Infrastructure/Persistence/Configurations`).
 - New use case -> an Application service behind an interface; impl/store in Infrastructure.
 - New cross-cutting capability -> abstraction in `Ats.Application/Abstractions`, impl in Infrastructure.
+- New back-office page or view -> follow `.claude/skills/ui/SKILL.md` (layouts, tokens, components).
 
 ## Conventions
 - Cookie auth for back-office; JWT for Api (Phase 3+). Auth always behind `IIdentityService`.

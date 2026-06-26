@@ -7,20 +7,21 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/Ats.Web.styles.css" asp-append-version="true" />
 </head>
 <body>
-    <div class="ats-shell">
-        <vc:sidebar-nav></vc:sidebar-nav>
-        <main class="ats-content">
-            <partial name="_Alerts" />
-            <partial name="_PageHeader" />
-            @RenderBody()
-        </main>
+    <div class="ats-auth-wrap">
+        <div class="ats-auth-card">
+            <div class="ats-auth-brand"><i class="bi bi-briefcase-fill"></i> ATS</div>
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    @RenderBody()
+                </div>
+            </div>
+        </div>
     </div>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

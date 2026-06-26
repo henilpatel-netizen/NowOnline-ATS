@@ -26,6 +26,10 @@ dotnet build
 dotnet run --project src/Ats.Web
 ```
 
+## Front-end
+Server-rendered MVC + Bootstrap 5. Client libraries are managed by LibMan (`libman.json`); run
+`libman restore` to populate `src/Ats.Web/wwwroot/lib`. UI conventions: `.claude/skills/ui/SKILL.md`.
+
 ## Architecture (strict layering)
 Controllers -> Application services -> repositories -> EF Core (Infrastructure).
 `Ats.Domain` has no EF/framework deps. Always `async/await`.
@@ -61,3 +65,4 @@ re-derive it from the ReferralTool repo.
 |--------|-----------|--------|
 | Architecture | `.claude/skills/architecture/SKILL.md` | Solution layout, layering, DI, where code goes |
 | Multi-tenancy | `.claude/skills/multitenancy/SKILL.md` | `TenantEntity`, query filter, interceptor, onboarding stamping |
+| UI | `.claude/skills/ui/SKILL.md` | Layouts, design tokens, shared components, how to add a page |

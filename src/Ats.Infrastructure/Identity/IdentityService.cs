@@ -41,8 +41,8 @@ public sealed class IdentityService : IIdentityService
         // IgnoreQueryFilters: sign-in happens before a tenant is in context
         var user = await _db.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Email == normalized, ct);
         if (user is null || !VerifyPassword(user.PasswordHash, password))
-            return new SignInResult(false, null, null, null, "Invalid email or password.");
+            return new SignInResult(false, null, null, null, null, "Invalid email or password.");
 
-        return new SignInResult(true, user.Id, user.TenantId, user.Role, null);
+        return new SignInResult(true, user.Id, user.TenantId, user.Role, user.DisplayName, null);
     }
 }

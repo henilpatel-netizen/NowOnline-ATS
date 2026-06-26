@@ -1,5 +1,22 @@
-<h1>Dashboard</h1>
-<p>Welcome. Jobs, pipelines, and candidates arrive in Phase 1.</p>
-<form asp-controller="Account" asp-action="Logout" method="post">
-    <button type="submit">Sign out</button>
-</form>
+@{ ViewData["Title"] = "Dashboard"; }
+<div class="row g-3 mb-4">
+    <div class="col-sm-4">
+        <div class="card h-100"><div class="card-body">
+            <div class="text-muted small">Open jobs</div>
+            <div class="fs-3 fw-semibold">-</div>
+        </div></div>
+    </div>
+    <div class="col-sm-4">
+        <div class="card h-100"><div class="card-body">
+            <div class="text-muted small">Candidates</div>
+            <div class="fs-3 fw-semibold">-</div>
+        </div></div>
+    </div>
+    <div class="col-sm-4">
+        <div class="card h-100"><div class="card-body">
+            <div class="text-muted small">In pipeline</div>
+            <div class="fs-3 fw-semibold">-</div>
+        </div></div>
+    </div>
+</div>
+<p class="text-muted">Jobs, pipelines, and candidates arrive in Phase 1.</p>

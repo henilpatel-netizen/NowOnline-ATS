@@ -21,7 +21,7 @@ public static class DependencyInjection
 
         services.AddDbContext<AtsDbContext>((sp, options) =>
         {
-            options.UseSqlServer(config.GetConnectionString("AtsDb"));
+            options.UseSqlServer(config.GetConnectionString("DefaultConnection"));
             options.AddInterceptors(sp.GetRequiredService<TenantSaveChangesInterceptor>());
         });
 
