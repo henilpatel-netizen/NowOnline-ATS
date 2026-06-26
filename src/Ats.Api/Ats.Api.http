@@ -1,0 +1,6 @@
+@Ats.Api_HostAddress = http://localhost:5168
+
+GET {{Ats.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

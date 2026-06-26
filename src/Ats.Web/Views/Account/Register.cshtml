@@ -1,0 +1,11 @@
+@model Ats.Web.Models.RegisterViewModel
+<h1>Create your company account</h1>
+<form asp-action="Register" method="post">
+    <div asp-validation-summary="All"></div>
+    <p>Company name <input asp-for="CompanyName" /></p>
+    <p>URL slug <input asp-for="Slug" /> .ourats.com/careers</p>
+    <p>Your name <input asp-for="OwnerName" /></p>
+    <p>Work email <input asp-for="OwnerEmail" /></p>
+    <p>Password <input asp-for="Password" /></p>
+    <button type="submit">Create account</button>
+</form>
