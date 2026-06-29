@@ -1,6 +1,7 @@
 using Ats.Application.Abstractions;
 using Ats.Application.Candidates;
 using Ats.Application.Departments; // OperationResult
+using Ats.Application.Integration;
 using Ats.Domain.Entities;
 using Ats.Domain.Enums;
 
@@ -23,10 +24,11 @@ public sealed class ApplicationService : IApplicationService
     private readonly IApplicationRepository _repo;
     private readonly ICandidateRepository _candidates;
     private readonly ICurrentUser _currentUser;
+    private readonly IOutboxEnqueuer _outbox;
 
-    public ApplicationService(IApplicationRepository repo, ICandidateRepository candidates, ICurrentUser currentUser)
+    public ApplicationService(IApplicationRepository repo, ICandidateRepository candidates, ICurrentUser currentUser, IOutboxEnqueuer outbox)
     {
-        _repo = repo; _candidates = candidates; _currentUser = currentUser;
+        _repo = repo; _candidates = candidates; _currentUser = currentUser; _outbox = outbox;
     }
 
     public Task<Job?> GetJobAsync(int jobId, CancellationToken ct = default) => _repo.GetJobAsync(jobId, ct);
@@ -95,6 +97,7 @@ public sealed class ApplicationService : IApplicationService
             OccurredAt = DateTimeOffset.UtcNow,
             MovedByUserId = _currentUser.UserId
         }, ct);
+        await _outbox.StageAsync(application.Id, firstStage.Id, ct);
         await _repo.SaveChangesAsync(ct);
         return OperationResult.Ok;
     }
@@ -125,6 +128,8 @@ public sealed class ApplicationService : IApplicationService
             OccurredAt = DateTimeOffset.UtcNow,
             MovedByUserId = _currentUser.UserId
         }, ct);
+
+        await _outbox.StageAsync(application.Id, toStageId, ct);
 
         _repo.SetExpectedRowVersion(application, rowVersion);
         var ok = await _repo.TrySaveChangesAsync(ct);

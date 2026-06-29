@@ -1,6 +1,7 @@
 using Ats.Application.Applications;
 using Ats.Application.Candidates;
 using Ats.Application.Departments; // OperationResult
+using Ats.Application.Integration;
 using Ats.Domain.Entities;
 using Ats.Domain.Enums;
 
@@ -11,10 +12,11 @@ public sealed class CareerService : ICareerService
     private readonly ICareerRepository _career;
     private readonly ICandidateRepository _candidates;
     private readonly IApplicationRepository _applications;
+    private readonly IOutboxEnqueuer _outbox;
 
-    public CareerService(ICareerRepository career, ICandidateRepository candidates, IApplicationRepository applications)
+    public CareerService(ICareerRepository career, ICandidateRepository candidates, IApplicationRepository applications, IOutboxEnqueuer outbox)
     {
-        _career = career; _candidates = candidates; _applications = applications;
+        _career = career; _candidates = candidates; _applications = applications; _outbox = outbox;
     }
 
     public Task<List<Job>> GetPublishedJobsAsync(CancellationToken ct = default) => _career.GetPublishedJobsAsync(ct);
@@ -83,6 +85,7 @@ public sealed class CareerService : ICareerService
             OccurredAt = DateTimeOffset.UtcNow,
             MovedByUserId = null   // public apply, no signed-in user
         }, ct);
+        await _outbox.StageAsync(application.Id, firstStage.Id, ct);
         await _applications.SaveChangesAsync(ct);
         return OperationResult.Ok;
     }

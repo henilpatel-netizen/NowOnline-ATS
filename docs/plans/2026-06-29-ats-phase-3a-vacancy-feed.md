@@ -490,6 +490,21 @@ git commit -m "chore: Phase 3 Plan A vacancy feed verified"
 
 ---
 
+## Add-on (post-plan): Scalar API reference UI, dev-only
+
+Added so the feed can be exercised from a browser. Outside the original Plan A spec; commit separately.
+
+- `Scalar.AspNetCore` package added to `Ats.Api`.
+- `Ats.Api/OpenApi/FeedSecuritySchemeTransformer.cs` adds an `apiKey` security scheme (`FeedToken`,
+  header `Authorization`) to the OpenAPI document so Scalar shows an auth box; the value to enter is
+  `Token {your-feed-key}`.
+- `Program.cs`: `AddOpenApi(... AddDocumentTransformer<FeedSecuritySchemeTransformer>())`, and in
+  Development only `MapOpenApi()` + `MapScalarApiReference()`. UI at `/scalar`, doc at
+  `/openapi/v1.json`. Never enabled outside Development (security guidance).
+
+Usage: run `Ats.Api`, browse `/scalar`, open `POST /jobs/search`, click Authorize, enter
+`Token {your-feed-key}` (the key whose SHA-256 is in `TenantSettings.FeedApiKeyHash`), Send.
+
 ## Self-review (completed by plan author)
 
 - **Spec coverage (Plan A):** `Ats.Api` host wiring (Task 1); feed key generate/hash/verify (Task 2);

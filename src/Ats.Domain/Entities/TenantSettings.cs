@@ -11,4 +11,5 @@ public class TenantSettings : TenantEntity
     public string CodeParameterName { get; set; } = "ref";
     public string? FeedApiKeyHash { get; set; }
     public int LastJobNumber { get; set; }
+    public string? ReferralToolApiKey { get; set; }
 }

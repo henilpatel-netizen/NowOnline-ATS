@@ -24,6 +24,8 @@ public class AtsDbContext : DbContext
     public DbSet<Candidate> Candidates => Set<Candidate>();
     public DbSet<JobApplication> Applications => Set<JobApplication>();
     public DbSet<ApplicationEvent> ApplicationEvents => Set<ApplicationEvent>();
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+    public DbSet<WebhookDelivery> WebhookDeliveries => Set<WebhookDelivery>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

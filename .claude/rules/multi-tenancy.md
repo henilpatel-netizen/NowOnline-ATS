@@ -20,4 +20,9 @@
   key: `FeedApiKeyFilter` matches `TenantSettings.FeedApiKeyHash` via `IgnoreQueryFilters` and sets
   `HttpContext.Items["TenantId"]`. This is a documented filter-bypass spot (no tenant claim on feed
   requests). Invalid/missing key returns 401.
+- The outbox worker (`Ats.Worker`) drains `OutboxMessages` across all tenants with `IgnoreQueryFilters`
+  (`OutboxClaimStore`), then sets a settable `WorkerTenantContext.CurrentTenantId` to each message's
+  `TenantId` before processing, so per-tenant reads, `TenantId` stamping, and the `WebhookDelivery`
+  insert scope correctly. The worker registers `WorkerTenantContext` in place of `HttpTenantContext`
+  (no HttpContext). This is a documented filter-bypass spot.
 - Never expose a queryable that bypasses the filter outside those documented spots.

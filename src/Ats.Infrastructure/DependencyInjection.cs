@@ -10,6 +10,7 @@ using Ats.Application.Pipelines;
 using Ats.Application.Tenancy;
 using Ats.Infrastructure.Files;
 using Ats.Infrastructure.Identity;
+using Ats.Infrastructure.Integration;
 using Ats.Infrastructure.Persistence;
 using Ats.Infrastructure.Persistence.Repositories;
 using Ats.Infrastructure.Tenancy;
@@ -54,6 +55,7 @@ public static class DependencyInjection
         services.AddScoped<ICareerRepository, CareerRepository>();
         services.AddScoped<ICareerService, CareerService>();
         services.AddScoped<IVacancyFeedRepository, VacancyFeedRepository>();
+        services.AddScoped<IOutboxEnqueuer, OutboxEnqueuer>();
 
         return services;
     }
