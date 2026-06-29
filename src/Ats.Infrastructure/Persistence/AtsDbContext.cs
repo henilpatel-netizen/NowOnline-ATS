@@ -26,6 +26,7 @@ public class AtsDbContext : DbContext
     public DbSet<ApplicationEvent> ApplicationEvents => Set<ApplicationEvent>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
     public DbSet<WebhookDelivery> WebhookDeliveries => Set<WebhookDelivery>();
+    public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

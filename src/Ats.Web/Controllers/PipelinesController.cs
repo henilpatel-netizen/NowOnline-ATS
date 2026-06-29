@@ -1,3 +1,4 @@
+using Ats.Application.Auditing;
 using Ats.Application.Pipelines;
 using Ats.Web.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -9,7 +10,11 @@ namespace Ats.Web.Controllers;
 public class PipelinesController : Controller
 {
     private readonly IPipelineTemplateService _service;
-    public PipelinesController(IPipelineTemplateService service) => _service = service;
+    private readonly IAuditLogger _audit;
+    public PipelinesController(IPipelineTemplateService service, IAuditLogger audit)
+    {
+        _service = service; _audit = audit;
+    }
 
     public async Task<IActionResult> Index() => View(await _service.ListAsync());
 
@@ -50,6 +55,7 @@ public class PipelinesController : Controller
 
         var result = await _service.SaveAsync(input);
         if (!result.Succeeded) { ModelState.AddModelError("", result.Error!); return View("Form", vm); }
+        await _audit.LogAsync("PipelineSaved", "PipelineTemplate", vm.Id?.ToString(), $"Saved pipeline '{vm.Name}'");
         TempData["Success"] = "Pipeline saved.";
         return RedirectToAction(nameof(Index));
     }
@@ -58,6 +64,7 @@ public class PipelinesController : Controller
     public async Task<IActionResult> Delete(int id)
     {
         var result = await _service.DeleteAsync(id);
+        if (result.Succeeded) await _audit.LogAsync("PipelineDeleted", "PipelineTemplate", id.ToString(), $"Deleted pipeline {id}");
         TempData[result.Succeeded ? "Success" : "Error"] = result.Succeeded ? "Pipeline deleted." : result.Error;
         return RedirectToAction(nameof(Index));
     }

@@ -16,7 +16,6 @@ builder.Services.AddScoped<WorkerTenantContext>();
 builder.Services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<WorkerTenantContext>());
 
 builder.Services.Configure<IntegrationOptions>(builder.Configuration.GetSection("Integration"));
-builder.Services.AddHttpClient<IReferralToolClient, ReferralToolClient>();
 builder.Services.AddScoped<IOutboxClaimStore, OutboxClaimStore>();
 builder.Services.AddScoped<IOutboxProcessor, OutboxProcessor>();
 builder.Services.AddHostedService<OutboxDrainer>();

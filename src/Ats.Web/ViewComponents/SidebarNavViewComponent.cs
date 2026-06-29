@@ -19,6 +19,7 @@ public class SidebarNavViewComponent : ViewComponent
         new("Departments", "bi-building", "Departments", "Index"),
         new("Locations", "bi-geo-alt", "Locations", "Index"),
         new("Integration", "bi-plugin", "Integration", "Index", AtsRole.Owner),
+        new("Audit", "bi-journal-text", "Audit", "Index", AtsRole.Owner),
     };
 
     public IViewComponentResult Invoke()

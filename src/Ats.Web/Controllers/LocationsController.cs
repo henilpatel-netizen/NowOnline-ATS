@@ -1,3 +1,4 @@
+using Ats.Application.Auditing;
 using Ats.Application.Locations;
 using Ats.Web.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -9,7 +10,11 @@ namespace Ats.Web.Controllers;
 public class LocationsController : Controller
 {
     private readonly ILocationService _service;
-    public LocationsController(ILocationService service) => _service = service;
+    private readonly IAuditLogger _audit;
+    public LocationsController(ILocationService service, IAuditLogger audit)
+    {
+        _service = service; _audit = audit;
+    }
 
     public async Task<IActionResult> Index() => View(await _service.ListAsync());
 
@@ -21,6 +26,7 @@ public class LocationsController : Controller
         if (!ModelState.IsValid) return View("Form", vm);
         var result = await _service.CreateAsync(vm.Name, vm.City);
         if (!result.Succeeded) { ModelState.AddModelError("", result.Error!); return View("Form", vm); }
+        await _audit.LogAsync("LocationCreated", "Location", null, $"Created location '{vm.Name}'");
         TempData["Success"] = "Location created.";
         return RedirectToAction(nameof(Index));
     }
@@ -39,6 +45,7 @@ public class LocationsController : Controller
         if (!ModelState.IsValid) return View("Form", vm);
         var result = await _service.UpdateAsync(vm.Id, vm.Name, vm.City);
         if (!result.Succeeded) { ModelState.AddModelError("", result.Error!); return View("Form", vm); }
+        await _audit.LogAsync("LocationUpdated", "Location", vm.Id.ToString(), $"Updated location '{vm.Name}'");
         TempData["Success"] = "Location updated.";
         return RedirectToAction(nameof(Index));
     }
@@ -47,6 +54,7 @@ public class LocationsController : Controller
     public async Task<IActionResult> Delete(int id)
     {
         var result = await _service.DeleteAsync(id);
+        if (result.Succeeded) await _audit.LogAsync("LocationDeleted", "Location", id.ToString(), $"Deleted location {id}");
         TempData[result.Succeeded ? "Success" : "Error"] = result.Succeeded ? "Location deleted." : result.Error;
         return RedirectToAction(nameof(Index));
     }

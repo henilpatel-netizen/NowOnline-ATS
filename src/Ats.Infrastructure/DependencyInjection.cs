@@ -1,6 +1,8 @@
 using Ats.Application.Abstractions;
 using Ats.Application.Applications;
+using Ats.Application.Auditing;
 using Ats.Application.Candidates;
+using Ats.Application.Dashboard;
 using Ats.Application.Career;
 using Ats.Application.Departments;
 using Ats.Application.Integration;
@@ -8,6 +10,8 @@ using Ats.Application.Jobs;
 using Ats.Application.Locations;
 using Ats.Application.Pipelines;
 using Ats.Application.Tenancy;
+using Ats.Infrastructure.Auditing;
+using Ats.Infrastructure.Dashboard;
 using Ats.Infrastructure.Files;
 using Ats.Infrastructure.Identity;
 using Ats.Infrastructure.Integration;
@@ -58,6 +62,10 @@ public static class DependencyInjection
         services.AddScoped<IOutboxEnqueuer, OutboxEnqueuer>();
         services.AddScoped<IIntegrationSettingsService, IntegrationSettingsService>();
         services.AddScoped<IDeliveryLogService, DeliveryLogService>();
+        services.AddScoped<IAuditLogger, AuditLogger>();
+        services.AddScoped<IAuditQuery, AuditQuery>();
+        services.AddScoped<IDashboardService, DashboardService>();
+        services.AddHttpClient<IReferralToolClient, ReferralToolClient>();
 
         return services;
     }

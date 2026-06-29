@@ -70,3 +70,4 @@ re-derive it from the ReferralTool repo.
 | Pipeline | `.claude/skills/pipeline/SKILL.md` | Templates, stages, board moves, history, concurrency |
 | Career site | `.claude/skills/career-site/SKILL.md` | Careers area, slug tenancy, IFileStore, public apply |
 | Integration | `.claude/skills/integration/SKILL.md` | Feed, outbox, worker, ReferralTool client, settings |
+| Audit | `.claude/skills/audit/SKILL.md` | Audit log, dashboard metrics, integration test tools |

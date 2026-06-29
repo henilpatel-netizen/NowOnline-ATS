@@ -1,0 +1,19 @@
+@model List<Ats.Domain.Entities.AuditEntry>
+@{ ViewData["Title"] = "Audit log"; }
+<table class="table bg-white align-middle">
+    <thead><tr><th>When</th><th>User</th><th>Action</th><th>Entity</th><th>Summary</th></tr></thead>
+    <tbody>
+    @foreach (var a in Model)
+    {
+        <tr>
+            <td class="small text-muted">@a.OccurredAt.ToLocalTime().ToString("g")</td>
+            <td>@a.UserName</td>
+            <td><span class="badge bg-secondary">@a.Action</span></td>
+            <td>@a.EntityType @(string.IsNullOrEmpty(a.EntityRef) ? "" : $"({a.EntityRef})")</td>
+            <td>@a.Summary</td>
+        </tr>
+    }
+    @if (Model.Count == 0) { <tr><td colspan="5" class="text-muted">No activity recorded yet.</td></tr> }
+    </tbody>
+</table>
+<p class="text-muted small">Stage-move history is on each application's Details page; outbound delivery attempts are in the Integration delivery log.</p>

@@ -1,3 +1,4 @@
+using Ats.Application.Auditing;
 using Ats.Application.Departments;
 using Ats.Application.Jobs;
 using Ats.Application.Locations;
@@ -16,11 +17,12 @@ public class JobsController : Controller
     private readonly IDepartmentService _departments;
     private readonly ILocationService _locations;
     private readonly IPipelineTemplateService _pipelines;
+    private readonly IAuditLogger _audit;
 
     public JobsController(IJobService jobs, IDepartmentService departments,
-        ILocationService locations, IPipelineTemplateService pipelines)
+        ILocationService locations, IPipelineTemplateService pipelines, IAuditLogger audit)
     {
-        _jobs = jobs; _departments = departments; _locations = locations; _pipelines = pipelines;
+        _jobs = jobs; _departments = departments; _locations = locations; _pipelines = pipelines; _audit = audit;
     }
 
     public async Task<IActionResult> Index() => View(await _jobs.ListAsync());
@@ -40,6 +42,7 @@ public class JobsController : Controller
         var result = await _jobs.CreateAsync(new JobInput(null, vm.Title, vm.Description,
             vm.DepartmentId, vm.LocationId, vm.EmploymentType, vm.PipelineTemplateId));
         if (!result.Succeeded) { ModelState.AddModelError("", result.Error!); await PopulateLists(vm); return View("Form", vm); }
+        await _audit.LogAsync("JobCreated", "Job", null, $"Created job '{vm.Title}'");
         TempData["Success"] = "Job created.";
         return RedirectToAction(nameof(Index));
     }
@@ -66,25 +69,35 @@ public class JobsController : Controller
         var result = await _jobs.UpdateAsync(new JobInput(vm.Id, vm.Title, vm.Description,
             vm.DepartmentId, vm.LocationId, vm.EmploymentType, vm.PipelineTemplateId));
         if (!result.Succeeded) { ModelState.AddModelError("", result.Error!); await PopulateLists(vm); return View("Form", vm); }
+        await _audit.LogAsync("JobUpdated", "Job", vm.Id?.ToString(), $"Updated job '{vm.Title}'");
         TempData["Success"] = "Job updated.";
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpPost] public Task<IActionResult> Publish(int id) => Lifecycle(_jobs.PublishAsync(id), "Job published.");
-    [HttpPost] public Task<IActionResult> Close(int id) => Lifecycle(_jobs.CloseAsync(id), "Job closed.");
+    [HttpPost]
+    public async Task<IActionResult> Publish(int id)
+    {
+        var result = await _jobs.PublishAsync(id);
+        if (result.Succeeded) await _audit.LogAsync("JobPublished", "Job", id.ToString(), $"Published job {id}");
+        TempData[result.Succeeded ? "Success" : "Error"] = result.Succeeded ? "Job published." : result.Error;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Close(int id)
+    {
+        var result = await _jobs.CloseAsync(id);
+        if (result.Succeeded) await _audit.LogAsync("JobClosed", "Job", id.ToString(), $"Closed job {id}");
+        TempData[result.Succeeded ? "Success" : "Error"] = result.Succeeded ? "Job closed." : result.Error;
+        return RedirectToAction(nameof(Index));
+    }
 
     [HttpPost]
     public async Task<IActionResult> Delete(int id)
     {
         var result = await _jobs.DeleteAsync(id);
+        if (result.Succeeded) await _audit.LogAsync("JobDeleted", "Job", id.ToString(), $"Deleted job {id}");
         TempData[result.Succeeded ? "Success" : "Error"] = result.Succeeded ? "Job deleted." : result.Error;
-        return RedirectToAction(nameof(Index));
-    }
-
-    private async Task<IActionResult> Lifecycle(Task<OperationResult> action, string okMessage)
-    {
-        var result = await action;
-        TempData[result.Succeeded ? "Success" : "Error"] = result.Succeeded ? okMessage : result.Error;
         return RedirectToAction(nameof(Index));
     }
 

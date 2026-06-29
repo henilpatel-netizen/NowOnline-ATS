@@ -17,4 +17,5 @@ public class IntegrationSettingsViewModel
     public bool HasAuthToken { get; set; }
     public bool HasApiKey { get; set; }
     public bool HasFeedKey { get; set; }
+    public int PublishedJobCount { get; set; }
 }

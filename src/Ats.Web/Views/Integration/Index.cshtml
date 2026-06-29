@@ -50,6 +50,10 @@
                 <button type="submit" class="btn btn-outline-secondary btn-sm">@(Model.HasFeedKey ? "Regenerate" : "Generate") feed key</button>
             </form>
             <hr />
+            <p class="small mb-2">Published jobs the feed would return: <strong>@Model.PublishedJobCount</strong></p>
+            <form asp-action="TestConnection" method="post" class="mb-2">
+                <button type="submit" class="btn btn-outline-secondary btn-sm">Test ReferralTool connection</button>
+            </form>
             <a asp-action="Deliveries" class="btn btn-outline-secondary btn-sm">View delivery log</a>
         </div>
     </div>

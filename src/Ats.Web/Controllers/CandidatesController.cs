@@ -1,4 +1,5 @@
 using Ats.Application.Applications;
+using Ats.Application.Auditing;
 using Ats.Application.Candidates;
 using Ats.Application.Jobs;
 using Ats.Domain.Enums;
@@ -15,10 +16,11 @@ public class CandidatesController : Controller
     private readonly ICandidateService _service;
     private readonly IJobService _jobs;
     private readonly IApplicationService _applications;
+    private readonly IAuditLogger _audit;
 
-    public CandidatesController(ICandidateService service, IJobService jobs, IApplicationService applications)
+    public CandidatesController(ICandidateService service, IJobService jobs, IApplicationService applications, IAuditLogger audit)
     {
-        _service = service; _jobs = jobs; _applications = applications;
+        _service = service; _jobs = jobs; _applications = applications; _audit = audit;
     }
 
     public async Task<IActionResult> Index()
@@ -41,6 +43,7 @@ public class CandidatesController : Controller
         if (!ModelState.IsValid) return View("Form", vm);
         var result = await _service.CreateAsync(vm.FirstName, vm.LastName, vm.Email, vm.Phone);
         if (!result.Succeeded) { ModelState.AddModelError("", result.Error!); return View("Form", vm); }
+        await _audit.LogAsync("CandidateCreated", "Candidate", null, $"Created candidate '{vm.FirstName} {vm.LastName}'");
         TempData["Success"] = "Candidate created.";
         return RedirectToAction(nameof(Index));
     }
@@ -59,6 +62,7 @@ public class CandidatesController : Controller
         if (!ModelState.IsValid) return View("Form", vm);
         var result = await _service.UpdateAsync(vm.Id, vm.FirstName, vm.LastName, vm.Email, vm.Phone);
         if (!result.Succeeded) { ModelState.AddModelError("", result.Error!); return View("Form", vm); }
+        await _audit.LogAsync("CandidateUpdated", "Candidate", vm.Id.ToString(), $"Updated candidate '{vm.FirstName} {vm.LastName}'");
         TempData["Success"] = "Candidate updated.";
         return RedirectToAction(nameof(Index));
     }
