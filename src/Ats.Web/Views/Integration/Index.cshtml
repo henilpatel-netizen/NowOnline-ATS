@@ -1,0 +1,57 @@
+@model Ats.Web.Models.IntegrationSettingsViewModel
+@{ ViewData["Title"] = "Integration"; }
+
+@if (TempData["FeedKey"] is string newKey)
+{
+    <div class="alert alert-warning">
+        <div class="fw-semibold mb-1">New feed API key (copy now, shown once):</div>
+        <code>@newKey</code>
+    </div>
+}
+
+<div class="row">
+    <div class="col-lg-7">
+        <form asp-action="Index" method="post" class="card card-body mb-4">
+            <div asp-validation-summary="All" class="text-danger small mb-2"></div>
+            <div class="form-check mb-3">
+                <input asp-for="IntegrationEnabled" class="form-check-input" />
+                <label asp-for="IntegrationEnabled" class="form-check-label">Integration enabled</label>
+            </div>
+            <div class="mb-3">
+                <label asp-for="ReferralToolBaseUrl" class="form-label">ReferralTool base URL</label>
+                <input asp-for="ReferralToolBaseUrl" class="form-control" placeholder="https://referraltool.example.com" />
+            </div>
+            <div class="mb-3">
+                <label asp-for="ReferralToolCustomerId" class="form-label">ReferralTool customer id</label>
+                <input asp-for="ReferralToolCustomerId" class="form-control" type="number" />
+            </div>
+            <div class="mb-3">
+                <label asp-for="CodeParameterName" class="form-label">Referral code parameter name</label>
+                <input asp-for="CodeParameterName" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <label asp-for="ReferralToolAuthToken" class="form-label">X-Auth-Token @(Model.HasAuthToken ? "(set; leave blank to keep)" : "")</label>
+                <input asp-for="ReferralToolAuthToken" class="form-control" type="password" autocomplete="off" />
+            </div>
+            <div class="mb-3">
+                <label asp-for="ReferralToolApiKey" class="form-label">X-Api-Key @(Model.HasApiKey ? "(set; leave blank to keep)" : "")</label>
+                <input asp-for="ReferralToolApiKey" class="form-control" type="password" autocomplete="off" />
+            </div>
+            <button type="submit" class="btn btn-primary">Save</button>
+        </form>
+    </div>
+    <div class="col-lg-5">
+        <div class="card card-body">
+            <h2 class="h6">Feed API key</h2>
+            <p class="text-muted small mb-2">ReferralTool uses this to pull the vacancy feed. Only its hash is stored.</p>
+            <p class="mb-2">Status: @(Model.HasFeedKey ? "configured" : "not set")</p>
+            <form asp-action="GenerateFeedKey" method="post"
+                  onsubmit="return confirm('Generate a new feed key? The old key stops working immediately.');">
+                <button type="submit" class="btn btn-outline-secondary btn-sm">@(Model.HasFeedKey ? "Regenerate" : "Generate") feed key</button>
+            </form>
+            <hr />
+            <a asp-action="Deliveries" class="btn btn-outline-secondary btn-sm">View delivery log</a>
+        </div>
+    </div>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

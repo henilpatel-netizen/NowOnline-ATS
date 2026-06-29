@@ -56,6 +56,8 @@ public static class DependencyInjection
         services.AddScoped<ICareerService, CareerService>();
         services.AddScoped<IVacancyFeedRepository, VacancyFeedRepository>();
         services.AddScoped<IOutboxEnqueuer, OutboxEnqueuer>();
+        services.AddScoped<IIntegrationSettingsService, IntegrationSettingsService>();
+        services.AddScoped<IDeliveryLogService, DeliveryLogService>();
 
         return services;
     }

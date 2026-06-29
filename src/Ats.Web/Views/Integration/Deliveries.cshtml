@@ -1,0 +1,38 @@
+@model List<Ats.Application.Integration.DeliveryLogEntry>
+@using Ats.Domain.Enums
+@{ ViewData["Title"] = "Delivery log"; }
+<div class="mb-3"><a class="btn btn-outline-secondary btn-sm" asp-action="Index"><i class="bi bi-arrow-left"></i> Integration</a></div>
+<table class="table bg-white align-middle">
+    <thead><tr><th>#</th><th>Candidate ext id</th><th>Vacancy</th><th>Status sent</th><th>State</th><th>Attempts</th><th>Last attempt</th></tr></thead>
+    <tbody>
+    @foreach (var e in Model)
+    {
+        var last = e.Deliveries.LastOrDefault();
+        var badge = e.Message.Status switch
+        {
+            OutboxStatus.Delivered => "bg-success",
+            OutboxStatus.Failed => "bg-danger",
+            _ => "bg-warning text-dark"
+        };
+        <tr>
+            <td>@e.Message.Id</td>
+            <td><code>@e.Message.ExternalCandidateId</code></td>
+            <td><code>@e.Message.ExternalVacancyId</code></td>
+            <td>@e.Message.CandidateStatus</td>
+            <td><span class="badge @badge">@e.Message.Status</span></td>
+            <td>@e.Message.Attempts</td>
+            <td>
+                @if (last is not null)
+                {
+                    <span class="small text-muted">@last.Kind @(last.HttpStatus?.ToString() ?? "-") at @last.AttemptedAt.ToLocalTime().ToString("g")</span>
+                }
+                @if (!string.IsNullOrEmpty(e.Message.LastError))
+                {
+                    <div class="small text-danger">@e.Message.LastError</div>
+                }
+            </td>
+        </tr>
+    }
+    @if (Model.Count == 0) { <tr><td colspan="7" class="text-muted">No status updates yet.</td></tr> }
+    </tbody>
+</table>

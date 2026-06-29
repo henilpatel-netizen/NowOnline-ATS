@@ -118,3 +118,18 @@ Source of truth at design time:
 - The career-site referral query parameter name is set by ReferralTool's `Customer.CodeParameterName`
   (default `ref`). The Ats career site must read whatever parameter name the tenant configures and
   store its value verbatim on `Application.SourceCode`.
+
+---
+
+## Verified against ReferralTool source on 2026-06-29 (supersedes the 2026-06-26 notes above)
+
+1. Status route is `POST /v1.0/kafka/candidatestatusupdate` (controller `Kafka`, version 1.0).
+2. The status endpoint requires BOTH headers: `X-Api-Key` (a ReferralTool-issued key, validated by the
+   `[Authorize(ApiKey)]` scheme) AND `X-Auth-Token` (compared to `Kafka:AuthToken`). The 2026-06-26
+   Appendix B documented only `X-Auth-Token`.
+3. "Vacancy does not exist" returns HTTP 400 (transient until the feed import lands). A pre-flight
+   `POST /v1.0/kafka/checkvacancyexists` (`{ CustomerId, ExternalVacancyId }` -> `{ exists }`, same dual
+   auth) is available and is used by the worker.
+4. Feed hours `custom_fields` use a nested shape: each entry's name is at
+   `custom_fields[]._embedded.definition.name` (value at `[].value`), not the flat `{name,value}` shown
+   in Appendix A. The Ats feed omits `custom_fields` in v1 (hours optional).
