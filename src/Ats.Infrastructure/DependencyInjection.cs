@@ -1,4 +1,6 @@
 using Ats.Application.Abstractions;
+using Ats.Application.Applications;
+using Ats.Application.Candidates;
 using Ats.Application.Departments;
 using Ats.Application.Jobs;
 using Ats.Application.Locations;
@@ -41,6 +43,10 @@ public static class DependencyInjection
         services.AddScoped<IPipelineTemplateService, PipelineTemplateService>();
         services.AddScoped<IJobRepository, JobRepository>();
         services.AddScoped<IJobService, JobService>();
+        services.AddScoped<ICandidateRepository, CandidateRepository>();
+        services.AddScoped<ICandidateService, CandidateService>();
+        services.AddScoped<IApplicationRepository, ApplicationRepository>();
+        services.AddScoped<IApplicationService, ApplicationService>();
 
         return services;
     }

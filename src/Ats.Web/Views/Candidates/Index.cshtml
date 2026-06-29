@@ -1,0 +1,34 @@
+@model Ats.Web.Models.CandidatesIndexViewModel
+@{ ViewData["Title"] = "Candidates"; }
+<div class="mb-3"><a class="btn btn-primary" asp-action="Create"><i class="bi bi-plus-lg"></i> New candidate</a></div>
+<table class="table table-hover bg-white align-middle">
+    <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th class="text-end">Actions</th></tr></thead>
+    <tbody>
+    @foreach (var c in Model.Candidates)
+    {
+        <tr>
+            <td>@c.FullName</td>
+            <td>@c.Email</td>
+            <td>@c.Phone</td>
+            <td class="text-end">
+                <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@c.Id">Edit</a>
+                @if (Model.PublishedJobs.Count > 0)
+                {
+                    <form asp-action="AddToJob" method="post" class="d-inline-flex gap-1 align-items-center ms-1">
+                        <input type="hidden" name="candidateId" value="@c.Id" />
+                        <select name="jobId" class="form-select form-select-sm" style="width:auto" asp-items="Model.PublishedJobs">
+                            <option value="">Add to job...</option>
+                        </select>
+                        <button class="btn btn-sm btn-outline-primary" type="submit">Add</button>
+                    </form>
+                }
+            </td>
+        </tr>
+    }
+    @if (Model.Candidates.Count == 0) { <tr><td colspan="4" class="text-muted">No candidates yet.</td></tr> }
+    </tbody>
+</table>
+@if (Model.PublishedJobs.Count == 0)
+{
+    <p class="text-muted small">Publish a job to enable "Add to job" here.</p>
+}

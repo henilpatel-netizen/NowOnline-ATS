@@ -66,3 +66,5 @@ re-derive it from the ReferralTool repo.
 | Architecture | `.claude/skills/architecture/SKILL.md` | Solution layout, layering, DI, where code goes |
 | Multi-tenancy | `.claude/skills/multitenancy/SKILL.md` | `TenantEntity`, query filter, interceptor, onboarding stamping |
 | UI | `.claude/skills/ui/SKILL.md` | Layouts, design tokens, shared components, how to add a page |
+| Entities | `.claude/skills/entities/SKILL.md` | Job/Candidate/JobApplication/Event, soft delete, ExternalRef |
+| Pipeline | `.claude/skills/pipeline/SKILL.md` | Templates, stages, board moves, history, concurrency |

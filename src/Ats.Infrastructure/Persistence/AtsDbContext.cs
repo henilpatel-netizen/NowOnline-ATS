@@ -21,6 +21,9 @@ public class AtsDbContext : DbContext
     public DbSet<Department> Departments => Set<Department>();
     public DbSet<Location> Locations => Set<Location>();
     public DbSet<Job> Jobs => Set<Job>();
+    public DbSet<Candidate> Candidates => Set<Candidate>();
+    public DbSet<JobApplication> Applications => Set<JobApplication>();
+    public DbSet<ApplicationEvent> ApplicationEvents => Set<ApplicationEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

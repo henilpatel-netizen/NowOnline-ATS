@@ -1,0 +1,29 @@
+@model Ats.Web.Models.ApplicationDetailsViewModel
+@{ ViewData["Title"] = $"Application: {Model.CandidateName}"; }
+<div class="mb-3">
+    <a class="btn btn-outline-secondary btn-sm" asp-controller="Board" asp-action="Index" asp-route-jobId="@Model.Application.JobId">
+        <i class="bi bi-arrow-left"></i> Board
+    </a>
+</div>
+<dl class="row">
+    <dt class="col-sm-3">Candidate</dt><dd class="col-sm-9">@Model.CandidateName</dd>
+    <dt class="col-sm-3">Current stage</dt><dd class="col-sm-9">@Model.StageName(Model.Application.CurrentStageId)</dd>
+    <dt class="col-sm-3">Status</dt><dd class="col-sm-9">@Model.Application.Status</dd>
+    <dt class="col-sm-3">Applied</dt><dd class="col-sm-9">@Model.Application.AppliedAt.ToLocalTime().ToString("g")</dd>
+</dl>
+
+<h2 class="h5 mt-4">Stage history</h2>
+<ul class="list-group">
+    @foreach (var e in Model.Events)
+    {
+        <li class="list-group-item d-flex justify-content-between">
+            <span>
+                @(e.FromStageId is null ? "Applied" : Model.StageName(e.FromStageId.Value))
+                <i class="bi bi-arrow-right mx-1"></i>
+                @Model.StageName(e.ToStageId)
+            </span>
+            <span class="text-muted small">@e.OccurredAt.ToLocalTime().ToString("g")</span>
+        </li>
+    }
+    @if (Model.Events.Count == 0) { <li class="list-group-item text-muted">No history yet.</li> }
+</ul>
