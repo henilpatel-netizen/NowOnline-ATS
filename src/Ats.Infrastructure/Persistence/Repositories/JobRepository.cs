@@ -46,4 +46,12 @@ public sealed class JobRepository : IJobRepository
         _db.PipelineTemplates.AnyAsync(t => t.Id == pipelineTemplateId, ct);
 
     public Task SaveChangesAsync(CancellationToken ct = default) => _db.SaveChangesAsync(ct);
+
+    // Saves; returns false if a unique-constraint violation occurs (e.g. a concurrent job-create race
+    // on the per-tenant ExternalRef). Lets the service surface a friendly retry message instead of a 500.
+    public async Task<bool> TrySaveChangesAsync(CancellationToken ct = default)
+    {
+        try { await _db.SaveChangesAsync(ct); return true; }
+        catch (DbUpdateException) { return false; }
+    }
 }

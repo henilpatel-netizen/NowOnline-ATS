@@ -46,4 +46,13 @@ public sealed class LocalFileStore : IFileStore
         };
         return Task.FromResult<FileDownload?>(new FileDownload(stream, contentType, "resume" + ext));
     }
+
+    public Task DeleteAsync(string key, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(key) || key.Contains('/') || key.Contains('\\') || key.Contains(".."))
+            return Task.CompletedTask;
+        var path = Path.Combine(_root, key);
+        if (File.Exists(path)) File.Delete(path);
+        return Task.CompletedTask;
+    }
 }

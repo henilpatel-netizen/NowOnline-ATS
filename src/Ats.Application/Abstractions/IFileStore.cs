@@ -9,4 +9,7 @@ public interface IFileStore
 
     // Opens a previously stored file by key, or null if the key is invalid or missing.
     Task<FileDownload?> OpenAsync(string key, CancellationToken ct = default);
+
+    // Deletes a stored file by key. No-op if the key is invalid or the file is missing.
+    Task DeleteAsync(string key, CancellationToken ct = default);
 }

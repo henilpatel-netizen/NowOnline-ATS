@@ -51,7 +51,8 @@ public sealed class JobService : IJobService
             ExternalRef = $"JOB-{number}"
         };
         await _repo.AddAsync(job, ct);
-        await _repo.SaveChangesAsync(ct);
+        if (!await _repo.TrySaveChangesAsync(ct))
+            return OperationResult.Fail("Could not assign a job number just now. Please try again.");
         return OperationResult.Ok;
     }
 

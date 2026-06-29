@@ -12,4 +12,5 @@ public interface IJobRepository
     Task<int> NextJobNumberAsync(CancellationToken ct = default);
     Task<bool> PipelineExistsAsync(int pipelineTemplateId, CancellationToken ct = default);
     Task SaveChangesAsync(CancellationToken ct = default);
+    Task<bool> TrySaveChangesAsync(CancellationToken ct = default);
 }

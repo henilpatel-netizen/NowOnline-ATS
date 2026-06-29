@@ -80,7 +80,11 @@ public class JobsController : Controller
         var result = await _career.ApplyAsync(new ApplyInput(
             externalRef, form.FirstName, form.LastName, form.Email, form.Phone, form.SourceCode, key));
 
-        if (!result.Succeeded) return await RedisplayAsync(result.Error ?? "Could not submit your application.");
+        if (!result.Succeeded)
+        {
+            await _files.DeleteAsync(key); // don't leak the uploaded file when the application fails
+            return await RedisplayAsync(result.Error ?? "Could not submit your application.");
+        }
 
         return RedirectToAction(nameof(ThankYou), new { slug });
     }

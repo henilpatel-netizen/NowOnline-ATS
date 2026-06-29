@@ -18,14 +18,22 @@ implement `ITenantEntity`.
   `ITenantContext`, and throws if none is resolved. Also stamps `CreatedAt`/`UpdatedAt`.
 
 ## Tenant resolution
-`HttpTenantContext` reads the `tenant_id` claim (back-office/API). The career-site slug path
-(`/careers/{tenantSlug}` -> tenant id) is added in Phase 2.
+`HttpTenantContext.CurrentTenantId` reads the `tenant_id` claim first (back-office/API), then
+`HttpContext.Items["TenantId"]`. The item is set by `TenantResolutionMiddleware` for public career-site
+requests (`/careers/{slug}` -> tenant id) and by `FeedApiKeyFilter` for vacancy-feed requests. In the
+`Ats.Worker`, `ITenantContext` is a settable `WorkerTenantContext` the outbox drainer sets per message.
 
-## Documented bypasses (the ONLY ones)
+## Documented bypasses (the complete list)
 - `IdentityService.ValidateCredentialsAsync` — `IgnoreQueryFilters()` at sign-in (no claim yet).
 - `OnboardingStore.CreateTenantGraphAsync` — creates the tenant graph and sets `TenantId` by hand on
   settings/template/stages/owner before a claim exists, inside one transaction.
+- `TenantResolutionMiddleware` — resolves `{slug}` -> Active tenant and sets `Items["TenantId"]`
+  (career site). Unknown/suspended slug returns 404.
+- `FeedApiKeyFilter` (`Ats.Api`) — resolves the hashed `Authorization: Token` feed key
+  (`IgnoreQueryFilters` over `TenantSettings`) and sets `Items["TenantId"]`.
+- `OutboxClaimStore.ClaimDueAsync` (`Ats.Worker`) — claims Pending outbox messages across all tenants
+  with `IgnoreQueryFilters`; the drainer then sets `WorkerTenantContext.TenantId` per message.
 
 ## Rule
-Outside those two spots: never `IgnoreQueryFilters()`, never hand-set `TenantId`, never expose an
-unfiltered queryable. See `.claude/rules/multi-tenancy.md`.
+Outside those five documented spots: never `IgnoreQueryFilters()`, never hand-set `TenantId`, never
+expose an unfiltered queryable. See `.claude/rules/multi-tenancy.md`.

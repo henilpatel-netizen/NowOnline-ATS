@@ -23,25 +23,30 @@
     }
     <form asp-controller="Jobs" asp-action="Apply" asp-route-slug="@Model.Slug"
           asp-route-externalRef="@Model.Job.ExternalRef" method="post" enctype="multipart/form-data" class="col-lg-8">
-        <input type="hidden" name="SourceCode" value="@Model.Code" />
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
+        <input type="hidden" asp-for="Code" name="SourceCode" />
         <div class="row">
             <div class="col-md-6 mb-3">
-                <label class="form-label">First name</label>
-                <input name="FirstName" value="@Model.FirstName" class="form-control" required />
+                <label asp-for="FirstName" class="form-label">First name</label>
+                <input asp-for="FirstName" class="form-control" required />
+                <span asp-validation-for="FirstName" class="text-danger small"></span>
             </div>
             <div class="col-md-6 mb-3">
-                <label class="form-label">Last name</label>
-                <input name="LastName" value="@Model.LastName" class="form-control" required />
+                <label asp-for="LastName" class="form-label">Last name</label>
+                <input asp-for="LastName" class="form-control" required />
+                <span asp-validation-for="LastName" class="text-danger small"></span>
             </div>
         </div>
         <div class="row">
             <div class="col-md-6 mb-3">
-                <label class="form-label">Email</label>
-                <input name="Email" type="email" value="@Model.Email" class="form-control" required />
+                <label asp-for="Email" class="form-label">Email</label>
+                <input asp-for="Email" type="email" class="form-control" required />
+                <span asp-validation-for="Email" class="text-danger small"></span>
             </div>
             <div class="col-md-6 mb-3">
-                <label class="form-label">Phone</label>
-                <input name="Phone" value="@Model.Phone" class="form-control" />
+                <label asp-for="Phone" class="form-label">Phone</label>
+                <input asp-for="Phone" class="form-control" />
+                <span asp-validation-for="Phone" class="text-danger small"></span>
             </div>
         </div>
         <div class="mb-3">
@@ -50,4 +55,5 @@
         </div>
         <button type="submit" class="btn btn-primary">Submit application</button>
     </form>
+    <p class="text-muted small mt-2 mb-0">A resume in PDF or Word format is required.</p>
 </div></div>

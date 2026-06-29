@@ -16,7 +16,7 @@ Solution: `Ats.slnx` (modern XML solution format, .NET 10 default; projects unde
 | `Ats.Domain` | Entities, enums, domain rules. No framework/EF dependencies. |
 | `Ats.Application` | Use-case services, abstractions (`ITenantContext`, `IIdentityService`), validators. |
 | `Ats.Infrastructure` | EF Core `AtsDbContext`, tenancy filters + interceptor, Identity impl, DI. |
-| `Ats.Web` | MVC back-office (`/manage`) + public career site (Areas, later phases). |
+| `Ats.Web` | MVC back-office (root: `/Jobs`, `/Candidates`, `/Board`, ...) + public career site (`Careers` area, `/careers/{slug}`). |
 | `Ats.Api` | REST API: vacancy feed + integration endpoints. |
 | `Ats.Worker` | Background host: outbox delivery, notifications. |
 

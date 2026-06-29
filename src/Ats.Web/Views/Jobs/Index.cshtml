@@ -38,13 +38,15 @@
                 <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@j.Id">Edit</a>
                 @if (j.Status != JobStatus.Published)
                 {
-                    <form asp-action="Publish" asp-route-id="@j.Id" method="post" class="d-inline">
+                    <form asp-action="Publish" asp-route-id="@j.Id" method="post" class="d-inline"
+                          onsubmit="return confirm('Publish this job? It becomes visible on the public career site.');">
                         <button class="btn btn-sm btn-outline-success" type="submit">Publish</button>
                     </form>
                 }
                 @if (j.Status == JobStatus.Published)
                 {
-                    <form asp-action="Close" asp-route-id="@j.Id" method="post" class="d-inline">
+                    <form asp-action="Close" asp-route-id="@j.Id" method="post" class="d-inline"
+                          onsubmit="return confirm('Close this job? It is removed from the public career site.');">
                         <button class="btn btn-sm btn-outline-secondary" type="submit">Close</button>
                     </form>
                 }

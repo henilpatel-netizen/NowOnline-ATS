@@ -44,6 +44,11 @@
     <script>
         (function () {
             const tbody = document.querySelector('#stages tbody');
+            // Capture a blank row template from the first rendered row (Create always seeds one row,
+            // Edit always has at least one), so "Add stage" works even after all rows are removed.
+            const firstRow = tbody.querySelector('tr');
+            const templateHtml = firstRow ? firstRow.outerHTML : null;
+
             function reindex() {
                 tbody.querySelectorAll('tr').forEach((tr, i) => {
                     tr.querySelectorAll('input,select').forEach(el => {
@@ -52,18 +57,32 @@
                     });
                 });
             }
+            function nextOrder() {
+                let max = 0;
+                tbody.querySelectorAll('tr').forEach(tr => {
+                    if (tr.style.display === 'none') return; // skip rows flagged for delete
+                    const o = parseInt((tr.querySelector('input[name$=".Order"]') || {}).value || '0', 10);
+                    if (!isNaN(o) && o > max) max = o;
+                });
+                return max + 1;
+            }
             document.querySelector('#add-stage').addEventListener('click', function () {
-                const rows = tbody.querySelectorAll('tr');
-                const tpl = rows.length ? rows[rows.length - 1].cloneNode(true) : null;
-                if (!tpl) return;
-                tpl.querySelectorAll('input').forEach(el => {
+                if (!templateHtml) return;
+                const holder = document.createElement('tbody');
+                holder.innerHTML = templateHtml.trim();
+                const row = holder.querySelector('tr');
+                row.style.display = '';
+                row.querySelectorAll('input').forEach(el => {
                     if (el.type === 'checkbox') el.checked = false;
                     else if (!el.classList.contains('delete-flag')) el.value = '';
                 });
-                const idHidden = tpl.querySelector('input[name$=".Id"]');
+                const idHidden = row.querySelector('input[name$=".Id"]');
                 if (idHidden) idHidden.value = '';
-                tpl.querySelector('.delete-flag').value = 'false';
-                tbody.appendChild(tpl);
+                const del = row.querySelector('.delete-flag');
+                if (del) del.value = 'false';
+                const orderInput = row.querySelector('input[name$=".Order"]');
+                if (orderInput) orderInput.value = nextOrder();
+                tbody.appendChild(row);
                 reindex();
             });
             tbody.addEventListener('click', function (e) {
