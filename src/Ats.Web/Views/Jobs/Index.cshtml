@@ -1,0 +1,46 @@
+@model List<Ats.Domain.Entities.Job>
+@using Ats.Domain.Enums
+@{ ViewData["Title"] = "Jobs"; }
+<div class="mb-3"><a class="btn btn-primary" asp-action="Create"><i class="bi bi-plus-lg"></i> New job</a></div>
+<table class="table table-hover bg-white">
+    <thead><tr><th>Ref</th><th>Title</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
+    <tbody>
+    @foreach (var j in Model)
+    {
+        <tr>
+            <td><code>@j.ExternalRef</code></td>
+            <td>@j.Title</td>
+            <td>
+                @{
+                    var badge = j.Status switch {
+                        JobStatus.Published => "bg-success",
+                        JobStatus.Closed => "bg-secondary",
+                        _ => "bg-warning text-dark"
+                    };
+                }
+                <span class="badge @badge">@j.Status</span>
+            </td>
+            <td class="text-end">
+                <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@j.Id">Edit</a>
+                @if (j.Status != JobStatus.Published)
+                {
+                    <form asp-action="Publish" asp-route-id="@j.Id" method="post" class="d-inline">
+                        <button class="btn btn-sm btn-outline-success" type="submit">Publish</button>
+                    </form>
+                }
+                @if (j.Status == JobStatus.Published)
+                {
+                    <form asp-action="Close" asp-route-id="@j.Id" method="post" class="d-inline">
+                        <button class="btn btn-sm btn-outline-secondary" type="submit">Close</button>
+                    </form>
+                }
+                <form asp-action="Delete" asp-route-id="@j.Id" method="post" class="d-inline"
+                      onsubmit="return confirm('Delete this job?');">
+                    <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                </form>
+            </td>
+        </tr>
+    }
+    @if (Model.Count == 0) { <tr><td colspan="4" class="text-muted">No jobs yet.</td></tr> }
+    </tbody>
+</table>

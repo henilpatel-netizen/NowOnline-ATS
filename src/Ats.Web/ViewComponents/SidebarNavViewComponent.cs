@@ -13,6 +13,10 @@ public class SidebarNavViewComponent : ViewComponent
     private static readonly NavItem[] Items =
     {
         new("Dashboard", "bi-speedometer2", "Dashboard", "Index"),
+        new("Jobs", "bi-briefcase", "Jobs", "Index"),
+        new("Pipelines", "bi-diagram-3", "Pipelines", "Index"),
+        new("Departments", "bi-building", "Departments", "Index"),
+        new("Locations", "bi-geo-alt", "Locations", "Index"),
     };
 
     public IViewComponentResult Invoke()

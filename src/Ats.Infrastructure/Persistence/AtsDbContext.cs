@@ -18,6 +18,9 @@ public class AtsDbContext : DbContext
     public DbSet<AppUser> Users => Set<AppUser>();
     public DbSet<PipelineTemplate> PipelineTemplates => Set<PipelineTemplate>();
     public DbSet<PipelineStage> PipelineStages => Set<PipelineStage>();
+    public DbSet<Department> Departments => Set<Department>();
+    public DbSet<Location> Locations => Set<Location>();
+    public DbSet<Job> Jobs => Set<Job>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -33,7 +36,15 @@ public class AtsDbContext : DbContext
                 // current tenant captured via closure over _tenant
                 var current = Expression.Call(
                     Expression.Constant(this), nameof(GetTenantIdOrZero), Type.EmptyTypes);
-                var body = Expression.Equal(prop, current);
+                Expression body = Expression.Equal(prop, current);
+
+                if (typeof(ISoftDeletable).IsAssignableFrom(entityType.ClrType))
+                {
+                    var notDeleted = Expression.Not(
+                        Expression.Property(param, nameof(ISoftDeletable.IsDeleted)));
+                    body = Expression.AndAlso(body, notDeleted);
+                }
+
                 var lambda = Expression.Lambda(body, param);
                 modelBuilder.Entity(entityType.ClrType).HasQueryFilter(lambda);
             }

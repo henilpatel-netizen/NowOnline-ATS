@@ -1,0 +1,40 @@
+@model Ats.Web.Models.JobEditViewModel
+@using Ats.Domain.Enums
+@{ ViewData["Title"] = Model.Id is null ? "New job" : "Edit job"; }
+<form asp-action="@(Model.Id is null ? "Create" : "Edit")" method="post" class="col-lg-8">
+    <div asp-validation-summary="All" class="text-danger small mb-2"></div>
+    <input type="hidden" asp-for="Id" />
+    <div class="mb-3">
+        <label asp-for="Title" class="form-label">Title</label>
+        <input asp-for="Title" class="form-control" />
+        <span asp-validation-for="Title" class="text-danger small"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Description" class="form-label">Description</label>
+        <textarea asp-for="Description" class="form-control" rows="5"></textarea>
+    </div>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label asp-for="DepartmentId" class="form-label">Department</label>
+            <select asp-for="DepartmentId" asp-items="Model.Departments" class="form-select"><option value="">(none)</option></select>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label asp-for="LocationId" class="form-label">Location</label>
+            <select asp-for="LocationId" asp-items="Model.Locations" class="form-select"><option value="">(none)</option></select>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label asp-for="EmploymentType" class="form-label">Employment type</label>
+            <select asp-for="EmploymentType" asp-items="Html.GetEnumSelectList<EmploymentType>()" class="form-select"></select>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label asp-for="PipelineTemplateId" class="form-label">Pipeline</label>
+            <select asp-for="PipelineTemplateId" asp-items="Model.Pipelines" class="form-select"><option value="">Select a pipeline</option></select>
+            <span asp-validation-for="PipelineTemplateId" class="text-danger small"></span>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a class="btn btn-link" asp-action="Index">Cancel</a>
+</form>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }
