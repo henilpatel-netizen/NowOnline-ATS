@@ -1,3 +1,4 @@
+using Ats.Application.Common;
 using Ats.Application.Departments; // OperationResult
 using Ats.Domain.Entities;
 
@@ -6,6 +7,7 @@ namespace Ats.Application.Candidates;
 public interface ICandidateService
 {
     Task<List<Candidate>> ListAsync(CancellationToken ct = default);
+    Task<PagedResult<Candidate>> SearchAsync(string? search, int page, int pageSize, CancellationToken ct = default);
     Task<Candidate?> GetAsync(int id, CancellationToken ct = default);
     Task<OperationResult> CreateAsync(string firstName, string lastName, string email, string? phone, CancellationToken ct = default);
     Task<OperationResult> UpdateAsync(int id, string firstName, string lastName, string email, string? phone, CancellationToken ct = default);
@@ -17,6 +19,13 @@ public sealed class CandidateService : ICandidateService
     public CandidateService(ICandidateRepository repo) => _repo = repo;
 
     public Task<List<Candidate>> ListAsync(CancellationToken ct = default) => _repo.ListAsync(ct);
+
+    public async Task<PagedResult<Candidate>> SearchAsync(string? search, int page, int pageSize, CancellationToken ct = default)
+    {
+        var (candidates, total) = await _repo.SearchAsync(search, page, pageSize, ct);
+        return new PagedResult<Candidate>(candidates, page, pageSize, total);
+    }
+
     public Task<Candidate?> GetAsync(int id, CancellationToken ct = default) => _repo.GetAsync(id, ct);
 
     public async Task<OperationResult> CreateAsync(string firstName, string lastName, string email, string? phone, CancellationToken ct = default)

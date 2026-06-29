@@ -23,16 +23,14 @@ public class CandidatesController : Controller
         _service = service; _jobs = jobs; _applications = applications; _audit = audit;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? q, int page = 1)
     {
+        if (page < 1) page = 1;
+        var results = await _service.SearchAsync(q, page, 20);
         var jobs = (await _jobs.ListAsync())
             .Where(j => j.Status == JobStatus.Published)
             .Select(j => new SelectListItem($"{j.ExternalRef} - {j.Title}", j.Id.ToString())).ToList();
-        return View(new CandidatesIndexViewModel
-        {
-            Candidates = await _service.ListAsync(),
-            PublishedJobs = jobs
-        });
+        return View(new CandidatesIndexViewModel { Results = results, Q = q, PublishedJobs = jobs });
     }
 
     [HttpGet] public IActionResult Create() => View("Form", new CandidateViewModel());

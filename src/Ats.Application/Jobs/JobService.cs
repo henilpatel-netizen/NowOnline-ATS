@@ -1,3 +1,4 @@
+using Ats.Application.Common;
 using Ats.Application.Departments; // OperationResult
 using Ats.Domain.Entities;
 using Ats.Domain.Enums;
@@ -7,6 +8,7 @@ namespace Ats.Application.Jobs;
 public interface IJobService
 {
     Task<List<Job>> ListAsync(CancellationToken ct = default);
+    Task<PagedResult<Job>> SearchAsync(JobStatus? status, string? search, int page, int pageSize, CancellationToken ct = default);
     Task<Job?> GetAsync(int id, CancellationToken ct = default);
     Task<OperationResult> CreateAsync(JobInput input, CancellationToken ct = default);
     Task<OperationResult> UpdateAsync(JobInput input, CancellationToken ct = default);
@@ -21,6 +23,13 @@ public sealed class JobService : IJobService
     public JobService(IJobRepository repo) => _repo = repo;
 
     public Task<List<Job>> ListAsync(CancellationToken ct = default) => _repo.ListAsync(ct);
+
+    public async Task<PagedResult<Job>> SearchAsync(JobStatus? status, string? search, int page, int pageSize, CancellationToken ct = default)
+    {
+        var (jobs, total) = await _repo.SearchAsync(status, search, page, pageSize, ct);
+        return new PagedResult<Job>(jobs, page, pageSize, total);
+    }
+
     public Task<Job?> GetAsync(int id, CancellationToken ct = default) => _repo.GetAsync(id, ct);
 
     public async Task<OperationResult> CreateAsync(JobInput input, CancellationToken ct = default)

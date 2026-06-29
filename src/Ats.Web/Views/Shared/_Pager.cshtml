@@ -1,0 +1,15 @@
+@model Ats.Web.Models.PagerModel
+@if (Model.TotalPages > 1)
+{
+    <nav aria-label="Pagination">
+        <ul class="pagination pagination-sm">
+            <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                <a class="page-link" asp-action="@Model.Action" asp-route-page="@(Model.Page - 1)" asp-all-route-data="Model.Query">Previous</a>
+            </li>
+            <li class="page-item disabled"><span class="page-link">Page @Model.Page of @Model.TotalPages</span></li>
+            <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" asp-action="@Model.Action" asp-route-page="@(Model.Page + 1)" asp-all-route-data="Model.Query">Next</a>
+            </li>
+        </ul>
+    </nav>
+}

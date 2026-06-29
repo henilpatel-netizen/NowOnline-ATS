@@ -48,3 +48,15 @@ Use tag helpers: `asp-for`, `asp-validation-for`, `asp-validation-summary="Model
 ## Security
 Antiforgery is validated globally (`AutoValidateAntiforgeryToken`); form tag helpers emit the token.
 The auth cookie is `HttpOnly` + `Secure`, so test over https.
+
+## Lists, pagination, and errors (Phase 4)
+- Paginated lists use `PagedResult<T>` (`Ats.Application/Common`) + the `_Pager.cshtml` partial
+  (`PagerModel` with `Page`, `TotalPages`, `Action`, and a `Query` dictionary of filters to preserve).
+  Jobs, Candidates, and the delivery log follow this with a GET search/filter form (page size 20). Build
+  the `PagerModel` in a `@{ }` block and pass it as `model`; Razor cannot parse an object initializer
+  inline in a tag-helper attribute.
+- Error pages: `app.UseStatusCodePagesWithReExecute("/Home/Status/{0}")` renders `HomeController.Status`
+  (`Views/Home/Status.cshtml`, neutral `_AuthLayout`) for 404/403; `UseExceptionHandler` renders
+  `Views/Shared/Error.cshtml` for 500. The neutral layout serves both back-office and careers visitors.
+- Polish: an inline-SVG favicon in all layouts; `_Alerts` are dismissible; `site.js` disables a form's
+  submit button on submit (back-office only).

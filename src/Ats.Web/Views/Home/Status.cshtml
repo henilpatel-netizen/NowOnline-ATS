@@ -1,0 +1,10 @@
+@{
+    Layout = "_AuthLayout";
+    var code = ViewData["Code"];
+    ViewData["Title"] = $"Error {code}";
+}
+<div class="text-center">
+    <div class="display-5 fw-semibold">@code</div>
+    <p class="text-muted">@ViewData["Message"]</p>
+    <a class="btn btn-outline-secondary btn-sm" href="/">Go home</a>
+</div>

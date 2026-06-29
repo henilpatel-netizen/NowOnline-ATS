@@ -25,7 +25,12 @@ public class JobsController : Controller
         _jobs = jobs; _departments = departments; _locations = locations; _pipelines = pipelines; _audit = audit;
     }
 
-    public async Task<IActionResult> Index() => View(await _jobs.ListAsync());
+    public async Task<IActionResult> Index(string? q, Ats.Domain.Enums.JobStatus? status, int page = 1)
+    {
+        if (page < 1) page = 1;
+        var results = await _jobs.SearchAsync(status, q, page, 20);
+        return View(new JobsIndexViewModel { Results = results, Q = q, Status = status });
+    }
 
     [HttpGet]
     public async Task<IActionResult> Create()
