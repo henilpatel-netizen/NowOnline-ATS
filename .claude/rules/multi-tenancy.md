@@ -16,4 +16,8 @@
   `TenantResolutionMiddleware` sets `HttpContext.Items["TenantId"]` and `HttpTenantContext` reads it
   after the `tenant_id` claim. This is the only place `Items["TenantId"]` is set. Unknown/suspended
   slug returns 404. Querying `Tenants` by slug is unfiltered (Tenant is not an `ITenantEntity`).
+- The CatsOne vacancy feed (`Ats.Api`) resolves the tenant from a hashed `Authorization: Token` feed
+  key: `FeedApiKeyFilter` matches `TenantSettings.FeedApiKeyHash` via `IgnoreQueryFilters` and sets
+  `HttpContext.Items["TenantId"]`. This is a documented filter-bypass spot (no tenant claim on feed
+  requests). Invalid/missing key returns 401.
 - Never expose a queryable that bypasses the filter outside those documented spots.

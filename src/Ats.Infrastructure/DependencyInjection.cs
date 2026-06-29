@@ -3,6 +3,7 @@ using Ats.Application.Applications;
 using Ats.Application.Candidates;
 using Ats.Application.Career;
 using Ats.Application.Departments;
+using Ats.Application.Integration;
 using Ats.Application.Jobs;
 using Ats.Application.Locations;
 using Ats.Application.Pipelines;
@@ -52,6 +53,7 @@ public static class DependencyInjection
         services.AddScoped<IFileStore, LocalFileStore>();
         services.AddScoped<ICareerRepository, CareerRepository>();
         services.AddScoped<ICareerService, CareerService>();
+        services.AddScoped<IVacancyFeedRepository, VacancyFeedRepository>();
 
         return services;
     }
