@@ -13,8 +13,14 @@ public sealed class HttpTenantContext : ITenantContext
     {
         get
         {
-            var claim = _accessor.HttpContext?.User?.FindFirst("tenant_id")?.Value;
-            return int.TryParse(claim, out var id) ? id : null;
+            var ctx = _accessor.HttpContext;
+            var claim = ctx?.User?.FindFirst("tenant_id")?.Value;
+            if (int.TryParse(claim, out var id)) return id;
+
+            // Set by TenantResolutionMiddleware for public career-site (slug) requests.
+            if (ctx is not null && ctx.Items.TryGetValue("TenantId", out var v) && v is int tid) return tid;
+
+            return null;
         }
     }
 

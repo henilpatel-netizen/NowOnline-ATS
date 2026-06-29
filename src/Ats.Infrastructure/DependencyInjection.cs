@@ -1,11 +1,13 @@
 using Ats.Application.Abstractions;
 using Ats.Application.Applications;
 using Ats.Application.Candidates;
+using Ats.Application.Career;
 using Ats.Application.Departments;
 using Ats.Application.Jobs;
 using Ats.Application.Locations;
 using Ats.Application.Pipelines;
 using Ats.Application.Tenancy;
+using Ats.Infrastructure.Files;
 using Ats.Infrastructure.Identity;
 using Ats.Infrastructure.Persistence;
 using Ats.Infrastructure.Persistence.Repositories;
@@ -47,6 +49,9 @@ public static class DependencyInjection
         services.AddScoped<ICandidateService, CandidateService>();
         services.AddScoped<IApplicationRepository, ApplicationRepository>();
         services.AddScoped<IApplicationService, ApplicationService>();
+        services.AddScoped<IFileStore, LocalFileStore>();
+        services.AddScoped<ICareerRepository, CareerRepository>();
+        services.AddScoped<ICareerService, CareerService>();
 
         return services;
     }

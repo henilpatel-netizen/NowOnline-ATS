@@ -12,4 +12,8 @@
   - `IdentityService.ValidateCredentialsAsync` (sign-in: no tenant claim yet; matches unique `(TenantId, Email)`).
   - `OnboardingStore.CreateTenantGraphAsync` (creates the tenant graph before a tenant claim exists;
     stamps `TenantId` explicitly on settings/template/stages/owner). These are documented exceptions.
+- Public career-site requests resolve the tenant from the `{slug}` route value:
+  `TenantResolutionMiddleware` sets `HttpContext.Items["TenantId"]` and `HttpTenantContext` reads it
+  after the `tenant_id` claim. This is the only place `Items["TenantId"]` is set. Unknown/suspended
+  slug returns 404. Querying `Tenants` by slug is unfiltered (Tenant is not an `ITenantEntity`).
 - Never expose a queryable that bypasses the filter outside those documented spots.

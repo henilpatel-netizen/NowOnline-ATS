@@ -12,6 +12,13 @@
     <dt class="col-sm-3">Applied</dt><dd class="col-sm-9">@Model.Application.AppliedAt.ToLocalTime().ToString("g")</dd>
 </dl>
 
+@if (Model.Application.Candidate?.ResumeFileKey is not null)
+{
+    <a class="btn btn-outline-secondary btn-sm mb-3" asp-controller="Resume" asp-action="Download" asp-route-applicationId="@Model.Application.Id">
+        <i class="bi bi-file-earmark-arrow-down"></i> Download resume
+    </a>
+}
+
 <h2 class="h5 mt-4">Stage history</h2>
 <ul class="list-group">
     @foreach (var e in Model.Events)

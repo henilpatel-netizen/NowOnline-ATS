@@ -15,4 +15,7 @@ public class Job : TenantEntity, ISoftDeletable
     public DateTimeOffset? PublishedAt { get; set; }
     public string ExternalRef { get; set; } = string.Empty;
     public bool IsDeleted { get; set; }
+
+    public Department? Department { get; set; }
+    public Location? Location { get; set; }
 }

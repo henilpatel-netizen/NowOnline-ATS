@@ -50,6 +50,8 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.UseMiddleware<Ats.Web.Middleware.TenantResolutionMiddleware>();
+
 app.MapStaticAssets();
 
 app.MapControllerRoute(
@@ -57,5 +59,6 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
+app.MapControllers();
 
 app.Run();

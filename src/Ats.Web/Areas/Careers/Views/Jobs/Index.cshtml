@@ -1,0 +1,25 @@
+@model List<Ats.Domain.Entities.Job>
+@{ var slug = ViewData["Slug"] as string; }
+<h1 class="h3 mb-4">Open positions</h1>
+@if (Model.Count == 0)
+{
+    <p class="text-muted">There are no open positions right now. Please check back later.</p>
+}
+<div class="row g-3">
+    @foreach (var j in Model)
+    {
+        <div class="col-md-6">
+            <div class="card h-100"><div class="card-body">
+                <h2 class="h5 mb-1">
+                    <a class="text-decoration-none" asp-controller="Jobs" asp-action="Detail"
+                       asp-route-slug="@slug" asp-route-externalRef="@j.ExternalRef">@j.Title</a>
+                </h2>
+                <div class="text-muted small mb-2">
+                    @j.EmploymentType
+                    @if (j.Location is not null) { <span>&middot; @(j.Location.City ?? j.Location.Name)</span> }
+                    @if (j.Department is not null) { <span>&middot; @j.Department.Name</span> }
+                </div>
+            </div></div>
+        </div>
+    }
+</div>

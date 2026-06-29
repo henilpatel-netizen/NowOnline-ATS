@@ -68,3 +68,4 @@ re-derive it from the ReferralTool repo.
 | UI | `.claude/skills/ui/SKILL.md` | Layouts, design tokens, shared components, how to add a page |
 | Entities | `.claude/skills/entities/SKILL.md` | Job/Candidate/JobApplication/Event, soft delete, ExternalRef |
 | Pipeline | `.claude/skills/pipeline/SKILL.md` | Templates, stages, board moves, history, concurrency |
+| Career site | `.claude/skills/career-site/SKILL.md` | Careers area, slug tenancy, IFileStore, public apply |

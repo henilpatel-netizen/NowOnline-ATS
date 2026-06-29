@@ -18,8 +18,9 @@ public class ApplicationsController : Controller
         if (app is null) return NotFound();
         var stages = await _service.GetStagesForJobAsync(app.JobId);
         var events = await _service.ListEventsAsync(id);
-        var name = (await _service.ListForJobAsync(app.JobId))
-            .FirstOrDefault(a => a.Id == id)?.Candidate?.FullName ?? "(unknown)";
+        var withCandidate = (await _service.ListForJobAsync(app.JobId)).FirstOrDefault(a => a.Id == id);
+        app.Candidate = withCandidate?.Candidate;
+        var name = app.Candidate?.FullName ?? "(unknown)";
         return View(new ApplicationDetailsViewModel
         {
             Application = app, CandidateName = name, Stages = stages, Events = events
