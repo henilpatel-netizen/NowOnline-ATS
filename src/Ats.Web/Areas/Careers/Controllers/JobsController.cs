@@ -20,6 +20,14 @@ public class JobsController : Controller
     };
     private const long MaxBytes = 5 * 1024 * 1024;
 
+    // Referral attribution: a candidate who arrives on any careers page with the tenant's code
+    // query parameter (e.g. ?ref=...) has that code captured into a per-tenant cookie, so it
+    // survives navigation from the all-jobs landing page through to the apply form. Without this,
+    // the general "all jobs" referral link loses attribution the moment the visitor opens a job.
+    private const string RefCookieName = "ats_ref";
+    private const int MaxRefLength = 36; // matches ReferralTool's code length limit
+    private static readonly TimeSpan RefWindow = TimeSpan.FromDays(30);
+
     private readonly ICareerService _career;
     private readonly IFileStore _files;
 
@@ -33,6 +41,7 @@ public class JobsController : Controller
     {
         ViewData["Title"] = "Open positions";
         ViewData["Slug"] = slug;
+        ResolveReferralCode(slug, await _career.GetCodeParameterNameAsync()); // capture ?ref on the landing page
         return View(await _career.GetPublishedJobsAsync());
     }
 
@@ -46,7 +55,7 @@ public class JobsController : Controller
         return View(new CareerJobDetailViewModel
         {
             Job = job, Slug = slug, CodeParamName = codeParam,
-            Code = Request.Query[codeParam].ToString()
+            Code = ResolveReferralCode(slug, codeParam) ?? string.Empty // query wins, else the captured cookie
         });
     }
 
@@ -55,6 +64,14 @@ public class JobsController : Controller
     {
         var job = await _career.GetPublishedJobAsync(externalRef);
         if (job is null) return NotFound();
+
+        // Fall back to the captured cookie when the posted form carries no code (e.g. the visitor
+        // arrived via the general all-jobs link and the code was never on the job page's URL).
+        if (string.IsNullOrWhiteSpace(form.SourceCode))
+        {
+            var captured = Request.Cookies[RefCookieName];
+            if (!string.IsNullOrWhiteSpace(captured)) form.SourceCode = captured;
+        }
 
         async Task<IActionResult> RedisplayAsync(string error)
         {
@@ -95,6 +112,33 @@ public class JobsController : Controller
         ViewData["Title"] = "Application received";
         ViewData["Slug"] = slug;
         return View();
+    }
+
+    // Captures the referral code from the query string (last-touch wins) into a per-tenant cookie
+    // and returns the effective code: the query value if present, otherwise the previously
+    // captured cookie. The value is treated as untrusted input (trimmed and length-capped) and is
+    // only ever forwarded as SourceCode; ReferralTool validates it and rejects unknown codes.
+    private string? ResolveReferralCode(string slug, string codeParam)
+    {
+        var fromQuery = Request.Query[codeParam].ToString();
+        if (!string.IsNullOrWhiteSpace(fromQuery))
+        {
+            var code = fromQuery.Trim();
+            if (code.Length > MaxRefLength) code = code[..MaxRefLength];
+            Response.Cookies.Append(RefCookieName, code, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = Request.IsHttps,
+                SameSite = SameSiteMode.Lax,
+                IsEssential = true,                 // functional, not subject to consent gating
+                Path = $"/careers/{slug}",          // scope to this tenant so codes don't bleed across slugs
+                Expires = DateTimeOffset.UtcNow.Add(RefWindow)
+            });
+            return code;
+        }
+
+        var fromCookie = Request.Cookies[RefCookieName];
+        return string.IsNullOrWhiteSpace(fromCookie) ? null : fromCookie;
     }
 
     private static string? ValidateResume(IFormFile? resume)

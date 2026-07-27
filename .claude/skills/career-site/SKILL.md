@@ -31,6 +31,17 @@ duplicate, no stage change) or creates a new application at the first stage with
 `ApplicationEvent` (`MovedByUserId` null for public apply). The controller validates the resume
 (.pdf/.doc/.docx, content-type, 5 MB) before storing; `IFormFile` never reaches the Application layer.
 
+## Referral attribution (the `?ref=` capture)
+`JobsController.ResolveReferralCode(slug, codeParam)` captures the tenant's code query parameter (name
+from `ICareerService.GetCodeParameterNameAsync`, e.g. `ref`) on any careers page into a per-tenant
+cookie (`ats_ref`, `Path=/careers/{slug}`, `HttpOnly`, `Secure` on HTTPS, `SameSite=Lax`, essential,
+30-day, last-touch, trimmed and capped to 36 chars). Index captures only; Detail captures and resolves
+`Code` (query wins, else cookie); Apply falls back to the cookie when `form.SourceCode` is empty. This
+makes the ReferralTool general "all jobs" link attribute: the code survives navigation from the landing
+page to the apply form even though job links don't carry `?ref=`. The cookie value is untrusted input,
+only ever forwarded as `SourceCode`; ReferralTool validates and rejects unknown codes. Future upgrade:
+a dedicated redirect capture route (`/careers/{slug}/r/{code}`) if click analytics are needed.
+
 ## Security
 Only Published jobs are exposed (404 otherwise); resume validated + stored outside web root; antiforgery
 on the apply POST (global filter); tenant strictly from the slug with fail-closed filtering.
