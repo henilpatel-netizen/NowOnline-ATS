@@ -1,0 +1,69 @@
+@model Ats.Web.Models.JobsIndexViewModel
+@using Ats.Domain.Enums
+@{ ViewData["Title"] = "Jobs"; }
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <a class="btn btn-primary" asp-action="Create"><i class="bi bi-plus-lg"></i> New job</a>
+    <form asp-action="Index" method="get" class="d-flex gap-2">
+        <input name="q" value="@Model.Q" class="form-control form-control-sm" placeholder="Search title or ref" style="width:14rem" />
+        <select name="status" class="form-select form-select-sm" style="width:auto">
+            <option value="">All statuses</option>
+            @foreach (var st in Enum.GetValues<JobStatus>())
+            {
+                <option value="@st" selected="@(Model.Status == st)">@st</option>
+            }
+        </select>
+        <button class="btn btn-outline-secondary btn-sm" type="submit">Filter</button>
+    </form>
+</div>
+<table class="table table-hover bg-white">
+    <thead><tr><th>Ref</th><th>Title</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
+    <tbody>
+    @foreach (var j in Model.Results.Items)
+    {
+        <tr>
+            <td><code>@j.ExternalRef</code></td>
+            <td>@j.Title</td>
+            <td>
+                @{
+                    var badge = j.Status switch {
+                        JobStatus.Published => "bg-success",
+                        JobStatus.Closed => "bg-secondary",
+                        _ => "bg-warning text-dark"
+                    };
+                }
+                <span class="badge @badge">@j.Status</span>
+            </td>
+            <td class="text-end">
+                <a class="btn btn-sm btn-outline-primary" asp-controller="Board" asp-action="Index" asp-route-jobId="@j.Id">Board</a>
+                <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@j.Id">Edit</a>
+                @if (j.Status != JobStatus.Published)
+                {
+                    <form asp-action="Publish" asp-route-id="@j.Id" method="post" class="d-inline"
+                          onsubmit="return confirm('Publish this job? It becomes visible on the public career site.');">
+                        <button class="btn btn-sm btn-outline-success" type="submit">Publish</button>
+                    </form>
+                }
+                @if (j.Status == JobStatus.Published)
+                {
+                    <form asp-action="Close" asp-route-id="@j.Id" method="post" class="d-inline"
+                          onsubmit="return confirm('Close this job? It is removed from the public career site.');">
+                        <button class="btn btn-sm btn-outline-secondary" type="submit">Close</button>
+                    </form>
+                }
+                <form asp-action="Delete" asp-route-id="@j.Id" method="post" class="d-inline"
+                      onsubmit="return confirm('Delete this job?');">
+                    <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                </form>
+            </td>
+        </tr>
+    }
+    @if (Model.Results.Items.Count == 0) { <tr><td colspan="4" class="text-muted">No jobs match.</td></tr> }
+    </tbody>
+</table>
+@{
+    var jq = new Dictionary<string, string>();
+    if (!string.IsNullOrEmpty(Model.Q)) jq["q"] = Model.Q;
+    if (Model.Status is not null) jq["status"] = Model.Status.ToString()!;
+    var pager = new Ats.Web.Models.PagerModel { Page = Model.Results.Page, TotalPages = Model.Results.TotalPages, Action = "Index", Query = jq };
+}
+<partial name="_Pager" model="pager" />

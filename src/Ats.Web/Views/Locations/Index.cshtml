@@ -1,0 +1,23 @@
+@model List<Ats.Domain.Entities.Location>
+@{ ViewData["Title"] = "Locations"; }
+<div class="mb-3"><a class="btn btn-primary" asp-action="Create"><i class="bi bi-plus-lg"></i> New location</a></div>
+<table class="table table-hover bg-white">
+    <thead><tr><th>Name</th><th>City</th><th class="text-end">Actions</th></tr></thead>
+    <tbody>
+    @foreach (var l in Model)
+    {
+        <tr>
+            <td>@l.Name</td>
+            <td>@l.City</td>
+            <td class="text-end">
+                <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@l.Id">Edit</a>
+                <form asp-action="Delete" asp-route-id="@l.Id" method="post" class="d-inline"
+                      onsubmit="return confirm('Delete this location?');">
+                    <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                </form>
+            </td>
+        </tr>
+    }
+    @if (Model.Count == 0) { <tr><td colspan="3" class="text-muted">No locations yet.</td></tr> }
+    </tbody>
+</table>

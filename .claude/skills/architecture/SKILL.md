@@ -12,7 +12,8 @@ description: Ats solution layout, strict layering, DI registration, and where ea
   `IIdentityService`, onboarding) + validators. References Domain.
 - `Ats.Infrastructure` — `AtsDbContext`, EF configurations, `TenantSaveChangesInterceptor`,
   `HttpTenantContext`, `IdentityService`, `OnboardingStore`, `DependencyInjection`. References Application.
-- `Ats.Web` — MVC back-office; cookie auth; controllers are thin.
+- `Ats.Web` — MVC back-office at the root (`/Jobs`, `/Candidates`, `/Board`, `/Integration`, ...); cookie
+  auth; controllers are thin. The public career site is the `Careers` area at `/careers/{slug}`.
 - `Ats.Api` — REST API (feed + integration; built out in Phase 3).
 - `Ats.Worker` — background host (outbox delivery; built out in Phase 3).
 
@@ -30,6 +31,7 @@ Infrastructure wiring is centralised in `Ats.Infrastructure/DependencyInjection.
   `Ats.Infrastructure/Persistence/Configurations`).
 - New use case -> an Application service behind an interface; impl/store in Infrastructure.
 - New cross-cutting capability -> abstraction in `Ats.Application/Abstractions`, impl in Infrastructure.
+- New back-office page or view -> follow `.claude/skills/ui/SKILL.md` (layouts, tokens, components).
 
 ## Conventions
 - Cookie auth for back-office; JWT for Api (Phase 3+). Auth always behind `IIdentityService`.

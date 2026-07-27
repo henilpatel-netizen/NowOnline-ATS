@@ -1,0 +1,23 @@
+@model Ats.Web.ViewComponents.SidebarNavModel
+<aside class="ats-sidebar">
+    <div class="ats-brand"><i class="bi bi-briefcase-fill"></i> ATS</div>
+    <nav class="ats-nav">
+        @foreach (var item in Model.Items)
+        {
+            var active = string.Equals(item.Controller, Model.CurrentController, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+            <a class="@active" asp-controller="@item.Controller" asp-action="@item.Action">
+                <i class="bi @item.Icon"></i> @item.Text
+            </a>
+        }
+    </nav>
+    <div class="ats-sidebar-footer">
+        <div><i class="bi bi-person-circle"></i> @Model.UserName</div>
+        @if (!string.IsNullOrEmpty(Model.Role))
+        {
+            <div class="text-uppercase" style="font-size:.7rem; letter-spacing:.04em;">@Model.Role</div>
+        }
+        <form asp-controller="Account" asp-action="Logout" method="post" class="mt-2">
+            <button type="submit" class="btn btn-sm btn-outline-light w-100">Sign out</button>
+        </form>
+    </div>
+</aside>

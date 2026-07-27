@@ -1,0 +1,102 @@
+@model Ats.Web.Models.PipelineEditViewModel
+@using Ats.Domain.Entities
+@{ ViewData["Title"] = Model.Id is null ? "New pipeline" : "Edit pipeline"; }
+<form asp-action="Save" method="post" class="col-lg-9">
+    <div asp-validation-summary="All" class="text-danger small mb-2"></div>
+    <input type="hidden" asp-for="Id" />
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label">Pipeline name</label>
+        <input asp-for="Name" class="form-control" />
+    </div>
+
+    <h2 class="h5">Stages</h2>
+    <table class="table align-middle bg-white" id="stages">
+        <thead><tr><th style="width:5rem">Order</th><th>Name</th><th>Terminal</th><th>Outcome</th><th>Status override</th><th></th></tr></thead>
+        <tbody>
+        @for (var i = 0; i < Model.Stages.Count; i++)
+        {
+            <tr>
+                <td>
+                    <input type="hidden" asp-for="Stages[i].Id" />
+                    <input type="hidden" asp-for="Stages[i].Delete" class="delete-flag" />
+                    <input asp-for="Stages[i].Order" class="form-control form-control-sm" type="number" />
+                </td>
+                <td><input asp-for="Stages[i].Name" class="form-control form-control-sm" /></td>
+                <td class="text-center"><input asp-for="Stages[i].IsTerminal" class="form-check-input" type="checkbox" /></td>
+                <td>
+                    <select asp-for="Stages[i].TerminalOutcome" asp-items="Html.GetEnumSelectList<StageOutcome>()" class="form-select form-select-sm"></select>
+                </td>
+                <td><input asp-for="Stages[i].ReferralStatusOverride" class="form-control form-control-sm" placeholder="(defaults to name)" /></td>
+                <td><button type="button" class="btn btn-sm btn-outline-danger remove-row">Remove</button></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+    <button type="button" class="btn btn-outline-secondary btn-sm mb-3" id="add-stage"><i class="bi bi-plus-lg"></i> Add stage</button>
+    <div>
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a class="btn btn-link" asp-action="Index">Cancel</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const tbody = document.querySelector('#stages tbody');
+            // Capture a blank row template from the first rendered row (Create always seeds one row,
+            // Edit always has at least one), so "Add stage" works even after all rows are removed.
+            const firstRow = tbody.querySelector('tr');
+            const templateHtml = firstRow ? firstRow.outerHTML : null;
+
+            function reindex() {
+                tbody.querySelectorAll('tr').forEach((tr, i) => {
+                    tr.querySelectorAll('input,select').forEach(el => {
+                        if (el.name) el.name = el.name.replace(/Stages\[\d+\]/, 'Stages[' + i + ']');
+                        if (el.id) el.id = el.id.replace(/Stages_\d+__/, 'Stages_' + i + '__');
+                    });
+                });
+            }
+            function nextOrder() {
+                let max = 0;
+                tbody.querySelectorAll('tr').forEach(tr => {
+                    if (tr.style.display === 'none') return; // skip rows flagged for delete
+                    const o = parseInt((tr.querySelector('input[name$=".Order"]') || {}).value || '0', 10);
+                    if (!isNaN(o) && o > max) max = o;
+                });
+                return max + 1;
+            }
+            document.querySelector('#add-stage').addEventListener('click', function () {
+                if (!templateHtml) return;
+                const holder = document.createElement('tbody');
+                holder.innerHTML = templateHtml.trim();
+                const row = holder.querySelector('tr');
+                row.style.display = '';
+                row.querySelectorAll('input').forEach(el => {
+                    if (el.type === 'checkbox') el.checked = false;
+                    else if (!el.classList.contains('delete-flag')) el.value = '';
+                });
+                const idHidden = row.querySelector('input[name$=".Id"]');
+                if (idHidden) idHidden.value = '';
+                const del = row.querySelector('.delete-flag');
+                if (del) del.value = 'false';
+                const orderInput = row.querySelector('input[name$=".Order"]');
+                if (orderInput) orderInput.value = nextOrder();
+                tbody.appendChild(row);
+                reindex();
+            });
+            tbody.addEventListener('click', function (e) {
+                if (!e.target.classList.contains('remove-row')) return;
+                const tr = e.target.closest('tr');
+                const idHidden = tr.querySelector('input[name$=".Id"]');
+                if (idHidden && idHidden.value) {
+                    tr.querySelector('.delete-flag').value = 'true';
+                    tr.style.display = 'none';
+                } else {
+                    tr.remove();
+                    reindex();
+                }
+            });
+        })();
+    </script>
+}

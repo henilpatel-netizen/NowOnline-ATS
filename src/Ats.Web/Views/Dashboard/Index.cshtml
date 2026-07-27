@@ -1,5 +1,45 @@
-<h1>Dashboard</h1>
-<p>Welcome. Jobs, pipelines, and candidates arrive in Phase 1.</p>
-<form asp-controller="Account" asp-action="Logout" method="post">
-    <button type="submit">Sign out</button>
-</form>
+@model Ats.Application.Dashboard.DashboardSummary
+@{ ViewData["Title"] = "Dashboard"; }
+<div class="row g-3 mb-4">
+    <div class="col-sm-4"><div class="card h-100"><div class="card-body">
+        <div class="text-muted small">Published jobs</div><div class="fs-3 fw-semibold">@Model.PublishedJobs</div>
+    </div></div></div>
+    <div class="col-sm-4"><div class="card h-100"><div class="card-body">
+        <div class="text-muted small">Candidates</div><div class="fs-3 fw-semibold">@Model.TotalCandidates</div>
+    </div></div></div>
+    <div class="col-sm-4"><div class="card h-100"><div class="card-body">
+        <div class="text-muted small">Active applications</div><div class="fs-3 fw-semibold">@Model.ActiveApplications</div>
+    </div></div></div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card h-100"><div class="card-body">
+            <h2 class="h6">Active applications by stage</h2>
+            <table class="table table-sm mb-0">
+                <tbody>
+                @foreach (var s in Model.ByStage)
+                {
+                    <tr><td>@s.Stage</td><td class="text-end">@s.Count</td></tr>
+                }
+                @if (Model.ByStage.Count == 0) { <tr><td class="text-muted">No active applications.</td></tr> }
+                </tbody>
+            </table>
+        </div></div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100"><div class="card-body">
+            <h2 class="h6">Recent applications</h2>
+            <ul class="list-unstyled mb-0">
+            @foreach (var r in Model.Recent)
+            {
+                <li class="d-flex justify-content-between border-bottom py-1">
+                    <span>@r.Candidate <span class="text-muted small">- @r.Job</span></span>
+                    <span class="text-muted small">@r.AppliedAt.ToLocalTime().ToString("g")</span>
+                </li>
+            }
+            @if (Model.Recent.Count == 0) { <li class="text-muted">No applications yet.</li> }
+            </ul>
+        </div></div>
+    </div>
+</div>

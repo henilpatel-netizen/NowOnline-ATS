@@ -1,0 +1,14 @@
+@model Ats.Web.Models.DepartmentViewModel
+@{ ViewData["Title"] = Model.Id == 0 ? "New department" : "Edit department"; }
+<form asp-action="@(Model.Id == 0 ? "Create" : "Edit")" method="post" class="col-md-6">
+    <div asp-validation-summary="All" class="text-danger small mb-2"></div>
+    <input type="hidden" asp-for="Id" />
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label">Name</label>
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger small"></span>
+    </div>
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a class="btn btn-link" asp-action="Index">Cancel</a>
+</form>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

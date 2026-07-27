@@ -1,0 +1,24 @@
+using Ats.Application.Integration;
+using Ats.Domain.Entities;
+using Ats.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
+
+namespace Ats.Infrastructure.Persistence.Repositories;
+
+public sealed class VacancyFeedRepository : IVacancyFeedRepository
+{
+    private readonly AtsDbContext _db;
+    public VacancyFeedRepository(AtsDbContext db) => _db = db;
+
+    public async Task<(List<Job> Jobs, int Total)> GetPageAsync(int page, int perPage, CancellationToken ct = default)
+    {
+        // Draft is never exposed; the global filter already excludes soft-deleted and scopes by tenant.
+        var query = _db.Jobs.Include(j => j.Location)
+            .Where(j => j.Status != JobStatus.Draft)
+            .OrderBy(j => j.Id);
+
+        var total = await query.CountAsync(ct);
+        var jobs = await query.Skip((page - 1) * perPage).Take(perPage).ToListAsync(ct);
+        return (jobs, total);
+    }
+}

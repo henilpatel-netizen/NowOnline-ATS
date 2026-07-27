@@ -1,7 +1,22 @@
 using Ats.Application.Abstractions;
+using Ats.Application.Applications;
+using Ats.Application.Auditing;
+using Ats.Application.Candidates;
+using Ats.Application.Dashboard;
+using Ats.Application.Career;
+using Ats.Application.Departments;
+using Ats.Application.Integration;
+using Ats.Application.Jobs;
+using Ats.Application.Locations;
+using Ats.Application.Pipelines;
 using Ats.Application.Tenancy;
+using Ats.Infrastructure.Auditing;
+using Ats.Infrastructure.Dashboard;
+using Ats.Infrastructure.Files;
 using Ats.Infrastructure.Identity;
+using Ats.Infrastructure.Integration;
 using Ats.Infrastructure.Persistence;
+using Ats.Infrastructure.Persistence.Repositories;
 using Ats.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -21,12 +36,36 @@ public static class DependencyInjection
 
         services.AddDbContext<AtsDbContext>((sp, options) =>
         {
-            options.UseSqlServer(config.GetConnectionString("AtsDb"));
+            options.UseSqlServer(config.GetConnectionString("DefaultConnection"));
             options.AddInterceptors(sp.GetRequiredService<TenantSaveChangesInterceptor>());
         });
 
         services.AddScoped<IOnboardingStore, OnboardingStore>();
         services.AddScoped<ITenantOnboardingService, TenantOnboardingService>();
+
+        services.AddScoped<IDepartmentRepository, DepartmentRepository>();
+        services.AddScoped<IDepartmentService, DepartmentService>();
+        services.AddScoped<ILocationRepository, LocationRepository>();
+        services.AddScoped<ILocationService, LocationService>();
+        services.AddScoped<IPipelineTemplateRepository, PipelineTemplateRepository>();
+        services.AddScoped<IPipelineTemplateService, PipelineTemplateService>();
+        services.AddScoped<IJobRepository, JobRepository>();
+        services.AddScoped<IJobService, JobService>();
+        services.AddScoped<ICandidateRepository, CandidateRepository>();
+        services.AddScoped<ICandidateService, CandidateService>();
+        services.AddScoped<IApplicationRepository, ApplicationRepository>();
+        services.AddScoped<IApplicationService, ApplicationService>();
+        services.AddScoped<IFileStore, LocalFileStore>();
+        services.AddScoped<ICareerRepository, CareerRepository>();
+        services.AddScoped<ICareerService, CareerService>();
+        services.AddScoped<IVacancyFeedRepository, VacancyFeedRepository>();
+        services.AddScoped<IOutboxEnqueuer, OutboxEnqueuer>();
+        services.AddScoped<IIntegrationSettingsService, IntegrationSettingsService>();
+        services.AddScoped<IDeliveryLogService, DeliveryLogService>();
+        services.AddScoped<IAuditLogger, AuditLogger>();
+        services.AddScoped<IAuditQuery, AuditQuery>();
+        services.AddScoped<IDashboardService, DashboardService>();
+        services.AddHttpClient<IReferralToolClient, ReferralToolClient>();
 
         return services;
     }

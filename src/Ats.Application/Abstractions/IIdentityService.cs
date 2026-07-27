@@ -1,6 +1,6 @@
 namespace Ats.Application.Abstractions;
 
-public record SignInResult(bool Succeeded, int? UserId, int? TenantId, string? Role, string? Error);
+public record SignInResult(bool Succeeded, int? UserId, int? TenantId, string? Role, string? DisplayName, string? Error);
 
 public interface IIdentityService
 {

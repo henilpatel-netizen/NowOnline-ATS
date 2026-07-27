@@ -1,0 +1,40 @@
+@model Ats.Web.Models.BoardViewModel
+<div id="board-container">
+    @if (!string.IsNullOrEmpty(Model.Error))
+    {
+        <div class="alert alert-warning" role="alert">@Model.Error</div>
+    }
+    <div class="d-flex gap-3 overflow-auto pb-2">
+        @foreach (var col in Model.Columns)
+        {
+            <div class="board-col card" style="min-width:240px; max-width:260px;" data-stage-id="@col.Stage.Id">
+                <div class="card-header py-2 d-flex justify-content-between">
+                    <span class="fw-semibold">@col.Stage.Name</span>
+                    <span class="badge bg-secondary">@col.Cards.Count</span>
+                </div>
+                <div class="card-body p-2 board-cards" style="min-height:60px;">
+                    @foreach (var card in col.Cards)
+                    {
+                        <form class="board-card card mb-2 p-2"
+                              asp-controller="Board" asp-action="Move" method="post"
+                              hx-post="@Url.Action("Move", "Board")" hx-target="#board-container" hx-swap="outerHTML">
+                            <input type="hidden" name="jobId" value="@Model.Job.Id" />
+                            <input type="hidden" name="applicationId" value="@card.ApplicationId" />
+                            <input type="hidden" name="rowVersion" value="@card.RowVersion" />
+                            <input type="hidden" name="toStageId" value="@col.Stage.Id" class="to-stage" />
+                            <div class="d-flex justify-content-between align-items-start">
+                                <a class="text-decoration-none" asp-controller="Applications" asp-action="Details" asp-route-id="@card.ApplicationId">@card.CandidateName</a>
+                            </div>
+                            <select class="form-select form-select-sm mt-1 move-select" aria-label="Move to stage">
+                                @foreach (var s in Model.Columns)
+                                {
+                                    <option value="@s.Stage.Id" selected="@(s.Stage.Id == col.Stage.Id)">@s.Stage.Name</option>
+                                }
+                            </select>
+                        </form>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>

@@ -16,7 +16,7 @@ Solution: `Ats.slnx` (modern XML solution format, .NET 10 default; projects unde
 | `Ats.Domain` | Entities, enums, domain rules. No framework/EF dependencies. |
 | `Ats.Application` | Use-case services, abstractions (`ITenantContext`, `IIdentityService`), validators. |
 | `Ats.Infrastructure` | EF Core `AtsDbContext`, tenancy filters + interceptor, Identity impl, DI. |
-| `Ats.Web` | MVC back-office (`/manage`) + public career site (Areas, later phases). |
+| `Ats.Web` | MVC back-office (root: `/Jobs`, `/Candidates`, `/Board`, ...) + public career site (`Careers` area, `/careers/{slug}`). |
 | `Ats.Api` | REST API: vacancy feed + integration endpoints. |
 | `Ats.Worker` | Background host: outbox delivery, notifications. |
 
@@ -25,6 +25,10 @@ Solution: `Ats.slnx` (modern XML solution format, .NET 10 default; projects unde
 dotnet build
 dotnet run --project src/Ats.Web
 ```
+
+## Front-end
+Server-rendered MVC + Bootstrap 5. Client libraries are managed by LibMan (`libman.json`); run
+`libman restore` to populate `src/Ats.Web/wwwroot/lib`. UI conventions: `.claude/skills/ui/SKILL.md`.
 
 ## Architecture (strict layering)
 Controllers -> Application services -> repositories -> EF Core (Infrastructure).
@@ -61,3 +65,9 @@ re-derive it from the ReferralTool repo.
 |--------|-----------|--------|
 | Architecture | `.claude/skills/architecture/SKILL.md` | Solution layout, layering, DI, where code goes |
 | Multi-tenancy | `.claude/skills/multitenancy/SKILL.md` | `TenantEntity`, query filter, interceptor, onboarding stamping |
+| UI | `.claude/skills/ui/SKILL.md` | Layouts, design tokens, shared components, how to add a page |
+| Entities | `.claude/skills/entities/SKILL.md` | Job/Candidate/JobApplication/Event, soft delete, ExternalRef |
+| Pipeline | `.claude/skills/pipeline/SKILL.md` | Templates, stages, board moves, history, concurrency |
+| Career site | `.claude/skills/career-site/SKILL.md` | Careers area, slug tenancy, IFileStore, public apply |
+| Integration | `.claude/skills/integration/SKILL.md` | Feed, outbox, worker, ReferralTool client, settings |
+| Audit | `.claude/skills/audit/SKILL.md` | Audit log, dashboard metrics, integration test tools |

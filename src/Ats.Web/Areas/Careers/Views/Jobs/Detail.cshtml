@@ -1,0 +1,59 @@
+@model Ats.Web.Areas.Careers.Models.CareerJobDetailViewModel
+<div class="mb-3">
+    <a class="btn btn-outline-secondary btn-sm" asp-controller="Jobs" asp-action="Index" asp-route-slug="@Model.Slug">
+        <i class="bi bi-arrow-left"></i> All positions
+    </a>
+</div>
+<h1 class="h3">@Model.Job.Title</h1>
+<div class="text-muted mb-3">
+    @Model.Job.EmploymentType
+    @if (Model.Job.Location is not null) { <span>&middot; @(Model.Job.Location.City ?? Model.Job.Location.Name)</span> }
+    @if (Model.Job.Department is not null) { <span>&middot; @Model.Job.Department.Name</span> }
+</div>
+@if (!string.IsNullOrWhiteSpace(Model.Job.Description))
+{
+    <div class="mb-4" style="white-space:pre-wrap;">@Model.Job.Description</div>
+}
+
+<div class="card"><div class="card-body">
+    <h2 class="h5 mb-3">Apply for this role</h2>
+    @if (!string.IsNullOrEmpty(Model.Error))
+    {
+        <div class="alert alert-danger">@Model.Error</div>
+    }
+    <form asp-controller="Jobs" asp-action="Apply" asp-route-slug="@Model.Slug"
+          asp-route-externalRef="@Model.Job.ExternalRef" method="post" enctype="multipart/form-data" class="col-lg-8">
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
+        <input type="hidden" asp-for="Code" name="SourceCode" />
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label asp-for="FirstName" class="form-label">First name</label>
+                <input asp-for="FirstName" class="form-control" required />
+                <span asp-validation-for="FirstName" class="text-danger small"></span>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label asp-for="LastName" class="form-label">Last name</label>
+                <input asp-for="LastName" class="form-control" required />
+                <span asp-validation-for="LastName" class="text-danger small"></span>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label asp-for="Email" class="form-label">Email</label>
+                <input asp-for="Email" type="email" class="form-control" required />
+                <span asp-validation-for="Email" class="text-danger small"></span>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label asp-for="Phone" class="form-label">Phone</label>
+                <input asp-for="Phone" class="form-control" />
+                <span asp-validation-for="Phone" class="text-danger small"></span>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Resume (PDF or Word, max 5 MB)</label>
+            <input name="resume" type="file" accept=".pdf,.doc,.docx" class="form-control" required />
+        </div>
+        <button type="submit" class="btn btn-primary">Submit application</button>
+    </form>
+    <p class="text-muted small mt-2 mb-0">A resume in PDF or Word format is required.</p>
+</div></div>

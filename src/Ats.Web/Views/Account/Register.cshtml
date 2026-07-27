@@ -1,11 +1,36 @@
 @model Ats.Web.Models.RegisterViewModel
-<h1>Create your company account</h1>
+@{ ViewData["Title"] = "Create account"; }
+<h1 class="h4 mb-3 text-center">Create your company account</h1>
 <form asp-action="Register" method="post">
-    <div asp-validation-summary="All"></div>
-    <p>Company name <input asp-for="CompanyName" /></p>
-    <p>URL slug <input asp-for="Slug" /> .ourats.com/careers</p>
-    <p>Your name <input asp-for="OwnerName" /></p>
-    <p>Work email <input asp-for="OwnerEmail" /></p>
-    <p>Password <input asp-for="Password" /></p>
-    <button type="submit">Create account</button>
+    <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
+    <div class="mb-3">
+        <label asp-for="CompanyName" class="form-label">Company name</label>
+        <input asp-for="CompanyName" class="form-control" />
+        <span asp-validation-for="CompanyName" class="text-danger small"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Slug" class="form-label">URL slug</label>
+        <div class="input-group">
+            <span class="input-group-text">ourats.com/careers/</span>
+            <input asp-for="Slug" class="form-control" />
+        </div>
+        <span asp-validation-for="Slug" class="text-danger small"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="OwnerName" class="form-label">Your name</label>
+        <input asp-for="OwnerName" class="form-control" />
+        <span asp-validation-for="OwnerName" class="text-danger small"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="OwnerEmail" class="form-label">Work email</label>
+        <input asp-for="OwnerEmail" class="form-control" autocomplete="email" />
+        <span asp-validation-for="OwnerEmail" class="text-danger small"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Password" class="form-label">Password</label>
+        <input asp-for="Password" class="form-control" autocomplete="new-password" />
+        <span asp-validation-for="Password" class="text-danger small"></span>
+    </div>
+    <button type="submit" class="btn btn-primary w-100">Create account</button>
 </form>
+<p class="text-center mt-3 mb-0 small">Already have an account? <a asp-action="Login">Sign in</a></p>

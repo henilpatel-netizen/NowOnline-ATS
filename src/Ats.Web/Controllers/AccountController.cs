@@ -34,7 +34,7 @@ public class AccountController : Controller
             return View(vm);
         }
 
-        await SignInAsync(result.OwnerUserId, result.TenantId, "Owner");
+        await SignInAsync(result.OwnerUserId, result.TenantId, "Owner", vm.OwnerName.Trim());
         return RedirectToAction("Index", "Dashboard");
     }
 
@@ -52,7 +52,7 @@ public class AccountController : Controller
             return View(vm);
         }
 
-        await SignInAsync(result.UserId!.Value, result.TenantId!.Value, result.Role!);
+        await SignInAsync(result.UserId!.Value, result.TenantId!.Value, result.Role!, result.DisplayName ?? "");
         return RedirectToAction("Index", "Dashboard");
     }
 
@@ -63,11 +63,12 @@ public class AccountController : Controller
         return RedirectToAction("Login");
     }
 
-    private async Task SignInAsync(int userId, int tenantId, string role)
+    private async Task SignInAsync(int userId, int tenantId, string role, string displayName)
     {
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, userId.ToString()),
+            new(ClaimTypes.Name, displayName),
             new(ClaimTypes.Role, role),
             new("tenant_id", tenantId.ToString())
         };

@@ -14,6 +14,8 @@ public sealed class CurrentUser : ICurrentUser
         int.TryParse(_accessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id)
             ? id : null;
 
+    public string? Name => _accessor.HttpContext?.User?.FindFirst(ClaimTypes.Name)?.Value;
+
     public string? Role => _accessor.HttpContext?.User?.FindFirst(ClaimTypes.Role)?.Value;
 
     public bool IsAuthenticated => _accessor.HttpContext?.User?.Identity?.IsAuthenticated ?? false;

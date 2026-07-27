@@ -1,0 +1,83 @@
+@model Ats.Web.Models.BoardViewModel
+@{ ViewData["Title"] = $"Board: {Model.Job.Title}"; }
+
+<div class="mb-3 d-flex gap-2">
+    <a class="btn btn-outline-secondary btn-sm" asp-controller="Jobs" asp-action="Index"><i class="bi bi-arrow-left"></i> Jobs</a>
+    <button class="btn btn-primary btn-sm" data-bs-toggle="collapse" data-bs-target="#add-candidate"><i class="bi bi-plus-lg"></i> Add candidate</button>
+</div>
+
+<div class="collapse mb-3" id="add-candidate">
+    <form asp-action="AddCandidate" method="post" class="card card-body">
+        <input type="hidden" name="JobId" value="@Model.Job.Id" />
+        <div class="row g-2 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label small mb-1">Existing candidate</label>
+                <select name="CandidateId" id="candidate-picker" class="form-select form-select-sm">
+                    <option value="">-- New candidate --</option>
+                    @foreach (var opt in Model.CandidateOptions)
+                    {
+                        <option value="@opt.Value">@opt.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2"><button type="submit" class="btn btn-primary btn-sm w-100">Add to job</button></div>
+        </div>
+        <div class="row g-2 mt-1" id="new-candidate-fields">
+            <div class="col-md-3"><input name="FirstName" class="form-control form-control-sm new-required" placeholder="First name" required /></div>
+            <div class="col-md-3"><input name="LastName" class="form-control form-control-sm new-required" placeholder="Last name" required /></div>
+            <div class="col-md-3"><input name="Email" type="email" class="form-control form-control-sm new-required" placeholder="Email" required /></div>
+            <div class="col-md-3"><input name="Phone" class="form-control form-control-sm" placeholder="Phone (optional)" /></div>
+        </div>
+    </form>
+</div>
+
+<partial name="_Board" model="Model" />
+
+@section Scripts {
+    <script src="~/lib/sortablejs/Sortable.min.js"></script>
+    <script src="~/lib/htmx/dist/htmx.min.js"></script>
+    <script>
+        function initBoard() {
+            document.querySelectorAll('.board-cards').forEach(function (el) {
+                Sortable.create(el, {
+                    group: 'stages',
+                    animation: 120,
+                    onEnd: function (evt) {
+                        const card = evt.item;                       // the moved .board-card form
+                        const destCol = evt.to.closest('.board-col');
+                        const stageId = destCol.getAttribute('data-stage-id');
+                        card.querySelector('.to-stage').value = stageId;
+                        htmx.trigger(card, 'submit');                // posts the move, swaps #board-container
+                    }
+                });
+            });
+            // fallback: the per-card select submits the same form
+            document.querySelectorAll('.move-select').forEach(function (sel) {
+                sel.addEventListener('change', function () {
+                    const form = sel.closest('form');
+                    form.querySelector('.to-stage').value = sel.value;
+                    htmx.trigger(form, 'submit');
+                });
+            });
+        }
+        initBoard();
+        document.body.addEventListener('htmx:afterSwap', function (e) {
+            if (e.target.id === 'board-container') initBoard();
+        });
+
+        // Candidate picker: hide the new-candidate fields when an existing candidate is selected.
+        (function () {
+            const picker = document.getElementById('candidate-picker');
+            const fields = document.getElementById('new-candidate-fields');
+            if (!picker || !fields) return;
+            picker.addEventListener('change', function () {
+                const existing = picker.value !== '';
+                fields.style.display = existing ? 'none' : '';
+                fields.querySelectorAll('.new-required').forEach(function (i) {
+                    i.required = !existing;
+                    if (existing) i.value = '';
+                });
+            });
+        })();
+    </script>
+}
