@@ -65,4 +65,13 @@ The frozen ReferralTool contract is `docs/integration/referraltool-contract.md`.
 N min ago" line on the dashboard and integrations screens. It is written by the feed endpoint
 (`Ats.Api` `FeedController`) after `FeedApiKeyFilter` resolves the tenant, debounced to at most once a
 minute, and wrapped so a telemetry-write failure never fails the feed response. It is display-only
-and not part of the frozen contract. (Wiring lands in a later redesign phase; the column exists now.)
+and not part of the frozen contract. It is wired: `FeedController.Search` (`Ats.Api`) calls
+`IVacancyFeedRepository.TouchFeedPulledAsync` after building the response, debounced by
+`FeedPullThrottle` (at most one write per minute) and wrapped in try/catch so a telemetry-write
+failure never fails the feed. It surfaces on the dashboard card and the Integrations health banner.
+
+## Integrations screen (redesign)
+Rebuilt with a dark health banner (connection state, customer id, feed-pull age, 24h delivered/
+failed/pending, Test connection), the connection form (masked write-only secrets: blank keeps the
+stored value), the feed-key card, and an inline delivery-log preview. The full paged log lives on
+`Deliveries`; both render rows through the shared `_DeliveryRows` partial.

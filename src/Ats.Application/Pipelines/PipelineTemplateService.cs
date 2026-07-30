@@ -6,6 +6,7 @@ namespace Ats.Application.Pipelines;
 public interface IPipelineTemplateService
 {
     Task<List<PipelineTemplate>> ListAsync(CancellationToken ct = default);
+    Task<Dictionary<int, int>> JobCountsByTemplateAsync(CancellationToken ct = default);
     Task<PipelineTemplate?> GetAsync(int id, CancellationToken ct = default);
     Task<OperationResult> SaveAsync(PipelineTemplateInput input, CancellationToken ct = default);
     Task<OperationResult> DeleteAsync(int id, CancellationToken ct = default);
@@ -17,6 +18,7 @@ public sealed class PipelineTemplateService : IPipelineTemplateService
     public PipelineTemplateService(IPipelineTemplateRepository repo) => _repo = repo;
 
     public Task<List<PipelineTemplate>> ListAsync(CancellationToken ct = default) => _repo.ListAsync(ct);
+    public Task<Dictionary<int, int>> JobCountsByTemplateAsync(CancellationToken ct = default) => _repo.JobCountsByTemplateAsync(ct);
     public Task<PipelineTemplate?> GetAsync(int id, CancellationToken ct = default) => _repo.GetWithStagesAsync(id, ct);
 
     public async Task<OperationResult> SaveAsync(PipelineTemplateInput input, CancellationToken ct = default)

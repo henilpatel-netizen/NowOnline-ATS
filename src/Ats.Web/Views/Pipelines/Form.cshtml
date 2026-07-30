@@ -1,17 +1,20 @@
 @model Ats.Web.Models.PipelineEditViewModel
 @using Ats.Domain.Entities
-@{ ViewData["Title"] = Model.Id is null ? "New pipeline" : "Edit pipeline"; }
-<form asp-action="Save" method="post" class="col-lg-9">
+@{
+    ViewData["Title"] = Model.Id is null ? "New pipeline" : "Edit pipeline";
+    ViewData["Eyebrow"] = "Editing:";
+}
+<form asp-action="Save" method="post" class="ats-card" style="max-width:960px">
     <div asp-validation-summary="All" class="text-danger small mb-2"></div>
     <input type="hidden" asp-for="Id" />
-    <div class="mb-3">
+    <div class="mb-3" style="max-width:420px">
         <label asp-for="Name" class="form-label">Pipeline name</label>
         <input asp-for="Name" class="form-control" />
     </div>
 
-    <h2 class="h5">Stages</h2>
-    <table class="table align-middle bg-white" id="stages">
-        <thead><tr><th style="width:5rem">Order</th><th>Name</th><th>Terminal</th><th>Outcome</th><th>Status override</th><th></th></tr></thead>
+    <h2 class="mb-2">Stages</h2>
+    <table class="table align-middle" id="stages">
+        <thead><tr><th style="width:5rem">Order</th><th>Name</th><th>Terminal</th><th>Outcome</th><th>ReferralTool status</th><th></th></tr></thead>
         <tbody>
         @for (var i = 0; i < Model.Stages.Count; i++)
         {
@@ -33,9 +36,10 @@
         </tbody>
     </table>
     <button type="button" class="btn btn-outline-secondary btn-sm mb-3" id="add-stage"><span class="ms ms-sm">add</span> Add stage</button>
-    <div>
-        <button type="submit" class="btn btn-primary">Save</button>
-        <a class="btn btn-link" asp-action="Index">Cancel</a>
+    <div class="d-flex align-items-center gap-2 border-top pt-3">
+        <button type="submit" class="btn btn-primary">Save pipeline</button>
+        <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a>
+        <span class="ms-auto ats-xsmall ats-muted">Changes apply to new applications; candidates already in a removed stage move to the previous one.</span>
     </div>
 </form>
 

@@ -1,3 +1,4 @@
+using Ats.Application.Common;
 using Ats.Application.Integration;
 using Ats.Domain.Entities;
 using Ats.Domain.Enums;
@@ -20,5 +21,16 @@ public sealed class VacancyFeedRepository : IVacancyFeedRepository
         var total = await query.CountAsync(ct);
         var jobs = await query.Skip((page - 1) * perPage).Take(perPage).ToListAsync(ct);
         return (jobs, total);
+    }
+
+    public async Task TouchFeedPulledAsync(CancellationToken ct = default)
+    {
+        // Runs under the tenant set by FeedApiKeyFilter, so TenantSettings is already tenant-scoped.
+        var settings = await _db.TenantSettings.FirstOrDefaultAsync(ct);
+        if (settings is null) return;
+        var now = DateTimeOffset.UtcNow;
+        if (!FeedPullThrottle.ShouldRecord(settings.FeedLastPulledAt, now)) return;
+        settings.FeedLastPulledAt = now;
+        await _db.SaveChangesAsync(ct);
     }
 }

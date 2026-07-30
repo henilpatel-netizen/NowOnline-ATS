@@ -99,6 +99,14 @@ by `IGlobalSearchService` (jobs by title/ExternalRef, candidates by name/email, 
 referral code), capped 5 per category, tenant-scoped by the global query filter, `LIKE`
 metacharacters escaped.
 
+## Organisation + Career site (Phase 3)
+Departments and Locations are presented together on `/Organisation` (job counts from
+`IOrganisationReadService`); the old `/Departments` and `/Locations` list routes 301-redirect there,
+while their create/edit/delete actions and restyled `Form.cshtml` views stay. `CareerSite` is the
+back-office career controller (preview + Owner-only Branding); it is deliberately not `Careers`.
+When adding a controller whose name could match a literal attribute route (like the public
+`careers/{slug}`), pick a non-colliding name — a literal route segment wins over a conventional one.
+
 ## Candidate drawer
 A right-side overlay used on the board. The board card click issues an htmx GET to
 `Applications/Card`, which returns the `_CandidateDrawer` partial (model `ApplicationCard`) into

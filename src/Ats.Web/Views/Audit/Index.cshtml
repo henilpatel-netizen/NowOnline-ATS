@@ -1,19 +1,68 @@
-@model List<Ats.Domain.Entities.AuditEntry>
-@{ ViewData["Title"] = "Audit log"; }
-<table class="table bg-white align-middle">
-    <thead><tr><th>When</th><th>User</th><th>Action</th><th>Entity</th><th>Summary</th></tr></thead>
-    <tbody>
-    @foreach (var a in Model)
+@model Ats.Web.Models.AuditIndexViewModel
+@{
+    ViewData["Title"] = "Audit log";
+    ViewData["Eyebrow"] = "Everything that changed, and who changed it:";
+    (string Icon, string Cls) Look(string action)
     {
-        <tr>
-            <td class="small text-muted">@a.OccurredAt.ToLocalTime().ToString("g")</td>
-            <td>@a.UserName</td>
-            <td><span class="badge bg-secondary">@a.Action</span></td>
-            <td>@a.EntityType @(string.IsNullOrEmpty(a.EntityRef) ? "" : $"({a.EntityRef})")</td>
-            <td>@a.Summary</td>
-        </tr>
+        var a = action.ToLowerInvariant();
+        if (a.Contains("delete")) return ("delete", "ats-pill--danger");
+        if (a.Contains("publish")) return ("publish", "ats-pill--success");
+        if (a.Contains("move") || a.Contains("stage")) return ("swap_horiz", "ats-pill--info");
+        if (a.Contains("create")) return ("person_add", "ats-pill--neutral");
+        return ("edit", "ats-pill--neutral");
     }
-    @if (Model.Count == 0) { <tr><td colspan="5" class="text-muted">No activity recorded yet.</td></tr> }
-    </tbody>
-</table>
-<p class="text-muted small">Stage-move history is on each application's Details page; outbound delivery attempts are in the Integration delivery log.</p>
+}
+<div class="ats-toolbar mb-3">
+    <form asp-action="Index" method="get" class="ats-toolbar" style="gap:.625rem">
+        <label class="ats-search" style="width:260px">
+            <span class="ms ms-sm ats-muted">search</span>
+            <input name="q" value="@Model.Q" placeholder="User, entity or summary" aria-label="Search audit log" />
+        </label>
+        <select name="act" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+            <option value="">All actions</option>
+            @foreach (var a in Model.Actions)
+            {
+                <option value="@a.Value" selected="@a.Selected">@a.Text</option>
+            }
+        </select>
+        <div class="ats-filter-group">
+            <a class="@(Model.Range is null ? "active" : "")" asp-action="Index" asp-route-q="@Model.Q" asp-route-act="@Model.Action">All time</a>
+            <a class="@(Model.Range == "7" ? "active" : "")" asp-action="Index" asp-route-range="7" asp-route-q="@Model.Q" asp-route-act="@Model.Action">7 days</a>
+            <a class="@(Model.Range == "30" ? "active" : "")" asp-action="Index" asp-route-range="30" asp-route-q="@Model.Q" asp-route-act="@Model.Action">30 days</a>
+        </div>
+    </form>
+</div>
+
+<div class="ats-card">
+    @if (Model.Results.Items.Count == 0)
+    {
+        <partial name="Partials/_EmptyState" model="@(new Ats.Web.Models.Shared.EmptyStateModel("history", "No activity matches."))" />
+    }
+    else
+    {
+        <div class="d-flex flex-column">
+            @foreach (var a in Model.Results.Items)
+            {
+                var look = Look(a.Action);
+                <div class="d-flex gap-3 py-3" style="border-bottom:1px solid var(--ats-border-subtle)">
+                    <span class="ats-mono ats-xsmall ats-muted" style="width:6.25rem;flex:0 0 6.25rem;padding-top:.2rem">@a.OccurredAt.ToLocalTime().ToString("dd/MM HH:mm")</span>
+                    <span class="ats-pill @look.Cls" style="width:2.125rem;height:2.125rem;padding:0;justify-content:center;border-radius:var(--no-radius-pill);flex:0 0 2.125rem"><span class="ms ms-sm">@look.Icon</span></span>
+                    <span class="ats-cell-stack flex-grow-1">
+                        <span class="ats-small"><strong style="font-weight:500">@a.UserName</strong> @a.Summary</span>
+                        <span class="ats-mono ats-xsmall ats-faint">@a.EntityType@(string.IsNullOrEmpty(a.EntityRef) ? "" : " · " + a.EntityRef)</span>
+                    </span>
+                    <span class="ats-pill ats-pill--neutral" style="height:fit-content">@a.Action</span>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@{
+    var aq = new Dictionary<string, string>();
+    if (!string.IsNullOrEmpty(Model.Q)) aq["q"] = Model.Q;
+    if (!string.IsNullOrEmpty(Model.Action)) aq["act"] = Model.Action;
+    if (!string.IsNullOrEmpty(Model.Range)) aq["range"] = Model.Range;
+    var pager = new Ats.Web.Models.PagerModel { Page = Model.Results.Page, TotalPages = Model.Results.TotalPages, Action = "Index", Query = aq };
+}
+<partial name="_Pager" model="pager" />

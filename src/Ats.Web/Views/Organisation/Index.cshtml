@@ -1,0 +1,52 @@
+@model Ats.Web.Models.OrganisationViewModel
+@using Ats.Web.Models.Shared
+@{
+    ViewData["Title"] = "Organisation";
+    ViewData["Eyebrow"] = "Departments and locations in one place:";
+}
+
+<div class="row g-3 align-items-start">
+    <div class="col-lg-6">
+        <div class="ats-card-flush">
+            <div class="ats-card-head">
+                <span class="ats-card-title">Departments</span>
+                <a class="btn btn-sm btn-outline-secondary" asp-controller="Departments" asp-action="Create"><span class="ms ms-sm">add</span> Add</a>
+            </div>
+            @foreach (var d in Model.Overview.Departments)
+            {
+                <div class="ats-trow" style="grid-template-columns:1fr auto auto;gap:1rem">
+                    <span class="ats-small">@d.Name</span>
+                    <span class="ats-mono ats-xsmall ats-muted">@d.JobCount @(d.JobCount == 1 ? "job" : "jobs")</span>
+                    <a class="ms ms-sm ats-faint" asp-controller="Departments" asp-action="Edit" asp-route-id="@d.Id" aria-label="Edit @d.Name">edit</a>
+                </div>
+            }
+            @if (Model.Overview.Departments.Count == 0)
+            {
+                <partial name="Partials/_EmptyState" model="@(new EmptyStateModel("apartment", "No departments yet."))" />
+            }
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="ats-card-flush">
+            <div class="ats-card-head">
+                <span class="ats-card-title">Locations</span>
+                <a class="btn btn-sm btn-outline-secondary" asp-controller="Locations" asp-action="Create"><span class="ms ms-sm">add</span> Add</a>
+            </div>
+            @foreach (var l in Model.Overview.Locations)
+            {
+                <div class="ats-trow" style="grid-template-columns:1fr auto auto;gap:1rem">
+                    <span class="ats-cell-stack">
+                        <span class="ats-small">@l.Name</span>
+                        @if (!string.IsNullOrEmpty(l.City)) { <span class="ats-xsmall ats-muted">@l.City</span> }
+                    </span>
+                    <span class="ats-mono ats-xsmall ats-muted">@l.JobCount @(l.JobCount == 1 ? "job" : "jobs")</span>
+                    <a class="ms ms-sm ats-faint" asp-controller="Locations" asp-action="Edit" asp-route-id="@l.Id" aria-label="Edit @l.Name">edit</a>
+                </div>
+            }
+            @if (Model.Overview.Locations.Count == 0)
+            {
+                <partial name="Partials/_EmptyState" model="@(new EmptyStateModel("place", "No locations yet."))" />
+            }
+        </div>
+    </div>
+</div>

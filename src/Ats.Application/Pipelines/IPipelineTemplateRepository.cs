@@ -10,5 +10,6 @@ public interface IPipelineTemplateRepository
     Task RemoveStagesAsync(IEnumerable<PipelineStage> stages, CancellationToken ct = default);
     Task RemoveAsync(PipelineTemplate template, CancellationToken ct = default);
     Task<bool> IsUsedByJobAsync(int id, CancellationToken ct = default);
+    Task<Dictionary<int, int>> JobCountsByTemplateAsync(CancellationToken ct = default);
     Task SaveChangesAsync(CancellationToken ct = default);
 }

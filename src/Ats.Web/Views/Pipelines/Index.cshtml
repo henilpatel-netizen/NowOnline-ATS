@@ -1,23 +1,49 @@
 @model List<Ats.Domain.Entities.PipelineTemplate>
-@{ ViewData["Title"] = "Pipelines"; }
-<div class="mb-3"><a class="btn btn-primary" asp-action="Create"><span class="ms ms-sm">add</span> New pipeline</a></div>
-<table class="table table-hover bg-white">
-    <thead><tr><th>Name</th><th>Stages</th><th class="text-end">Actions</th></tr></thead>
-    <tbody>
-    @foreach (var t in Model)
-    {
-        <tr>
-            <td>@t.Name</td>
-            <td>@t.Stages.Count</td>
-            <td class="text-end">
-                <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@t.Id">Edit</a>
-                <form asp-action="Delete" asp-route-id="@t.Id" method="post" class="d-inline"
-                      onsubmit="return confirm('Delete this pipeline?');">
-                    <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
-                </form>
-            </td>
-        </tr>
-    }
-    @if (Model.Count == 0) { <tr><td colspan="3" class="text-muted">No pipelines yet.</td></tr> }
-    </tbody>
-</table>
+@using Ats.Domain.Entities
+@{
+    ViewData["Title"] = "Pipelines";
+    ViewData["Eyebrow"] = "Stages, outcomes and referral mapping:";
+    var counts = ViewData["JobCounts"] as Dictionary<int, int> ?? new();
+    string ChipClass(PipelineStage s) => s.IsTerminal
+        ? (s.TerminalOutcome == StageOutcome.Hired ? "ats-pill--success" : "ats-pill--danger")
+        : "ats-pill--neutral";
+}
+
+@section PageActions {
+    <a class="btn btn-primary" asp-action="Create"><span class="ms ms-sm">add</span> New pipeline</a>
+}
+
+@if (Model.Count == 0)
+{
+    <partial name="Partials/_EmptyState" model="@(new Ats.Web.Models.Shared.EmptyStateModel("view_week", "No pipelines yet.", "Create one to start moving candidates through stages."))" />
+}
+else
+{
+    <div class="row g-3">
+        @foreach (var t in Model)
+        {
+            var used = counts.TryGetValue(t.Id, out var c) ? c : 0;
+            <div class="col-lg-6">
+                <div class="ats-card h-100 d-flex flex-column gap-3">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span class="ats-card-title">@t.Name</span>
+                        <span class="d-flex align-items-center gap-3">
+                            <span class="ats-mono ats-xsmall ats-muted">used by @used @(used == 1 ? "job" : "jobs")</span>
+                            <a class="ms ms-sm ats-faint" asp-action="Edit" asp-route-id="@t.Id" aria-label="Edit @t.Name">edit</a>
+                            <form asp-action="Delete" asp-route-id="@t.Id" method="post" class="d-inline"
+                                  onsubmit="return confirm('Delete this pipeline?');">
+                                <button type="submit" class="ms ms-sm border-0 bg-transparent p-0" style="color:var(--no-danger-ink)" aria-label="Delete @t.Name">delete</button>
+                            </form>
+                        </span>
+                    </div>
+                    <div class="d-flex gap-1 flex-wrap">
+                        @foreach (var s in t.Stages.OrderBy(s => s.Order))
+                        {
+                            <span class="ats-pill @ChipClass(s)">@s.Name</span>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

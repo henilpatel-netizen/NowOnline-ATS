@@ -1,0 +1,38 @@
+@model Ats.Web.Models.BrandingEditViewModel
+@using Ats.Domain.Enums
+@{
+    ViewData["Title"] = "Branding";
+    ViewData["Eyebrow"] = "Career site:";
+}
+@section PageActions {
+    <a class="btn btn-outline-secondary" asp-action="Index"><span class="ms ms-sm">arrow_back</span> Career site</a>
+}
+<form asp-action="Branding" method="post" class="ats-card d-flex flex-column gap-3" style="max-width:640px">
+    <div asp-validation-summary="All" class="text-danger small"></div>
+    <label class="d-flex flex-column gap-1" style="max-width:12rem">
+        <span class="form-label mb-0">Accent colour</span>
+        <input asp-for="AccentColor" type="color" class="form-control form-control-color" style="width:4rem;height:2.4rem" />
+        <span asp-validation-for="AccentColor" class="text-danger small"></span>
+    </label>
+    <label class="d-flex flex-column gap-1" style="max-width:16rem">
+        <span class="form-label mb-0">Sidebar theme</span>
+        <select asp-for="SidebarTheme" asp-items="Html.GetEnumSelectList<SidebarTheme>()" class="form-select"></select>
+    </label>
+    <label class="d-flex flex-column gap-1">
+        <span class="form-label mb-0">Career hero headline</span>
+        <input asp-for="CareerHeroHeadline" class="form-control" placeholder="Build things that" />
+    </label>
+    <label class="d-flex flex-column gap-1">
+        <span class="form-label mb-0">Outlined second line</span>
+        <input asp-for="CareerHeroHeadlineOutlined" class="form-control" placeholder="actually ship." />
+    </label>
+    <label class="d-flex flex-column gap-1">
+        <span class="form-label mb-0">Hero intro</span>
+        <textarea asp-for="CareerHeroIntro" class="form-control" rows="3"></textarea>
+    </label>
+    <div class="d-flex gap-2 border-top pt-3">
+        <button type="submit" class="btn btn-primary">Save branding</button>
+        <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a>
+    </div>
+</form>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

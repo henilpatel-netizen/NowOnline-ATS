@@ -3,6 +3,7 @@ using Ats.Api.Models.Feed;
 using Ats.Application.Integration;
 using Ats.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace Ats.Api.Controllers;
 
@@ -12,7 +13,12 @@ namespace Ats.Api.Controllers;
 public class FeedController : ControllerBase
 {
     private readonly IVacancyFeedRepository _feed;
-    public FeedController(IVacancyFeedRepository feed) => _feed = feed;
+    private readonly ILogger<FeedController> _logger;
+    public FeedController(IVacancyFeedRepository feed, ILogger<FeedController> logger)
+    {
+        _feed = feed;
+        _logger = logger;
+    }
 
     [HttpPost("search")]
     public async Task<FeedResponse> Search([FromQuery] int per_page = 100, [FromQuery] int page = 1)
@@ -37,6 +43,11 @@ public class FeedController : ControllerBase
                 }
             });
         }
+
+        // Telemetry only: never let a failed timestamp write break the feed response.
+        try { await _feed.TouchFeedPulledAsync(); }
+        catch (Exception ex) { _logger.LogWarning(ex, "Failed to record feed pull timestamp"); }
+
         return response;
     }
 }

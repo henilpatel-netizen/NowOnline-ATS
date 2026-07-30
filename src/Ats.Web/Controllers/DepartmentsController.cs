@@ -16,7 +16,9 @@ public class DepartmentsController : Controller
         _service = service; _audit = audit;
     }
 
-    public async Task<IActionResult> Index() => View(await _service.ListAsync());
+    // Departments + Locations are now presented together on /Organisation (redesign IA).
+    // The list route redirects there; create/edit/delete below are unchanged.
+    public IActionResult Index() => RedirectToActionPermanent("Index", "Organisation");
 
     [HttpGet] public IActionResult Create() => View("Form", new DepartmentViewModel());
 

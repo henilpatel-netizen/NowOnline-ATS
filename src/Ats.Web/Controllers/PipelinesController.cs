@@ -16,7 +16,11 @@ public class PipelinesController : Controller
         _service = service; _audit = audit;
     }
 
-    public async Task<IActionResult> Index() => View(await _service.ListAsync());
+    public async Task<IActionResult> Index()
+    {
+        ViewData["JobCounts"] = await _service.JobCountsByTemplateAsync();
+        return View(await _service.ListAsync());
+    }
 
     [HttpGet]
     public IActionResult Create() => View("Form", new PipelineEditViewModel

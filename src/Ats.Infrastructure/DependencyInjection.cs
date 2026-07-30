@@ -9,6 +9,7 @@ using Ats.Application.Departments;
 using Ats.Application.Integration;
 using Ats.Application.Jobs;
 using Ats.Application.Locations;
+using Ats.Application.Organisation;
 using Ats.Application.Pipelines;
 using Ats.Application.Search;
 using Ats.Application.Shell;
@@ -22,6 +23,7 @@ using Ats.Infrastructure.Files;
 using Ats.Infrastructure.Identity;
 using Ats.Infrastructure.Integration;
 using Ats.Infrastructure.Jobs;
+using Ats.Infrastructure.Organisation;
 using Ats.Infrastructure.Persistence;
 using Ats.Infrastructure.Persistence.Repositories;
 using Ats.Infrastructure.Search;
@@ -84,6 +86,7 @@ public static class DependencyInjection
         services.AddScoped<IJobListQuery, JobListQuery>();
         services.AddScoped<ICandidateListQuery, CandidateListQuery>();
         services.AddScoped<IApplicationCardQuery, ApplicationCardQuery>();
+        services.AddScoped<IOrganisationReadService, OrganisationReadService>();
 
         services.AddHttpClient<IReferralToolClient, ReferralToolClient>();
 

@@ -1,61 +1,95 @@
 @model Ats.Web.Models.IntegrationSettingsViewModel
-@{ ViewData["Title"] = "Integration"; }
+@using Ats.Application.Common
+@{
+    ViewData["Title"] = "Integrations";
+    ViewData["Eyebrow"] = "Outbound plumbing:";
+    var lastPull = ViewData["FeedLastPulledAt"] as DateTimeOffset?;
+    var recent = ViewData["RecentDeliveries"] as IReadOnlyList<Ats.Application.Integration.DeliveryLogEntry>
+                 ?? new List<Ats.Application.Integration.DeliveryLogEntry>();
+}
 
 @if (TempData["FeedKey"] is string newKey)
 {
-    <div class="alert alert-warning">
-        <div class="fw-semibold mb-1">New feed API key (copy now, shown once):</div>
-        <code>@newKey</code>
+    <div class="alert alert-warning d-flex align-items-start gap-2 mb-3" role="alert">
+        <span class="ms ms-sm">key</span>
+        <span>New feed API key (copy now, shown once):<br><code>@newKey</code></span>
     </div>
 }
 
-<div class="row">
+<div class="ats-card-dark mb-3 d-flex align-items-center gap-4 flex-wrap">
+    <div class="d-flex align-items-center gap-3 flex-grow-1" style="min-width:16rem">
+        <span style="width:44px;height:44px;border-radius:var(--no-radius-md);background:rgba(105,202,167,.18);color:var(--no-medium-aqua);display:inline-flex;align-items:center;justify-content:center"><span class="ms">cable</span></span>
+        <span class="ats-cell-stack">
+            <span style="font-family:var(--no-font-display);font-weight:700;font-size:1.0625rem">ReferralTool</span>
+            <span class="ats-small" style="color:#B9C4D0">
+                <span class="ats-board-col-dot d-inline-block" style="background:@(Model.IntegrationEnabled ? "var(--no-medium-aqua)" : "var(--no-roman-silver)")"></span>
+                @(Model.IntegrationEnabled ? "Connected" : "Disabled")
+                @if (Model.ReferralToolCustomerId is not null) { <text>· customer @Model.ReferralToolCustomerId</text> }
+                · feed @(lastPull is null ? "never pulled" : RelativeTime.Long(lastPull, DateTimeOffset.UtcNow))
+            </span>
+        </span>
+    </div>
+    <div class="ats-stat-strip">
+        <span><span class="ats-eyebrow" style="color:#8FA0B4">Delivered</span><span class="ats-stat-mini" style="color:#fff">@ViewData["Delivered"]</span></span>
+        <span><span class="ats-eyebrow" style="color:#8FA0B4">Failed</span><span class="ats-stat-mini" style="color:#FF7A96">@ViewData["Failed"]</span></span>
+        <span><span class="ats-eyebrow" style="color:#8FA0B4">Pending</span><span class="ats-stat-mini" style="color:#fff">@ViewData["Pending"]</span></span>
+    </div>
+    <form asp-action="TestConnection" method="post" class="m-0">
+        <button type="submit" class="btn btn-outline-light btn-sm"><span class="ms ms-sm">bolt</span> Test connection</button>
+    </form>
+</div>
+
+<div class="row g-3 align-items-start">
     <div class="col-lg-7">
-        <form asp-action="Index" method="post" class="card card-body mb-4">
-            <div asp-validation-summary="All" class="text-danger small mb-2"></div>
-            <div class="form-check mb-3">
-                <input asp-for="IntegrationEnabled" class="form-check-input" />
-                <label asp-for="IntegrationEnabled" class="form-check-label">Integration enabled</label>
+        <form asp-action="Index" method="post" class="ats-card d-flex flex-column gap-3">
+            <div><span class="ats-eyebrow">Connection:</span><h2 class="mt-1 mb-0">Where we push status updates.</h2></div>
+            <div asp-validation-summary="All" class="text-danger small"></div>
+            <label class="d-flex align-items-center gap-3 p-3" style="background:var(--ats-bg);border-radius:var(--no-radius-md);cursor:pointer">
+                <input asp-for="IntegrationEnabled" class="form-check-input m-0" />
+                <span class="ats-cell-stack">
+                    <span class="ats-small">Integration enabled</span>
+                    <span class="ats-xsmall ats-muted">Turn off to pause all outbound calls without losing settings.</span>
+                </span>
+            </label>
+            <div class="row g-2">
+                <label class="col-12 d-flex flex-column gap-1"><span class="form-label mb-0">Base URL</span><input asp-for="ReferralToolBaseUrl" class="form-control" placeholder="https://api.referraltool.nl" /></label>
+                <label class="col-md-6 d-flex flex-column gap-1"><span class="form-label mb-0">Customer id</span><input asp-for="ReferralToolCustomerId" type="number" class="form-control" /></label>
+                <label class="col-md-6 d-flex flex-column gap-1"><span class="form-label mb-0">Referral code parameter</span><input asp-for="CodeParameterName" class="form-control" /></label>
+                <label class="col-md-6 d-flex flex-column gap-1"><span class="form-label mb-0">X-Auth-Token @(Model.HasAuthToken ? "(set; leave blank to keep)" : "")</span><input asp-for="ReferralToolAuthToken" type="password" autocomplete="off" class="form-control" /></label>
+                <label class="col-md-6 d-flex flex-column gap-1"><span class="form-label mb-0">X-Api-Key @(Model.HasApiKey ? "(set; leave blank to keep)" : "")</span><input asp-for="ReferralToolApiKey" type="password" autocomplete="off" class="form-control" /></label>
             </div>
-            <div class="mb-3">
-                <label asp-for="ReferralToolBaseUrl" class="form-label">ReferralTool base URL</label>
-                <input asp-for="ReferralToolBaseUrl" class="form-control" placeholder="https://referraltool.example.com" />
-            </div>
-            <div class="mb-3">
-                <label asp-for="ReferralToolCustomerId" class="form-label">ReferralTool customer id</label>
-                <input asp-for="ReferralToolCustomerId" class="form-control" type="number" />
-            </div>
-            <div class="mb-3">
-                <label asp-for="CodeParameterName" class="form-label">Referral code parameter name</label>
-                <input asp-for="CodeParameterName" class="form-control" />
-            </div>
-            <div class="mb-3">
-                <label asp-for="ReferralToolAuthToken" class="form-label">X-Auth-Token @(Model.HasAuthToken ? "(set; leave blank to keep)" : "")</label>
-                <input asp-for="ReferralToolAuthToken" class="form-control" type="password" autocomplete="off" />
-            </div>
-            <div class="mb-3">
-                <label asp-for="ReferralToolApiKey" class="form-label">X-Api-Key @(Model.HasApiKey ? "(set; leave blank to keep)" : "")</label>
-                <input asp-for="ReferralToolApiKey" class="form-control" type="password" autocomplete="off" />
-            </div>
-            <button type="submit" class="btn btn-primary">Save</button>
+            <div class="border-top pt-3"><button type="submit" class="btn btn-primary">Save settings</button></div>
         </form>
     </div>
     <div class="col-lg-5">
-        <div class="card card-body">
-            <h2 class="h6">Feed API key</h2>
-            <p class="text-muted small mb-2">ReferralTool uses this to pull the vacancy feed. Only its hash is stored.</p>
-            <p class="mb-2">Status: @(Model.HasFeedKey ? "configured" : "not set")</p>
+        <div class="ats-card d-flex flex-column gap-3">
+            <div><span class="ats-eyebrow">Inbound:</span><h2 class="mt-1 mb-0">Vacancy feed key.</h2></div>
+            <p class="ats-small ats-muted mb-0">ReferralTool authenticates with this key to pull your published vacancies. Only the hash is stored.</p>
+            <div class="d-flex align-items-center justify-content-between">
+                <span class="ats-small">Status</span><strong class="ats-small">@(Model.HasFeedKey ? "configured" : "not set")</strong>
+            </div>
+            <div class="d-flex align-items-center justify-content-between">
+                <span class="ats-small">Published jobs exposed</span><strong class="ats-stat-mini">@Model.PublishedJobCount</strong>
+            </div>
             <form asp-action="GenerateFeedKey" method="post"
                   onsubmit="return confirm('Generate a new feed key? The old key stops working immediately.');">
                 <button type="submit" class="btn btn-outline-secondary btn-sm">@(Model.HasFeedKey ? "Regenerate" : "Generate") feed key</button>
             </form>
-            <hr />
-            <p class="small mb-2">Published jobs the feed would return: <strong>@Model.PublishedJobCount</strong></p>
-            <form asp-action="TestConnection" method="post" class="mb-2">
-                <button type="submit" class="btn btn-outline-secondary btn-sm">Test ReferralTool connection</button>
-            </form>
-            <a asp-action="Deliveries" class="btn btn-outline-secondary btn-sm">View delivery log</a>
         </div>
     </div>
 </div>
+
+<div class="ats-card-flush mt-3">
+    <div class="ats-card-head">
+        <div><span class="ats-eyebrow">Outbound:</span><h2 class="mt-1 mb-0">Delivery log.</h2></div>
+        <div class="ats-filter-group">
+            <a class="active" asp-action="Deliveries">All</a>
+            <a asp-action="Deliveries" asp-route-status="Failed">Failed</a>
+            <a asp-action="Deliveries" asp-route-status="Pending">Pending</a>
+        </div>
+    </div>
+    <partial name="_DeliveryRows" model="recent" />
+    <div class="p-3"><a class="ats-small" asp-action="Deliveries">View full delivery log <span class="ms ms-sm">arrow_forward</span></a></div>
+</div>
+
 @section Scripts { <partial name="_ValidationScriptsPartial" /> }

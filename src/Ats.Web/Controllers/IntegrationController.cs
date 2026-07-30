@@ -27,6 +27,14 @@ public class IntegrationController : Controller
     {
         var s = await _settings.GetAsync();
         var (_, total) = await _feed.GetPageAsync(1, 1);
+
+        // Health banner + inline delivery preview (redesign).
+        ViewData["FeedLastPulledAt"] = s.FeedLastPulledAt;
+        ViewData["Delivered"] = (await _log.SearchAsync(OutboxStatus.Delivered, 1, 1)).Total;
+        ViewData["Failed"] = (await _log.SearchAsync(OutboxStatus.Failed, 1, 1)).Total;
+        ViewData["Pending"] = (await _log.SearchAsync(OutboxStatus.Pending, 1, 1)).Total;
+        ViewData["RecentDeliveries"] = (await _log.SearchAsync(null, 1, 8)).Items;
+
         return View(new IntegrationSettingsViewModel
         {
             IntegrationEnabled = s.IntegrationEnabled,

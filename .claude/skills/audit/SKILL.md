@@ -32,3 +32,10 @@ deliveries, draft jobs) rather than any notification store. Time-to-hire, offer 
 source split are computed there too via `DashboardMath` (unit-tested in `Ats.Tests`). Offer
 acceptance currently uses a documented proxy denominator (applications that progressed in the last
 90 days); see the comment in `DashboardService`.
+
+## Audit screen (redesign)
+`IAuditQuery.SearchAsync` (filtered by free text / action / date-from, paged) backs the rebuilt audit
+screen; `RecentAsync` still backs the dashboard feed. `DistinctActionsAsync` populates the action
+filter. Gotcha: the controller's action-filter parameter binds from the query key `act`, NOT
+`action` — `action` is a reserved MVC route token and would bind to the current action name, silently
+filtering out every row. Keep it named `act`.

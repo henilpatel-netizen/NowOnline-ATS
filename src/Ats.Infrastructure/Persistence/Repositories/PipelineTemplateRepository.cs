@@ -34,5 +34,10 @@ public sealed class PipelineTemplateRepository : IPipelineTemplateRepository
     public Task<bool> IsUsedByJobAsync(int id, CancellationToken ct = default) =>
         _db.Jobs.AnyAsync(j => j.PipelineTemplateId == id, ct);
 
+    public async Task<Dictionary<int, int>> JobCountsByTemplateAsync(CancellationToken ct = default) =>
+        await _db.Jobs.GroupBy(j => j.PipelineTemplateId)
+            .Select(g => new { TemplateId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.TemplateId, x => x.Count, ct);
+
     public Task SaveChangesAsync(CancellationToken ct = default) => _db.SaveChangesAsync(ct);
 }

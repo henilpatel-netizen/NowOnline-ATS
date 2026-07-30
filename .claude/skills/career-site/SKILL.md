@@ -45,3 +45,12 @@ a dedicated redirect capture route (`/careers/{slug}/r/{code}`) if click analyti
 ## Security
 Only Published jobs are exposed (404 otherwise); resume validated + stored outside web root; antiforgery
 on the apply POST (global filter); tenant strictly from the slug with fail-closed filtering.
+
+## Back office + branding (redesign)
+`CareerSiteController` (`/CareerSite`, back office, NOT `/Careers` — that literal route belongs to the
+public site) shows a browser-frame preview of the hero and links to the live site. Its `Branding`
+actions are Owner-only (`[Authorize(Roles = Owner)]`) and reuse `ITenantBrandingService.UpdateAsync`
+(accent colour, sidebar theme, and the career hero copy: `CareerHeroHeadline` / `...Outlined` /
+`...Intro` on `TenantSettings`). Saving recolours the whole back-office shell via
+`BrandingViewComponent`; the accent is regex-validated in the VM and re-validated in `BrandColor`.
+The public hero currently uses defaults; Phase 4 renders the stored copy on the live site.
