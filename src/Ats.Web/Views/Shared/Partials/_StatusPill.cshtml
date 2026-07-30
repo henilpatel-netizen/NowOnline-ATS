@@ -1,0 +1,8 @@
+@model Ats.Web.Models.Shared.StatusPillModel
+<span class="ats-pill @PillToneCss.Pill(Model.Tone)">
+    @if (Model.ShowDot)
+    {
+        <span class="ats-pill-dot"></span>
+    }
+    @Model.Label
+</span>

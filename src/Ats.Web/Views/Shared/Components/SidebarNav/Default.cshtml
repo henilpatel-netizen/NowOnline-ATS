@@ -1,23 +1,73 @@
-@model Ats.Web.ViewComponents.SidebarNavModel
+@using Ats.Web.ViewComponents
+@model SidebarNavModel
+@{
+    var labels = new Dictionary<NavGroup, string>
+    {
+        [NavGroup.Hiring] = "Hiring:",
+        [NavGroup.Setup] = "Setup:",
+        [NavGroup.Admin] = "Admin:"
+    };
+}
 <aside class="ats-sidebar">
-    <div class="ats-brand"><i class="bi bi-briefcase-fill"></i> ATS</div>
+    <div class="ats-brand">
+        <span class="ats-brand-mark">A</span>
+        <span class="d-flex flex-column" style="line-height:1.1">
+            <span class="ats-brand-name">ATS</span>
+            <span class="ats-brand-sub">recruitment suite</span>
+        </span>
+    </div>
+
+    <div class="ats-tenant-chip">
+        <span class="ats-tenant-chip-mark">@AvatarPalette.Initials(Model.Branding.TenantName)</span>
+        <span class="d-flex flex-column flex-grow-1" style="min-width:0">
+            <span class="ats-tenant-chip-name">@Model.Branding.TenantName</span>
+            <span class="ats-brand-sub">tenant</span>
+        </span>
+    </div>
+
     <nav class="ats-nav">
-        @foreach (var item in Model.Items)
+        @foreach (var group in Model.Groups)
         {
-            var active = string.Equals(item.Controller, Model.CurrentController, StringComparison.OrdinalIgnoreCase) ? "active" : "";
-            <a class="@active" asp-controller="@item.Controller" asp-action="@item.Action">
-                <i class="bi @item.Icon"></i> @item.Text
-            </a>
+            <div class="ats-nav-group">
+                @if (labels.TryGetValue(group.Key, out var label))
+                {
+                    <div class="ats-nav-label">@label</div>
+                }
+                @foreach (var item in group)
+                {
+                    var active = string.Equals(item.Controller, Model.CurrentController, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+                    var count = item.Count?.Invoke(Model.Summary);
+                    var alert = item.Alert?.Invoke(Model.Summary) ?? false;
+                    <a class="@active" asp-controller="@item.Controller" asp-action="@item.Action">
+                        <span class="ms">@item.Icon</span>
+                        <span>@item.Text</span>
+                        @if (alert)
+                        {
+                            <span class="ats-nav-alert" title="Needs attention"></span>
+                        }
+                        else if (count is > 0)
+                        {
+                            <span class="ats-nav-count">@count</span>
+                        }
+                    </a>
+                }
+            </div>
         }
     </nav>
-    <div class="ats-sidebar-footer">
-        <div><i class="bi bi-person-circle"></i> @Model.UserName</div>
-        @if (!string.IsNullOrEmpty(Model.Role))
-        {
-            <div class="text-uppercase" style="font-size:.7rem; letter-spacing:.04em;">@Model.Role</div>
-        }
-        <form asp-controller="Account" asp-action="Logout" method="post" class="mt-2">
-            <button type="submit" class="btn btn-sm btn-outline-light w-100">Sign out</button>
+
+    <div class="ats-sidebar-user">
+        <partial name="Partials/_Avatar" model="new Ats.Web.Models.Shared.AvatarModel(Model.UserName, 1.875)" />
+        <span class="d-flex flex-column flex-grow-1" style="min-width:0">
+            <span class="ats-sidebar-user-name">@Model.UserName</span>
+            @if (!string.IsNullOrEmpty(Model.Role))
+            {
+                <span class="ats-sidebar-user-role">@Model.Role</span>
+            }
+        </span>
+        <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
+            <button type="submit" class="ats-sidebar-signout" title="Sign out" aria-label="Sign out">
+                <span class="ms ms-sm">logout</span>
+            </button>
         </form>
     </div>
 </aside>

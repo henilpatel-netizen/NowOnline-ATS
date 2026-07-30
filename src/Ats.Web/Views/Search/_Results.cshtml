@@ -1,0 +1,50 @@
+@model Ats.Application.Search.SearchResults
+@if (Model.IsEmpty)
+{
+    <div class="ats-search-empty">No matches.</div>
+}
+else
+{
+    @if (Model.Jobs.Count > 0)
+    {
+        <div class="ats-search-group">
+            <div class="ats-eyebrow ats-search-group-label">Jobs:</div>
+            @foreach (var j in Model.Jobs)
+            {
+                <a class="ats-search-hit" asp-controller="Board" asp-action="Index" asp-route-jobId="@j.Id">
+                    <span class="ms ms-sm">work_outline</span>
+                    <span class="flex-grow-1 text-truncate">@j.Title</span>
+                    <code>@j.ExternalRef</code>
+                </a>
+            }
+        </div>
+    }
+    @if (Model.Candidates.Count > 0)
+    {
+        <div class="ats-search-group">
+            <div class="ats-eyebrow ats-search-group-label">Candidates:</div>
+            @foreach (var c in Model.Candidates)
+            {
+                <a class="ats-search-hit" asp-controller="Candidates" asp-action="Edit" asp-route-id="@c.Id">
+                    <span class="ms ms-sm">person</span>
+                    <span class="flex-grow-1 text-truncate">@c.FullName</span>
+                    <span class="ats-faint ats-xsmall">@c.Email</span>
+                </a>
+            }
+        </div>
+    }
+    @if (Model.Applications.Count > 0)
+    {
+        <div class="ats-search-group">
+            <div class="ats-eyebrow ats-search-group-label">Referral codes:</div>
+            @foreach (var a in Model.Applications)
+            {
+                <a class="ats-search-hit" asp-controller="Applications" asp-action="Details" asp-route-id="@a.Id">
+                    <span class="ms ms-sm">share</span>
+                    <span class="flex-grow-1 text-truncate">@a.CandidateName <span class="ats-faint">· @a.JobTitle</span></span>
+                    <code>@a.ReferralCode</code>
+                </a>
+            }
+        </div>
+    }
+}

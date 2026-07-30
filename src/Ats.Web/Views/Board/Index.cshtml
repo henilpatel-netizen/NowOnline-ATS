@@ -2,8 +2,8 @@
 @{ ViewData["Title"] = $"Board: {Model.Job.Title}"; }
 
 <div class="mb-3 d-flex gap-2">
-    <a class="btn btn-outline-secondary btn-sm" asp-controller="Jobs" asp-action="Index"><i class="bi bi-arrow-left"></i> Jobs</a>
-    <button class="btn btn-primary btn-sm" data-bs-toggle="collapse" data-bs-target="#add-candidate"><i class="bi bi-plus-lg"></i> Add candidate</button>
+    <a class="btn btn-outline-secondary btn-sm" asp-controller="Jobs" asp-action="Index"><span class="ms ms-sm">arrow_back</span> Jobs</a>
+    <button class="btn btn-primary btn-sm" data-bs-toggle="collapse" data-bs-target="#add-candidate"><span class="ms ms-sm">add</span> Add candidate</button>
 </div>
 
 <div class="collapse mb-3" id="add-candidate">

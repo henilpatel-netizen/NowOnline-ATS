@@ -1,0 +1,40 @@
+@model Ats.Web.ViewComponents.TopBarModel
+<header class="ats-topbar">
+    <div class="ats-crumbs">
+        <span>@Model.CrumbRoot</span>
+        <span class="ats-crumbs-sep">·</span>
+        <span class="ats-crumbs-leaf">@Model.CrumbLeaf</span>
+    </div>
+
+    <div class="ats-topbar-search">
+        <label class="ats-search" for="ats-global-search">
+            <span class="ms ms-sm ats-muted">search</span>
+            <input id="ats-global-search" name="q" type="search" autocomplete="off"
+                   placeholder="Search candidates, jobs, refs…"
+                   aria-label="Search candidates, jobs and referral codes"
+                   hx-get="@Url.Action("Index", "Search")"
+                   hx-trigger="keyup changed delay:250ms, search"
+                   hx-target="#ats-search-results"
+                   hx-swap="innerHTML" />
+            <span class="ats-kbd">Ctrl K</span>
+        </label>
+        <div id="ats-search-results" class="ats-topbar-results" role="listbox"></div>
+    </div>
+
+    <button type="button" class="ats-icon-btn" id="ats-bell"
+            title="@(Model.Summary.HasAttention ? $"{Model.Summary.AttentionCount} items need attention" : "Nothing needs attention")"
+            aria-label="Notifications">
+        <span class="ms ms-sm">notifications</span>
+        @if (Model.Summary.HasAttention)
+        {
+            <span class="ats-icon-btn-dot"></span>
+        }
+    </button>
+
+    @if (ViewData["TopBarActionText"] is string actionText && ViewData["TopBarActionController"] is string ac)
+    {
+        <a class="btn btn-primary" asp-controller="@ac" asp-action="@(ViewData["TopBarActionAction"] as string ?? "Create")">
+            <span class="ms ms-sm">@(ViewData["TopBarActionIcon"] as string ?? "add")</span> @actionText
+        </a>
+    }
+</header>

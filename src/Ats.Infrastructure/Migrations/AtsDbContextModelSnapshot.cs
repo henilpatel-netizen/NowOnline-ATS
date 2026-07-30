@@ -351,6 +351,9 @@ namespace Ats.Infrastructure.Migrations
                     b.Property<Guid>("Key")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int>("Origin")
+                        .HasColumnType("int");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -614,6 +617,25 @@ namespace Ats.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("BrandAccentColor")
+                        .HasMaxLength(9)
+                        .HasColumnType("nvarchar(9)");
+
+                    b.Property<int?>("BrandSidebarTheme")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CareerHeroHeadline")
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<string>("CareerHeroHeadlineOutlined")
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<string>("CareerHeroIntro")
+                        .HasMaxLength(600)
+                        .HasColumnType("nvarchar(600)");
+
                     b.Property<string>("CodeParameterName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -623,6 +645,9 @@ namespace Ats.Infrastructure.Migrations
 
                     b.Property<string>("FeedApiKeyHash")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset?>("FeedLastPulledAt")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<bool>("IntegrationEnabled")
                         .HasColumnType("bit");

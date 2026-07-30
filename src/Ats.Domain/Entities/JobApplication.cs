@@ -11,6 +11,7 @@ public class JobApplication : TenantEntity, ISoftDeletable
     public int JobId { get; set; }
     public int CurrentStageId { get; set; }
     public string? SourceCode { get; set; }   // captured in Phase 2
+    public ApplicationOrigin Origin { get; set; } = ApplicationOrigin.Unknown;
     public DateTimeOffset AppliedAt { get; set; }
     public ApplicationStatus Status { get; set; } = ApplicationStatus.Active;
     public byte[] RowVersion { get; set; } = Array.Empty<byte>();

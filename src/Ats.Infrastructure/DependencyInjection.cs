@@ -1,6 +1,7 @@
 using Ats.Application.Abstractions;
 using Ats.Application.Applications;
 using Ats.Application.Auditing;
+using Ats.Application.Branding;
 using Ats.Application.Candidates;
 using Ats.Application.Dashboard;
 using Ats.Application.Career;
@@ -9,14 +10,19 @@ using Ats.Application.Integration;
 using Ats.Application.Jobs;
 using Ats.Application.Locations;
 using Ats.Application.Pipelines;
+using Ats.Application.Search;
+using Ats.Application.Shell;
 using Ats.Application.Tenancy;
 using Ats.Infrastructure.Auditing;
+using Ats.Infrastructure.Branding;
 using Ats.Infrastructure.Dashboard;
 using Ats.Infrastructure.Files;
 using Ats.Infrastructure.Identity;
 using Ats.Infrastructure.Integration;
 using Ats.Infrastructure.Persistence;
 using Ats.Infrastructure.Persistence.Repositories;
+using Ats.Infrastructure.Search;
+using Ats.Infrastructure.Shell;
 using Ats.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -65,6 +71,12 @@ public static class DependencyInjection
         services.AddScoped<IAuditLogger, AuditLogger>();
         services.AddScoped<IAuditQuery, AuditQuery>();
         services.AddScoped<IDashboardService, DashboardService>();
+
+        // Presentation-layer read services. Scoped so their per-request caches work.
+        services.AddScoped<ITenantBrandingService, TenantBrandingService>();
+        services.AddScoped<IShellSummaryService, ShellSummaryService>();
+        services.AddScoped<IGlobalSearchService, GlobalSearchService>();
+
         services.AddHttpClient<IReferralToolClient, ReferralToolClient>();
 
         return services;

@@ -3,12 +3,11 @@
   "defaultProvider": "unpkg",
   "libraries": [
     {
-      "library": "bootstrap-icons@1.11.3",
-      "destination": "src/Ats.Web/wwwroot/lib/bootstrap-icons",
+      "library": "material-symbols@0.31.8",
+      "destination": "src/Ats.Web/wwwroot/lib/material-symbols",
       "files": [
-        "font/bootstrap-icons.min.css",
-        "font/fonts/bootstrap-icons.woff",
-        "font/fonts/bootstrap-icons.woff2"
+        "outlined.css",
+        "material-symbols-outlined.woff2"
       ]
     },
     {

@@ -1,8 +1,19 @@
 @{
-    var success = TempData["Success"] as string;
-    var error = TempData["Error"] as string;
-    var info = TempData["Info"] as string;
+    var alerts = new (string? Text, string Css, string Icon)[]
+    {
+        (TempData["Success"] as string, "alert-success", "check_circle"),
+        (TempData["Error"] as string, "alert-danger", "error"),
+        (TempData["Info"] as string, "alert-info", "info")
+    };
 }
-@if (!string.IsNullOrEmpty(success)) { <div class="alert alert-success alert-dismissible fade show" role="alert">@success<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div> }
-@if (!string.IsNullOrEmpty(error)) { <div class="alert alert-danger alert-dismissible fade show" role="alert">@error<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div> }
-@if (!string.IsNullOrEmpty(info)) { <div class="alert alert-info alert-dismissible fade show" role="alert">@info<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div> }
+@foreach (var a in alerts)
+{
+    if (!string.IsNullOrEmpty(a.Text))
+    {
+        <div class="alert @a.Css alert-dismissible fade show d-flex align-items-center gap-2" role="alert">
+            <span class="ms ms-sm">@a.Icon</span>
+            <span class="flex-grow-1">@a.Text</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+}

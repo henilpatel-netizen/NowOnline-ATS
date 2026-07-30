@@ -1,0 +1,16 @@
+@using Ats.Domain.Enums
+@model Ats.Web.Models.Shared.SourceChipModel
+@*
+    Unknown renders as "Not recorded", not as a guessed source: every application that predates
+    the Origin column is Unknown and the UI must not invent history for it.
+*@
+@{
+    var (icon, label, cls) = Model.Origin switch
+    {
+        ApplicationOrigin.CareerSite => ("public", "Career site", "ats-chip--neutral"),
+        ApplicationOrigin.Referral => ("share", "Referral", "ats-chip--info"),
+        ApplicationOrigin.Manual => ("person_add", "Manual", "ats-chip--neutral"),
+        _ => ("help_outline", "Not recorded", "ats-chip--neutral")
+    };
+}
+<span class="ats-chip @cls"><span class="ms ms-sm">@icon</span>@label</span>

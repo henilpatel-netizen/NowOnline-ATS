@@ -1,0 +1,9 @@
+@model Ats.Web.Models.Shared.EmptyStateModel
+<div class="ats-empty">
+    <span class="ms ms-xl ats-faint">@Model.Icon</span>
+    <div class="ats-empty-headline">@Model.Headline</div>
+    @if (Model.Body is not null)
+    {
+        <div class="ats-empty-body">@Model.Body</div>
+    }
+</div>

@@ -1,0 +1,10 @@
+@using System.Globalization
+@model Ats.Web.Models.Shared.AvatarModel
+@{
+    var colors = AvatarPalette.For(Model.Name);
+    var initials = AvatarPalette.Initials(Model.Name);
+    var size = Model.SizeRem.ToString("0.###", CultureInfo.InvariantCulture);
+    var ring = Model.Ring ? "box-shadow:0 0 0 2px var(--ats-surface);" : "";
+}
+<span class="ats-avatar" title="@Model.Name"
+      style="--ats-avatar-size:@(size)rem;background:@colors.Background;color:@colors.Foreground;@ring">@initials</span>

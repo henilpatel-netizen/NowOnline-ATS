@@ -1,0 +1,29 @@
+@using System.Text
+@using Ats.Application.Branding
+@using Ats.Domain.Enums
+@model TenantBranding
+@{
+    // Re-validate at the point of emission. These values are written into a style element, so the
+    // string is assembled only from validated constants and the two normalized colours; nothing
+    // tenant-supplied is interpolated unchecked.
+    var accent = BrandColor.Normalize(Model.Accent) ?? BrandColor.DefaultAccent;
+    var accentHover = BrandColor.Normalize(Model.AccentHover) ?? BrandColor.DefaultAccentHover;
+
+    var sb = new StringBuilder();
+    sb.Append(":root{");
+    sb.Append("--ats-accent:").Append(accent).Append(';');
+    sb.Append("--ats-accent-hover:").Append(accentHover).Append(';');
+    if (Model.SidebarTheme == SidebarTheme.Light)
+    {
+        sb.Append("--ats-sidebar-bg:#FFFFFF;");
+        sb.Append("--ats-sidebar-fg:#0C2340;");
+        sb.Append("--ats-sidebar-muted:#88909A;");
+        sb.Append("--ats-sidebar-label:#88909A;");
+        sb.Append("--ats-sidebar-border:#E1E3E6;");
+        sb.Append("--ats-sidebar-hover:#F5F6F7;");
+        sb.Append("--ats-sidebar-chip:#FAFBFC;");
+        sb.Append("--ats-sidebar-active:#EBF5FB;");
+    }
+    sb.Append('}');
+}
+<style>@Html.Raw(sb.ToString())</style>

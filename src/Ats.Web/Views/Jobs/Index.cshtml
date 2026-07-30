@@ -2,7 +2,7 @@
 @using Ats.Domain.Enums
 @{ ViewData["Title"] = "Jobs"; }
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <a class="btn btn-primary" asp-action="Create"><i class="bi bi-plus-lg"></i> New job</a>
+    <a class="btn btn-primary" asp-action="Create"><span class="ms ms-sm">add</span> New job</a>
     <form asp-action="Index" method="get" class="d-flex gap-2">
         <input name="q" value="@Model.Q" class="form-control form-control-sm" placeholder="Search title or ref" style="width:14rem" />
         <select name="status" class="form-select form-select-sm" style="width:auto">

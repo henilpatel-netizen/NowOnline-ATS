@@ -1,26 +1,58 @@
+@{
+    var title = ViewData["Title"] as string ?? "";
+    var eyebrow = ViewData["Eyebrow"] as string;
+    var heading = string.IsNullOrEmpty(title) || title.EndsWith('.') ? title : title + ".";
+}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - ATS</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%234f46e5'/%3E%3Cpath d='M5 5V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1h2v7H3V5h2zm1 0h4V4H6v1z' fill='white'/%3E%3C/svg%3E" />
+    <title>@(string.IsNullOrEmpty(title) ? "ATS" : title + " - ATS")</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230085CA'/%3E%3Cpath d='M5 5V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1h2v7H3V5h2zm1 0h4V4H6v1z' fill='white'/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/material-symbols/outlined.css" />
+    <link rel="stylesheet" href="~/css/ats-tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/ats-base.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/ats-components.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/ats-shell.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/Ats.Web.styles.css" asp-append-version="true" />
+    @* Per-tenant overrides must come last so they win over the token defaults. *@
+    <vc:branding></vc:branding>
 </head>
 <body>
     <div class="ats-shell">
         <vc:sidebar-nav></vc:sidebar-nav>
-        <main class="ats-content">
-            <partial name="_Alerts" />
-            <partial name="_PageHeader" />
-            @RenderBody()
-        </main>
+        <div class="ats-main">
+            <vc:top-bar></vc:top-bar>
+            <main class="ats-content ats-scroll">
+                <partial name="_Alerts" />
+                @if (!string.IsNullOrEmpty(heading))
+                {
+                    <div class="ats-pagehead">
+                        <div class="ats-pagehead-text">
+                            @if (!string.IsNullOrEmpty(eyebrow))
+                            {
+                                <span class="ats-eyebrow">@eyebrow</span>
+                            }
+                            <h1>@heading</h1>
+                        </div>
+                        @if (IsSectionDefined("PageActions"))
+                        {
+                            <div class="ats-pagehead-actions">@await RenderSectionAsync("PageActions", required: false)</div>
+                        }
+                    </div>
+                }
+                @RenderBody()
+            </main>
+        </div>
     </div>
+    @* htmx swaps the candidate drawer in here (Phase 2). *@
+    <div id="ats-drawer-host"></div>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/htmx/dist/htmx.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

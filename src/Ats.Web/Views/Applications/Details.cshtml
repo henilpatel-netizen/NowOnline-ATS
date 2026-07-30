@@ -2,7 +2,7 @@
 @{ ViewData["Title"] = $"Application: {Model.CandidateName}"; }
 <div class="mb-3">
     <a class="btn btn-outline-secondary btn-sm" asp-controller="Board" asp-action="Index" asp-route-jobId="@Model.Application.JobId">
-        <i class="bi bi-arrow-left"></i> Board
+        <span class="ms ms-sm">arrow_back</span> Board
     </a>
 </div>
 <dl class="row">
@@ -15,7 +15,7 @@
 @if (Model.Application.Candidate?.ResumeFileKey is not null)
 {
     <a class="btn btn-outline-secondary btn-sm mb-3" asp-controller="Resume" asp-action="Download" asp-route-applicationId="@Model.Application.Id">
-        <i class="bi bi-file-earmark-arrow-down"></i> Download resume
+        <span class="ms ms-sm">download</span> Download resume
     </a>
 }
 
@@ -26,7 +26,7 @@
         <li class="list-group-item d-flex justify-content-between">
             <span>
                 @(e.FromStageId is null ? "Applied" : Model.StageName(e.FromStageId.Value))
-                <i class="bi bi-arrow-right mx-1"></i>
+                <span class="ms ms-sm mx-1">arrow_forward</span>
                 @Model.StageName(e.ToStageId)
             </span>
             <span class="text-muted small">@e.OccurredAt.ToLocalTime().ToString("g")</span>

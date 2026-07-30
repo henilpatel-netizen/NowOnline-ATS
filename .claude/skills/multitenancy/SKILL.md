@@ -34,6 +34,13 @@ requests (`/careers/{slug}` -> tenant id) and by `FeedApiKeyFilter` for vacancy-
 - `OutboxClaimStore.ClaimDueAsync` (`Ats.Worker`) — claims Pending outbox messages across all tenants
   with `IgnoreQueryFilters`; the drainer then sets `WorkerTenantContext.TenantId` per message.
 
+## Branding (redesign)
+`TenantSettings` carries per-tenant branding (`BrandAccentColor`, `BrandSidebarTheme`, career hero
+copy) and `FeedLastPulledAt`. `ITenantBrandingService` resolves them, cached per request, with
+NowOnline defaults for nulls. It reads `Tenants` by id (Tenant is not an `ITenantEntity`, so it is
+unfiltered) and `TenantSettings` under the normal filter. This introduced **no** new filter-bypass
+spot; the five below are still the only ones.
+
 ## Rule
 Outside those five documented spots: never `IgnoreQueryFilters()`, never hand-set `TenantId`, never
 expose an unfiltered queryable. See `.claude/rules/multi-tenancy.md`.

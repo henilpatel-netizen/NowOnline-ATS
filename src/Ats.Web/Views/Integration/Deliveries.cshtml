@@ -2,7 +2,7 @@
 @using Ats.Domain.Enums
 @{ ViewData["Title"] = "Delivery log"; }
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <a class="btn btn-outline-secondary btn-sm" asp-action="Index"><i class="bi bi-arrow-left"></i> Integration</a>
+    <a class="btn btn-outline-secondary btn-sm" asp-action="Index"><span class="ms ms-sm">arrow_back</span> Integration</a>
     <form asp-action="Deliveries" method="get" class="d-flex gap-2">
         <select name="status" class="form-select form-select-sm" style="width:auto">
             <option value="">All states</option>

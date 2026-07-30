@@ -1,7 +1,7 @@
 @model Ats.Web.Areas.Careers.Models.CareerJobDetailViewModel
 <div class="mb-3">
     <a class="btn btn-outline-secondary btn-sm" asp-controller="Jobs" asp-action="Index" asp-route-slug="@Model.Slug">
-        <i class="bi bi-arrow-left"></i> All positions
+        <span class="ms ms-sm">arrow_back</span> All positions
     </a>
 </div>
 <h1 class="h3">@Model.Job.Title</h1>

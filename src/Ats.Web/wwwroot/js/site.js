@@ -13,3 +13,27 @@ document.addEventListener('submit', function (e) {
         setTimeout(function () { btn.disabled = true; btn.classList.add('disabled'); }, 0);
     }
 }, true);
+
+// Ctrl/Cmd+K focuses global search; Escape clears the result list.
+(function () {
+    document.addEventListener('keydown', function (e) {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+            var input = document.getElementById('ats-global-search');
+            if (!input) return;
+            e.preventDefault();
+            input.focus();
+            input.select();
+        }
+        if (e.key === 'Escape') {
+            var results = document.getElementById('ats-search-results');
+            if (results) results.innerHTML = '';
+        }
+    });
+    // Clicking away closes the result list.
+    document.addEventListener('click', function (e) {
+        var wrap = document.querySelector('.ats-topbar-search');
+        var results = document.getElementById('ats-search-results');
+        if (!wrap || !results) return;
+        if (!wrap.contains(e.target)) results.innerHTML = '';
+    });
+})();

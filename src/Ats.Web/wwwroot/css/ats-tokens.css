@@ -1,0 +1,286 @@
+/* NowOnline design system tokens for the ATS.
+   Values are ported from the design system's colors_and_type.css. Do not hand-tune them here:
+   change the design system and re-port. Views must consume the --ats-* aliases, never --no-*. */
+
+:root {
+  /* Brand accents */
+  --no-oxford-blue: #0C2340;
+  --no-sky-blue: #0085CA;
+  --no-sky-blue-hover: #128FCF;
+  --no-sky-blue-soft: #EBF5FB;
+  --no-medium-aqua: #69CAA7;
+  --no-medium-aqua-deep: #54A185;
+
+  /* Neutrals */
+  --no-maastricht-blue: #08182C;
+  --no-charcoal: #394656;
+  --no-roman-silver: #88909A;
+  --no-platinum: #E1E3E6;
+  --no-cultured: #F5F6F7;
+  --no-white: #FFFFFF;
+
+  /* Semantic */
+  --no-danger: #EC003F;
+  --no-warning: #E17100;
+  --no-success: #009966;
+  --no-info: #155DFC;
+
+  /* Tints used by pills, chips and tinted rows in the prototype */
+  --no-success-soft: #E8F6F0;  --no-success-ink: #00734D;
+  --no-warning-soft: #FDF3E7;  --no-warning-ink: #A85400;
+  --no-danger-soft:  #FDECF0;  --no-danger-ink:  #C1002F;
+  --no-info-soft:    #EBF5FB;  --no-info-ink:    #00679E;
+  --no-violet-soft:  #F0ECFB;  --no-violet-ink:  #5B3FBF;
+  --no-slate-soft:   #EFF0F2;  --no-slate-ink:   #5A6472;
+  --no-danger-row:   #FEF7F8;
+
+  /* Stage ramp: Applied -> Screening -> Interview -> Offer -> Hired */
+  --no-stage-1: #0C2340;
+  --no-stage-2: #0085CA;
+  --no-stage-3: #3BA7D8;
+  --no-stage-4: #69CAA7;
+  --no-stage-5: #54A185;
+  --no-stage-empty: #EEF0F2;
+
+  /* Shadows: Oxford-Blue tinted, never neutral black */
+  --no-shadow-xs: 0 2px 6px 0 rgba(12, 35, 64, .03);
+  --no-shadow-md: 0 10px 40px 0 rgba(12, 35, 64, .08);
+  --no-shadow-lg: 0 10px 40px 0 rgba(12, 35, 64, .16);
+
+  /* Radii */
+  --no-radius-xs: 4px;
+  --no-radius-sm: 8px;
+  --no-radius-md: 12px;
+  --no-radius-lg: 16px;
+  --no-radius-xl: 24px;
+  --no-radius-pill: 999px;
+
+  /* Type families */
+  --no-font-display: "Urbanist", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --no-font-body: "Lexend", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --no-font-mono: "Sometype Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --no-track-display: -0.01em;
+  --no-track-eyebrow: 0.02em;
+
+  /* ---- Semantic aliases. This is the app-facing API. ---- */
+  --ats-accent: var(--no-sky-blue);
+  --ats-accent-hover: var(--no-sky-blue-hover);
+  --ats-accent-soft: var(--no-sky-blue-soft);
+
+  --ats-bg: var(--no-cultured);
+  --ats-surface: var(--no-white);
+  --ats-surface-subtle: #FAFBFC;
+  --ats-ink: var(--no-oxford-blue);
+  --ats-ink-muted: var(--no-charcoal);
+  --ats-ink-subtle: var(--no-roman-silver);
+  --ats-ink-faint: #A6AEB8;
+  --ats-border: var(--no-platinum);
+  --ats-border-subtle: #F0F1F3;
+  --ats-rule: #C9CDD3;
+
+  /* Sidebar. Overridden per tenant by the Branding view component. */
+  --ats-sidebar-bg: var(--no-oxford-blue);
+  --ats-sidebar-fg: var(--no-white);
+  --ats-sidebar-muted: #98A2AF;
+  --ats-sidebar-label: #7A8493;
+  --ats-sidebar-border: rgba(255, 255, 255, .10);
+  --ats-sidebar-hover: rgba(255, 255, 255, .07);
+  --ats-sidebar-chip: rgba(255, 255, 255, .05);
+  --ats-sidebar-active: rgba(0, 133, 202, .22);
+
+  --ats-sidebar-width: 252px;
+  --ats-topbar-height: 60px;
+}
+
+/* ---- Bootstrap 5 variable overrides ----
+   Bootstrap is kept for grid, forms, validation, collapse, modals and alerts. Overriding its
+   variables here means .btn/.card/.table/.form-control inherit NowOnline instead of being fought
+   with inline styles in views. */
+
+:root {
+  --bs-body-font-family: var(--no-font-body);
+  --bs-body-font-size: .9375rem;
+  --bs-body-font-weight: 300;
+  --bs-body-line-height: 1.56;
+  --bs-body-color: var(--ats-ink);
+  --bs-body-bg: var(--ats-bg);
+  --bs-border-color: var(--ats-border);
+  --bs-border-radius: var(--no-radius-md);
+  --bs-border-radius-sm: var(--no-radius-sm);
+  --bs-border-radius-lg: var(--no-radius-lg);
+  --bs-link-color: var(--ats-accent);
+  --bs-link-hover-color: var(--ats-accent-hover);
+  --bs-primary: var(--ats-accent);
+  --bs-emphasis-color: var(--ats-ink);
+  --bs-secondary-color: var(--ats-ink-subtle);
+  --bs-heading-color: var(--ats-ink);
+}
+
+/* Buttons: pill, Urbanist, no scale on press (design system interaction rules). */
+.btn {
+  --bs-btn-font-family: var(--no-font-display);
+  --bs-btn-font-weight: 600;
+  --bs-btn-font-size: .875rem;
+  --bs-btn-border-radius: var(--no-radius-pill);
+  --bs-btn-padding-x: 1.125rem;
+  --bs-btn-padding-y: .5625rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  white-space: nowrap;
+}
+
+.btn-sm {
+  --bs-btn-font-size: .8125rem;
+  --bs-btn-padding-x: .875rem;
+  --bs-btn-padding-y: .375rem;
+}
+
+.btn-primary {
+  --bs-btn-font-weight: 700;
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--ats-accent);
+  --bs-btn-border-color: var(--ats-accent);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--ats-accent-hover);
+  --bs-btn-hover-border-color: var(--ats-accent-hover);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--ats-accent-hover);
+  --bs-btn-active-border-color: var(--ats-accent-hover);
+  --bs-btn-disabled-bg: var(--ats-accent);
+  --bs-btn-disabled-border-color: var(--ats-accent);
+}
+
+/* Ghost buttons invert to Oxford Blue on hover, per the design system. */
+.btn-outline-secondary,
+.btn-outline-primary {
+  --bs-btn-color: var(--ats-ink);
+  --bs-btn-border-color: var(--ats-border);
+  --bs-btn-bg: var(--ats-surface);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--no-oxford-blue);
+  --bs-btn-hover-border-color: var(--no-oxford-blue);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--no-oxford-blue);
+  --bs-btn-active-border-color: var(--no-oxford-blue);
+}
+
+.btn-outline-success {
+  --bs-btn-color: var(--no-success-ink);
+  --bs-btn-border-color: #D6EAE1;
+  --bs-btn-bg: var(--ats-surface);
+  --bs-btn-hover-color: var(--no-success-ink);
+  --bs-btn-hover-bg: var(--no-success-soft);
+  --bs-btn-hover-border-color: #D6EAE1;
+  --bs-btn-active-color: var(--no-success-ink);
+  --bs-btn-active-bg: var(--no-success-soft);
+  --bs-btn-active-border-color: #D6EAE1;
+}
+
+.btn-outline-danger {
+  --bs-btn-color: var(--no-danger-ink);
+  --bs-btn-border-color: #F0DDE2;
+  --bs-btn-bg: var(--ats-surface);
+  --bs-btn-hover-color: var(--no-danger-ink);
+  --bs-btn-hover-bg: var(--no-danger-soft);
+  --bs-btn-hover-border-color: #F0DDE2;
+  --bs-btn-active-color: var(--no-danger-ink);
+  --bs-btn-active-bg: var(--no-danger-soft);
+  --bs-btn-active-border-color: #F0DDE2;
+}
+
+/* On a dark panel the ghost button has to read against Oxford Blue instead of white. */
+.btn-outline-light {
+  --bs-btn-color: #fff;
+  --bs-btn-border-color: rgba(255, 255, 255, .18);
+  --bs-btn-bg: rgba(255, 255, 255, .10);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: rgba(255, 255, 255, .18);
+  --bs-btn-hover-border-color: rgba(255, 255, 255, .24);
+}
+
+.card {
+  --bs-card-bg: var(--ats-surface);
+  --bs-card-border-color: var(--ats-border);
+  --bs-card-border-radius: var(--no-radius-lg);
+  --bs-card-inner-border-radius: var(--no-radius-lg);
+  --bs-card-spacer-x: 1.375rem;
+  --bs-card-spacer-y: 1.375rem;
+  box-shadow: var(--no-shadow-xs);
+}
+
+.card-header {
+  --bs-card-cap-bg: var(--ats-surface);
+  border-bottom-color: var(--ats-border);
+  font-family: var(--no-font-display);
+  font-weight: 700;
+}
+
+.form-control,
+.form-select {
+  --bs-border-radius: var(--no-radius-sm);
+  font-weight: 300;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--ats-accent);
+  box-shadow: 0 0 0 .2rem color-mix(in srgb, var(--ats-accent) 18%, transparent);
+}
+
+.form-label {
+  font-size: .8125rem;
+  color: var(--ats-ink-muted);
+  margin-bottom: .375rem;
+}
+
+.form-check-input:checked {
+  background-color: var(--ats-accent);
+  border-color: var(--ats-accent);
+}
+
+.table {
+  --bs-table-bg: var(--ats-surface);
+  --bs-table-border-color: var(--ats-border-subtle);
+  --bs-table-hover-bg: var(--ats-surface-subtle);
+  --bs-table-color: var(--ats-ink);
+}
+
+.table > thead {
+  font-family: var(--no-font-mono);
+  font-weight: 700;
+  font-size: .65625rem;
+  letter-spacing: var(--no-track-eyebrow);
+  color: var(--ats-ink-subtle);
+  text-transform: none;
+}
+
+.table > thead th {
+  background: var(--ats-surface-subtle);
+  border-bottom-color: var(--ats-border);
+  font-weight: 700;
+}
+
+.badge {
+  --bs-badge-border-radius: var(--no-radius-pill);
+  --bs-badge-font-weight: 400;
+  --bs-badge-padding-x: .6875rem;
+  --bs-badge-padding-y: .25rem;
+  --bs-badge-font-size: .75rem;
+}
+
+.alert {
+  --bs-alert-border-radius: var(--no-radius-md);
+  border-width: 1px;
+}
+
+.nav-link { color: var(--ats-ink-muted); }
+.nav-link:hover { color: var(--ats-ink); }
+
+/* Focus: 2px accent ring at 2px offset, never the browser default. */
+:focus-visible {
+  outline: 2px solid var(--ats-accent);
+  outline-offset: 2px;
+}

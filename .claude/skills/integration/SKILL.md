@@ -59,3 +59,10 @@ attempts.
 ## Contract
 The frozen ReferralTool contract is `docs/integration/referraltool-contract.md`. The status route is
 `/v1.0/kafka/candidatestatusupdate` with dual `X-Api-Key` + `X-Auth-Token`.
+
+## Feed pull telemetry (redesign)
+`TenantSettings.FeedLastPulledAt` records when the vacancy feed was last pulled, for the "feed pulled
+N min ago" line on the dashboard and integrations screens. It is written by the feed endpoint
+(`Ats.Api` `FeedController`) after `FeedApiKeyFilter` resolves the tenant, debounced to at most once a
+minute, and wrapped so a telemetry-write failure never fails the feed response. It is display-only
+and not part of the frozen contract. (Wiring lands in a later redesign phase; the column exists now.)

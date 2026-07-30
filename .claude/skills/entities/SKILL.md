@@ -13,7 +13,9 @@ description: The Ats Phase 1 aggregates - Job, Candidate, JobApplication, Applic
   `JobApplication` (not `Application`) to avoid colliding with the `Ats.Application` namespace; the
   DbSet is `Applications` and the table is `Applications`. One per `(TenantId, JobId, CandidateId)`;
   `RowVersion` optimistic concurrency; `Status` Active/Hired/Rejected/Withdrawn; `CurrentStageId`
-  points at a stage.
+  points at a stage. `Origin` (`ApplicationOrigin`: Unknown/CareerSite/Manual/Referral) is
+  presentation-only — it drives source chips in the UI and is never read by the outbox, worker,
+  feed, or ReferralTool client. Rows predating the column are `Unknown`, rendered as "Not recorded".
 - `ApplicationEvent` (TenantEntity): append-only stage-move history (`FromStageId?`, `ToStageId`,
   `OccurredAt`, `MovedByUserId?`).
 

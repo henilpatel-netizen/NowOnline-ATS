@@ -1,0 +1,12 @@
+@model Ats.Web.Models.Shared.StatTileModel
+<div class="ats-card ats-stat">
+    <span class="ats-eyebrow">@Model.Eyebrow</span>
+    <span class="ats-stat-value">@Model.Value@if (Model.Unit is not null) { <span class="ats-stat-unit">@Model.Unit</span> }</span>
+    @if (Model.DeltaText is not null)
+    {
+        <span class="ats-stat-delta" style="color:@PillToneCss.Ink(Model.DeltaTone)">
+            @if (Model.DeltaIcon is not null) { <span class="ms ms-sm">@Model.DeltaIcon</span> }
+            @Model.DeltaText
+        </span>
+    }
+</div>

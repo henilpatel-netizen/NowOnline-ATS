@@ -1,0 +1,18 @@
+@model Ats.Web.Models.Shared.TimelineModel
+<div class="ats-timeline">
+    @for (var i = 0; i < Model.Items.Count; i++)
+    {
+        var item = Model.Items[i];
+        var last = i == Model.Items.Count - 1;
+        <div class="ats-timeline-item">
+            <span class="ats-timeline-rail">
+                <span class="ats-timeline-dot @(item.IsCurrent ? "ats-timeline-dot--current" : "")"></span>
+                @if (!last) { <span class="ats-timeline-line"></span> }
+            </span>
+            <span class="ats-timeline-body @(last ? "" : "ats-timeline-body--spaced")">
+                <span class="ats-timeline-title">@item.Title</span>
+                @if (item.Subtitle is not null) { <span class="ats-timeline-sub">@item.Subtitle</span> }
+            </span>
+        </div>
+    }
+</div>

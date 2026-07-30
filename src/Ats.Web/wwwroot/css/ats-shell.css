@@ -1,0 +1,342 @@
+/* Back-office shell: sidebar, topbar, content, drawer host. Depends on ats-tokens.css.
+   The shell is a fixed-height flex row; only <main> scrolls. */
+
+.ats-shell {
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+  background: var(--ats-bg);
+}
+
+/* ---------- Sidebar ---------- */
+
+.ats-sidebar {
+  width: var(--ats-sidebar-width);
+  flex: 0 0 var(--ats-sidebar-width);
+  background: var(--ats-sidebar-bg);
+  color: var(--ats-sidebar-fg);
+  border-right: 1px solid var(--ats-sidebar-border);
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem .75rem 1rem;
+  gap: 1.25rem;
+}
+
+.ats-brand { display: flex; align-items: center; gap: .625rem; padding: 0 .5rem; }
+
+.ats-brand-mark {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  border-radius: var(--no-radius-sm);
+  background: var(--ats-accent);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--no-font-display);
+  font-weight: 800;
+  font-size: .875rem;
+}
+
+.ats-brand-name {
+  font-family: var(--no-font-display);
+  font-weight: 800;
+  font-size: 1rem;
+  letter-spacing: var(--no-track-display);
+  color: var(--ats-sidebar-fg);
+}
+
+.ats-brand-sub {
+  font-family: var(--no-font-mono);
+  font-weight: 700;
+  font-size: .625rem;
+  color: var(--ats-sidebar-muted);
+}
+
+.ats-tenant-chip {
+  display: flex;
+  align-items: center;
+  gap: .625rem;
+  width: 100%;
+  padding: .625rem;
+  border-radius: var(--no-radius-md);
+  border: 1px solid var(--ats-sidebar-border);
+  background: var(--ats-sidebar-chip);
+  text-align: left;
+  color: inherit;
+}
+
+.ats-tenant-chip-mark {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: var(--no-radius-sm);
+  background: var(--no-medium-aqua);
+  color: var(--no-oxford-blue);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--no-font-display);
+  font-weight: 800;
+  font-size: .6875rem;
+}
+
+.ats-tenant-chip-name {
+  font-size: .8125rem;
+  color: var(--ats-sidebar-fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ats-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 1.375rem;
+  flex: 1;
+  overflow: auto;
+}
+
+.ats-nav-group { display: flex; flex-direction: column; gap: 2px; }
+
+.ats-nav-label {
+  font-family: var(--no-font-mono);
+  font-weight: 700;
+  font-size: .65625rem;
+  letter-spacing: var(--no-track-eyebrow);
+  color: var(--ats-sidebar-label);
+  padding: 0 .625rem .375rem;
+}
+
+.ats-nav a {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: .625rem;
+  padding: .5625rem .625rem;
+  border-radius: var(--no-radius-md);
+  color: var(--ats-sidebar-muted);
+  font-size: .84375rem;
+  font-weight: 300;
+  transition: background .15s ease, color .15s ease;
+}
+
+.ats-nav a:hover { background: var(--ats-sidebar-hover); color: var(--ats-sidebar-fg); }
+
+.ats-nav a.active {
+  background: var(--ats-sidebar-active);
+  color: var(--ats-sidebar-fg);
+  font-weight: 500;
+}
+
+/* The 3px accent rail on the active item. The sidebar's own padding is 12px, so the rail sits at
+   -12px to hug the panel edge. */
+.ats-nav a.active::before {
+  content: "";
+  position: absolute;
+  left: -.75rem;
+  top: .5rem;
+  bottom: .5rem;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--ats-accent);
+}
+
+.ats-nav-count {
+  margin-left: auto;
+  font-family: var(--no-font-mono);
+  font-weight: 700;
+  font-size: .625rem;
+  color: var(--ats-sidebar-label);
+}
+
+.ats-nav-alert {
+  margin-left: auto;
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: var(--no-radius-pill);
+  background: var(--no-danger);
+}
+
+.ats-sidebar-user {
+  border-top: 1px solid var(--ats-sidebar-border);
+  padding-top: .75rem;
+  display: flex;
+  align-items: center;
+  gap: .625rem;
+}
+
+.ats-sidebar-user-name { font-size: .8125rem; color: var(--ats-sidebar-fg); }
+
+.ats-sidebar-user-role {
+  font-family: var(--no-font-mono);
+  font-weight: 700;
+  font-size: .625rem;
+  color: var(--ats-sidebar-muted);
+}
+
+.ats-sidebar-signout {
+  background: transparent;
+  border: 0;
+  color: var(--ats-sidebar-muted);
+  padding: .25rem;
+  border-radius: var(--no-radius-sm);
+  display: inline-flex;
+}
+
+.ats-sidebar-signout:hover { background: var(--ats-sidebar-hover); color: var(--ats-sidebar-fg); }
+
+/* ---------- Main column ---------- */
+
+.ats-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+.ats-topbar {
+  height: var(--ats-topbar-height);
+  flex: 0 0 var(--ats-topbar-height);
+  background: var(--ats-surface);
+  border-bottom: 1px solid var(--ats-border);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0 1.75rem;
+}
+
+.ats-crumbs {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-size: .8125rem;
+  font-weight: 300;
+  color: var(--ats-ink-subtle);
+  min-width: 0;
+}
+
+.ats-crumbs-sep { color: var(--ats-rule); }
+
+.ats-crumbs-leaf {
+  color: var(--ats-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ats-topbar-search { margin-left: auto; width: 20rem; position: relative; }
+
+.ats-topbar-results {
+  position: absolute;
+  top: calc(100% + .5rem);
+  left: 0;
+  right: 0;
+  z-index: 1040;
+  background: var(--ats-surface);
+  border: 1px solid var(--ats-border);
+  border-radius: var(--no-radius-md);
+  box-shadow: var(--no-shadow-md);
+  max-height: 24rem;
+  overflow: auto;
+}
+
+.ats-topbar-results:empty { display: none; }
+
+.ats-icon-btn {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border-radius: var(--no-radius-pill);
+  border: 1px solid var(--ats-border);
+  background: var(--ats-surface);
+  color: var(--ats-ink-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.ats-icon-btn:hover { background: var(--ats-bg); }
+
+.ats-icon-btn-dot {
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--no-radius-pill);
+  background: var(--no-danger);
+  border: 1.5px solid var(--ats-surface);
+}
+
+.ats-content { flex: 1; overflow: auto; padding: 1.75rem 1.75rem 3.5rem; }
+
+.ats-content > * { max-width: 1400px; }
+
+.ats-pagehead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.ats-pagehead-text { display: flex; flex-direction: column; gap: .5rem; }
+
+.ats-pagehead-actions { display: flex; gap: .5rem; align-items: center; }
+
+/* Drawer host: empty until htmx swaps a drawer in. */
+#ats-drawer-host:empty { display: none; }
+
+/* ---------- Auth shell ---------- */
+
+.ats-auth {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: linear-gradient(160deg, var(--no-oxford-blue), var(--no-maastricht-blue));
+}
+
+.ats-auth-card { width: 100%; max-width: 26rem; }
+
+.ats-auth-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .625rem;
+  margin-bottom: 1.25rem;
+  color: #fff;
+}
+
+/* ---------- Narrow viewports ----------
+   The fixed-height shell becomes a normal document flow so the page can scroll. */
+
+@media (max-width: 991.98px) {
+  .ats-shell { height: auto; overflow: visible; display: block; }
+
+  .ats-sidebar {
+    width: 100%;
+    flex: none;
+    height: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    border-right: 0;
+    border-bottom: 1px solid var(--ats-sidebar-border);
+  }
+
+  .ats-nav { flex-direction: row; flex-wrap: wrap; gap: .5rem; overflow: visible; }
+  .ats-nav-group { flex-direction: row; flex-wrap: wrap; gap: .25rem; }
+  .ats-nav-label { display: none; }
+  .ats-nav a.active::before { display: none; }
+
+  .ats-tenant-chip { width: auto; flex: 1 1 12rem; }
+  .ats-sidebar-user { border-top: 0; padding-top: 0; }
+
+  .ats-topbar { height: auto; flex: none; flex-wrap: wrap; padding: .75rem 1rem; }
+  .ats-topbar-search { width: 100%; order: 3; margin-left: 0; }
+
+  .ats-content { padding: 1rem 1rem 3rem; }
+  .ats-drawer { width: 100%; }
+}

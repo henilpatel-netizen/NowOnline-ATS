@@ -6,31 +6,59 @@ description: The Ats back-office UI pattern - layouts, design tokens, shared com
 # Ats UI
 
 ## Stack
-Server-rendered ASP.NET Core MVC + Bootstrap 5 (self-hosted in `wwwroot/lib`). Icons: Bootstrap
-Icons (`<i class="bi bi-..."></i>`). Client libraries are managed in `libman.json`; run
-`libman restore` to hydrate `wwwroot/lib`. htmx + SortableJS are present for the Phase 1 kanban.
-No external/CDN requests at runtime.
+Server-rendered ASP.NET Core MVC + Bootstrap 5 (self-hosted in `wwwroot/lib`), reskinned with the
+NowOnline design system. Icons: **Material Symbols Outlined**, self-hosted, used as
+`<span class="ms">icon_name</span>` (`.ms-sm` / `.ms-lg` / `.ms-xl` size variants). Do NOT use
+Bootstrap Icons (`bi-*`) — they were removed; do not mix icon systems. Fonts: Urbanist (display),
+Lexend (body), Sometype Mono (eyebrow), self-hosted in `wwwroot/lib/nowonline-fonts`. Client
+libraries are in `libman.json`; run `libman restore` to hydrate `wwwroot/lib`. htmx + SortableJS
+back the kanban and the global search. No external/CDN requests at runtime.
 
 ## Layouts
-- `Views/Shared/_Layout.cshtml` - authenticated app shell: left sidebar (`<vc:sidebar-nav>`) plus a
-  content area that renders `_Alerts`, `_PageHeader`, then the body. Default for all back-office pages.
-- `Views/Shared/_AuthLayout.cshtml` - centered card for anonymous pages (login, register).
-- Layout selection is declarative: `Views/_ViewStart.cshtml` sets `_Layout`;
-  `Views/Account/_ViewStart.cshtml` overrides to `_AuthLayout`.
+- `Views/Shared/_Layout.cshtml` - authenticated app shell: `<vc:branding>` (emits per-tenant CSS
+  vars), `<vc:sidebar-nav>`, `<vc:top-bar>`, then a scrolling `<main>` that renders `_Alerts`, the
+  page head (eyebrow + H1 + optional `PageActions` section, inlined here because sections are not
+  legal in a partial), the body, and an empty `#ats-drawer-host` for htmx-loaded drawers.
+- `Views/Shared/_AuthLayout.cshtml` - centered card on an Oxford-Blue gradient for anonymous pages.
+- `Areas/Careers/Views/Shared/_CareersLayout.cshtml` - public career site.
+- Layout selection is declarative via `_ViewStart.cshtml` files (unchanged).
 
-## Design tokens
-All theming lives in `wwwroot/css/site.css` as CSS custom properties (`--ats-accent`, sidebar
-colors, spacing, radius) plus a few Bootstrap overrides. Change the accent in one place. Do not put
-theme colors inline in views.
+## Design tokens (four layered stylesheets, replacing `site.css`)
+Load order matters and is controlled by the `<link>` sequence in each layout:
+`ats-tokens.css` (NowOnline `--no-*` tokens, `--ats-*` semantic aliases, Bootstrap variable
+overrides) -> `ats-base.css` (`@font-face`, typography, `.ms`, `.ats-eyebrow`) ->
+`ats-components.css` (cards, pills, chips, avatars, pipeline bar, tables, kanban, drawer, timeline,
+pager, search) -> `ats-shell.css` (sidebar, topbar, content, auth shell). `_AuthLayout` and
+`_CareersLayout` load a subset.
+- **Views consume `--ats-*` aliases only, never `--no-*`.** The `--no-*` values are ported verbatim
+  from the design system's `colors_and_type.css`; re-port rather than hand-tuning.
+- No theme colours inline in views. The one sanctioned inline style is the per-tenant accent, and
+  that is emitted only by `<vc:branding>` after regex validation.
+
+## Per-tenant branding
+`ITenantBrandingService` (Application) resolves accent colour, sidebar theme (dark/light) and career
+hero copy from `TenantSettings`, substituting NowOnline defaults for nulls, cached per request.
+`BrandingViewComponent` writes the resolved values into a `<style>` block. The accent is validated
+by `BrandColor.Normalize` on save and again on emission (it lands in a `style` attribute); anything
+invalid falls back to the default.
 
 ## Shared components
-- `SidebarNavViewComponent` (`ViewComponents/`) renders the nav from an in-code `NavItem[]`, marks
-  the active item from the current controller, and shows the signed-in user (`Name` claim) and role.
-  Add a new section by appending a `NavItem`.
-- `_PageHeader.cshtml` renders the page title from `ViewData["Title"]`. Every content page sets
-  `ViewData["Title"]`.
-- `_Alerts.cshtml` renders `TempData["Success"|"Error"|"Info"]` as Bootstrap alerts. Set those in
-  controllers for post-redirect feedback.
+- `SidebarNavViewComponent` renders grouped nav (ungrouped Dashboard, then `Hiring:`, `Setup:`,
+  `Admin:`) from an in-code `NavItem[]`. A `NavItem` carries a `NavGroup`, an optional `RequiredRole`,
+  an optional `Count` selector (badge, e.g. open jobs) and an optional `Alert` selector (danger dot).
+  Counts and the alert come from `IShellSummaryService` (one cached per-request query batch).
+- `TopBarViewComponent` renders the breadcrumb (from a controller->crumb map), the global search
+  field (htmx GET to `SearchController`, `Ctrl/Cmd+K` focus), and the notification bell (dot when
+  `ShellSummary.HasAttention`). A page adds a primary action by setting `ViewData["TopBarActionText"]`
+  + `TopBarActionController` (+ optional `TopBarActionAction`, `TopBarActionIcon`).
+- Presentation partials in `Views/Shared/Partials`, all strongly typed via
+  `Ats.Web.Models.Shared`: `_Avatar` (deterministic colour + initials from a name),
+  `_StatusPill`, `_SourceChip` (application origin), `_StatTile`, `_PipelineBar`, `_EmptyState`,
+  `_Timeline`.
+- Page head: set `ViewData["Title"]` (drives the H1 and browser title) and optional
+  `ViewData["Eyebrow"]` (mono kicker). The trailing heading period ("Jobs.") is added by the layout,
+  so `Title` stays "Jobs". There is no `_PageHeader.cshtml` any more.
+- `_Alerts.cshtml` renders `TempData["Success"|"Error"|"Info"]` as dismissible alerts with an icon.
 
 ## Forms
 Use tag helpers: `asp-for`, `asp-validation-for`, `asp-validation-summary="ModelOnly"`. Inputs get
@@ -40,10 +68,14 @@ Use tag helpers: `asp-for`, `asp-validation-for`, `asp-validation-summary="Model
 
 ## Add a new back-office page (checklist)
 1. Controller action returns `View(...)`; the page is `Views/<Controller>/<Action>.cshtml`.
-2. First line: `@{ ViewData["Title"] = "..."; }` (drives the header and browser title).
-3. Use Bootstrap layout (`row`, `col-*`, `card`) for content. No inline theme colors.
-4. To surface in the sidebar, append a `NavItem` in `SidebarNavViewComponent`.
-5. For flash messages, set `TempData["Success"]` etc. in the action.
+2. First line: `@{ ViewData["Title"] = "..."; }` (drives the H1 and browser title); optionally
+   `ViewData["Eyebrow"] = "...:";` for the mono kicker.
+3. Use Bootstrap grid + the `.ats-*` component classes. No inline theme colours; icons via `.ms`.
+4. Header buttons: define a `@section PageActions { ... }`, or set the `TopBarAction*` `ViewData`
+   keys for a topbar CTA.
+5. To surface in the sidebar, append a `NavItem` in `SidebarNavViewComponent` with its `NavGroup`
+   (and, if it should be role-gated, `RequiredRole`). Add a matching crumb in `TopBarViewComponent`.
+6. For flash messages, set `TempData["Success"]` etc. in the action.
 
 ## Security
 Antiforgery is validated globally (`AutoValidateAntiforgeryToken`); form tag helpers emit the token.
@@ -58,5 +90,16 @@ The auth cookie is `HttpOnly` + `Secure`, so test over https.
 - Error pages: `app.UseStatusCodePagesWithReExecute("/Home/Status/{0}")` renders `HomeController.Status`
   (`Views/Home/Status.cshtml`, neutral `_AuthLayout`) for 404/403; `UseExceptionHandler` renders
   `Views/Shared/Error.cshtml` for 500. The neutral layout serves both back-office and careers visitors.
-- Polish: an inline-SVG favicon in all layouts; `_Alerts` are dismissible; `site.js` disables a form's
-  submit button on submit (back-office only).
+- Polish: an inline-SVG favicon (Sky-Blue `#0085CA`) in all layouts; `_Alerts` are dismissible;
+  `site.js` disables a form's submit button on submit and wires the `Ctrl/Cmd+K` search shortcut.
+
+## Global search
+`SearchController` (`GET /Search?q=`) returns the `_Results` partial via htmx into the topbar. Backed
+by `IGlobalSearchService` (jobs by title/ExternalRef, candidates by name/email, applications by
+referral code), capped 5 per category, tenant-scoped by the global query filter, `LIKE`
+metacharacters escaped.
+
+## Icon subsetting caveat
+The Material Symbols woff2 self-hosts the full variable font (~3.5 MB). If it has been subset to the
+icons actually in use, adding a new icon means regenerating the subset — grep `class="ms"` blocks and
+the `Icon` values in `SidebarNavViewComponent` for the full list.

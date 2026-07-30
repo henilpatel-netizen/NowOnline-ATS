@@ -19,16 +19,20 @@ Solution: `Ats.slnx` (modern XML solution format, .NET 10 default; projects unde
 | `Ats.Web` | MVC back-office (root: `/Jobs`, `/Candidates`, `/Board`, ...) + public career site (`Careers` area, `/careers/{slug}`). |
 | `Ats.Api` | REST API: vacancy feed + integration endpoints. |
 | `Ats.Worker` | Background host: outbox delivery, notifications. |
+| `Ats.Tests` | xUnit tests for pure Application-layer logic (no database). Under `tests/`. |
 
 ## Build / run
 ```
 dotnet build
+dotnet test
 dotnet run --project src/Ats.Web
 ```
 
 ## Front-end
-Server-rendered MVC + Bootstrap 5. Client libraries are managed by LibMan (`libman.json`); run
-`libman restore` to populate `src/Ats.Web/wwwroot/lib`. UI conventions: `.claude/skills/ui/SKILL.md`.
+Server-rendered MVC + Bootstrap 5, reskinned with the NowOnline design system (Urbanist / Lexend /
+Sometype Mono, Material Symbols icons, four layered `ats-*.css` files). Client libraries are managed
+by LibMan (`libman.json`); run `libman restore` to populate `src/Ats.Web/wwwroot/lib`. UI
+conventions: `.claude/skills/ui/SKILL.md`.
 
 ## Architecture (strict layering)
 Controllers -> Application services -> repositories -> EF Core (Infrastructure).
