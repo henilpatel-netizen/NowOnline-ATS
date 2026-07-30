@@ -17,6 +17,9 @@ public class HomeController : Controller
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Status(int code)
     {
+        // Guard against a missing/invalid code: an out-of-range Response.StatusCode (e.g. 0) makes
+        // Kestrel reset the connection with no status line.
+        if (code < 400 || code > 599) code = 404;
         ViewData["Code"] = code;
         ViewData["Message"] = code switch
         {

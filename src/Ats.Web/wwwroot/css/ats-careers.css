@@ -1,0 +1,74 @@
+/* Public career site — hero, blobs, role cards, footer. Depends on ats-tokens.css + ats-base.css. */
+
+.careers-nav {
+  background: var(--ats-surface);
+  border-bottom: 1px solid var(--ats-border);
+}
+.careers-nav-inner {
+  max-width: 1058px; margin: 0 auto; padding: 1.25rem 1.5rem;
+  display: flex; align-items: center; gap: .75rem;
+}
+
+.careers-hero {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(160deg, var(--no-oxford-blue), var(--no-maastricht-blue));
+  color: #fff;
+}
+.careers-hero-inner {
+  position: relative; z-index: 1;
+  max-width: 1058px; margin: 0 auto; padding: 4.5rem 1.5rem;
+}
+.careers-hero-blob {
+  position: absolute; border-radius: 50%; filter: blur(10px); pointer-events: none;
+}
+.careers-hero-blob--1 { width: 520px; height: 420px; background: var(--ats-accent); opacity: .34; right: -120px; top: -140px; }
+.careers-hero-blob--2 { width: 380px; height: 320px; background: var(--no-medium-aqua); opacity: .26; right: 140px; bottom: -180px; }
+.careers-hero-eyebrow { color: #8FA0B4; }
+.careers-hero-title {
+  font-family: var(--no-font-display); font-weight: 800;
+  font-size: clamp(2.5rem, 6vw, 3.5rem); line-height: 1.12; letter-spacing: -.01em;
+  margin: 1rem 0; max-width: 40rem; color: #fff;
+}
+/* One outlined line inside the headline (the signature NowOnline treatment). */
+.careers-hero-title .outlined { color: transparent; -webkit-text-stroke: 1.5px #fff; }
+.careers-hero-intro {
+  font-size: 1.0625rem; font-weight: 300; line-height: 1.56; color: #C6D0DA; max-width: 40rem;
+}
+
+.careers-body { max-width: 1058px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+
+.careers-roles { display: grid; grid-template-columns: 1fr 1fr; gap: .875rem; }
+@media (max-width: 767.98px) { .careers-roles { grid-template-columns: 1fr; } }
+
+.careers-role-card {
+  display: flex; flex-direction: column; gap: .75rem;
+  border: 1px solid var(--ats-border); border-radius: var(--no-radius-lg);
+  padding: 1.375rem; background: var(--ats-surface); color: var(--ats-ink);
+  transition: box-shadow .15s ease, transform .15s ease;
+}
+.careers-role-card:hover { box-shadow: var(--no-shadow-lg); transform: translateY(-1px); color: var(--ats-ink); }
+.careers-role-title { font-family: var(--no-font-display); font-weight: 800; font-size: 1.25rem; letter-spacing: -.01em; }
+.careers-role-cta {
+  display: inline-flex; align-items: center; gap: .375rem;
+  font-family: var(--no-font-display); font-weight: 600; font-size: .84375rem; color: var(--ats-accent);
+}
+
+/* Standalone filter pills for the public site (the back-office .ats-filter-group is a segmented
+   control; here the pills stand alone, matching the prototype). */
+.careers-filter { display: flex; align-items: center; gap: .625rem; flex-wrap: wrap; }
+.careers-filter-pill {
+  border: 1px solid var(--ats-border); background: var(--ats-surface); color: var(--ats-ink-muted);
+  border-radius: var(--no-radius-pill); padding: .4375rem 1rem; font-size: .8125rem; cursor: pointer;
+}
+.careers-filter-pill.active { background: var(--no-oxford-blue); color: #fff; border-color: var(--no-oxford-blue); }
+
+.careers-detail { max-width: 788px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+
+.careers-footer {
+  background: var(--no-oxford-blue); color: #fff; margin-top: 3rem;
+}
+.careers-footer-inner {
+  max-width: 1058px; margin: 0 auto; padding: 2.5rem 1.5rem;
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+}

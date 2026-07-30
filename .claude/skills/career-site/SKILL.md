@@ -53,4 +53,15 @@ actions are Owner-only (`[Authorize(Roles = Owner)]`) and reuse `ITenantBranding
 (accent colour, sidebar theme, and the career hero copy: `CareerHeroHeadline` / `...Outlined` /
 `...Intro` on `TenantSettings`). Saving recolours the whole back-office shell via
 `BrandingViewComponent`; the accent is regex-validated in the VM and re-validated in `BrandColor`.
-The public hero currently uses defaults; Phase 4 renders the stored copy on the live site.
+
+## Public site redesign (Phase 4)
+The public pages are now the NowOnline design. `JobsController` injects `ITenantBrandingService`
+(resolves the tenant from the slug, so it works anonymously) and passes a `CareerIndexViewModel`
+(branding + jobs + slug) to the landing view; Detail keeps `CareerJobDetailViewModel`. Each action
+sets `ViewData["CareerTenantName"]` for the layout nav/footer. `_CareersLayout` emits `<vc:branding>`
+so public CTAs use the tenant accent — this required adding `@addTagHelper *, Ats.Web` to the area's
+`_ViewImports.cshtml`. The hero reads `CareerHeroHeadline` / `...Outlined` / `...Intro` (with
+NowOnline defaults) and applies the signature outlined-second-line treatment. Department filtering is
+client-side over the loaded cards (`data-dept`). Styling-only file: `wwwroot/css/ats-careers.css`.
+The apply POST, referral-code cookie capture (`?<codeparam>=` → `SourceCode`), resume validation,
+antiforgery and slug tenancy (unknown/suspended slug 404 for anonymous visitors) are all unchanged.

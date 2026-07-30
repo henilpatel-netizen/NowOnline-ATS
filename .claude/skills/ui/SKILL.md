@@ -28,8 +28,10 @@ Load order matters and is controlled by the `<link>` sequence in each layout:
 `ats-tokens.css` (NowOnline `--no-*` tokens, `--ats-*` semantic aliases, Bootstrap variable
 overrides) -> `ats-base.css` (`@font-face`, typography, `.ms`, `.ats-eyebrow`) ->
 `ats-components.css` (cards, pills, chips, avatars, pipeline bar, tables, kanban, drawer, timeline,
-pager, search) -> `ats-shell.css` (sidebar, topbar, content, auth shell). `_AuthLayout` and
-`_CareersLayout` load a subset.
+pager, search) -> `ats-shell.css` (sidebar, topbar, content, auth shell), and `ats-careers.css` (public career-site
+only: hero, blurred blobs, outlined headline, role cards, footer). `_AuthLayout` loads
+tokens/base/components/shell; `_CareersLayout` loads tokens/base/components/careers and emits
+`<vc:branding>` for the tenant accent (its area `_ViewImports` registers `@addTagHelper *, Ats.Web`).
 - **Views consume `--ats-*` aliases only, never `--no-*`.** The `--no-*` values are ported verbatim
   from the design system's `colors_and_type.css`; re-port rather than hand-tuning.
 - No theme colours inline in views. The one sanctioned inline style is the per-tenant accent, and
@@ -116,7 +118,12 @@ backdrop click, the close button (`data-drawer-close`), Escape, or the `ats:draw
 fallback, so the two surfaces never drift. A page with its own bespoke header (the board) sets
 `ViewData["HidePageHead"] = true` so the layout does not also emit the auto H1.
 
-## Icon subsetting caveat
-The Material Symbols woff2 self-hosts the full variable font (~3.5 MB). If it has been subset to the
-icons actually in use, adding a new icon means regenerating the subset — grep `class="ms"` blocks and
-the `Icon` values in `SidebarNavViewComponent` for the full list.
+## Icon font (subset)
+Material Symbols is self-hosted as a **subset**: `material-symbols-subset.woff2` (~216 KB), flattened
+to the fixed axes the `.ms` class renders at and containing only the ~50 icons the app uses. The
+`@font-face` for it lives in `ats-base.css`; the layouts no longer link LibMan's `outlined.css`.
+**After adding a new icon, regenerate the subset:** `py tools/subset-material-symbols.py`. That script
+scans every view + the icon-name literals in `SidebarNavViewComponent` and `DashboardService`,
+intersects with the ligatures the full font defines, rewrites the subset + `tools/material-symbols.icons.txt`,
+and fails if any used icon would be missing. LibMan still restores the full `material-symbols-outlined.woff2`
+as the re-subset source (not served at runtime).

@@ -1,59 +1,72 @@
 @model Ats.Web.Areas.Careers.Models.CareerJobDetailViewModel
-<div class="mb-3">
-    <a class="btn btn-outline-secondary btn-sm" asp-controller="Jobs" asp-action="Index" asp-route-slug="@Model.Slug">
-        <span class="ms ms-sm">arrow_back</span> All positions
-    </a>
-</div>
-<h1 class="h3">@Model.Job.Title</h1>
-<div class="text-muted mb-3">
-    @Model.Job.EmploymentType
-    @if (Model.Job.Location is not null) { <span>&middot; @(Model.Job.Location.City ?? Model.Job.Location.Name)</span> }
-    @if (Model.Job.Department is not null) { <span>&middot; @Model.Job.Department.Name</span> }
-</div>
-@if (!string.IsNullOrWhiteSpace(Model.Job.Description))
-{
-    <div class="mb-4" style="white-space:pre-wrap;">@Model.Job.Description</div>
+@{
+    Layout = "_CareersLayout";
 }
+<header class="careers-hero">
+    <span class="careers-hero-blob careers-hero-blob--1"></span>
+    <div class="careers-hero-inner">
+        <a asp-controller="Jobs" asp-action="Index" asp-route-slug="@Model.Slug"
+           class="ats-eyebrow careers-hero-eyebrow d-inline-flex align-items-center gap-1" style="text-decoration:none">
+            <span class="ms ms-sm">arrow_back</span> All positions
+        </a>
+        <h1 class="careers-hero-title" style="font-size:clamp(2rem,5vw,2.75rem)">@Model.Job.Title</h1>
+        <span class="d-flex gap-2 flex-wrap">
+            <span class="ats-chip ats-chip--neutral">@Model.Job.EmploymentType</span>
+            @if (Model.Job.Location is not null) { <span class="ats-chip ats-chip--neutral">@(Model.Job.Location.City ?? Model.Job.Location.Name)</span> }
+            @if (Model.Job.Department is not null) { <span class="ats-chip ats-chip--neutral">@Model.Job.Department.Name</span> }
+        </span>
+    </div>
+</header>
 
-<div class="card"><div class="card-body">
-    <h2 class="h5 mb-3">Apply for this role</h2>
-    @if (!string.IsNullOrEmpty(Model.Error))
+<main class="careers-detail">
+    @if (!string.IsNullOrWhiteSpace(Model.Job.Description))
     {
-        <div class="alert alert-danger">@Model.Error</div>
+        <div class="no-body mb-4" style="white-space:pre-wrap;line-height:1.56">@Model.Job.Description</div>
     }
-    <form asp-controller="Jobs" asp-action="Apply" asp-route-slug="@Model.Slug"
-          asp-route-externalRef="@Model.Job.ExternalRef" method="post" enctype="multipart/form-data" class="col-lg-8">
-        <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
-        <input type="hidden" asp-for="Code" name="SourceCode" />
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label asp-for="FirstName" class="form-label">First name</label>
-                <input asp-for="FirstName" class="form-control" required />
-                <span asp-validation-for="FirstName" class="text-danger small"></span>
+
+    <div class="ats-card">
+        <h2 class="mb-3">Apply for this role.</h2>
+        @if (!string.IsNullOrEmpty(Model.Error))
+        {
+            <div class="alert alert-danger d-flex align-items-center gap-2" role="alert">
+                <span class="ms ms-sm">error</span> @Model.Error
             </div>
-            <div class="col-md-6 mb-3">
-                <label asp-for="LastName" class="form-label">Last name</label>
-                <input asp-for="LastName" class="form-control" required />
-                <span asp-validation-for="LastName" class="text-danger small"></span>
+        }
+        <form asp-controller="Jobs" asp-action="Apply" asp-route-slug="@Model.Slug"
+              asp-route-externalRef="@Model.Job.ExternalRef" method="post" enctype="multipart/form-data"
+              class="d-flex flex-column gap-3">
+            <div asp-validation-summary="ModelOnly" class="text-danger small"></div>
+            <input type="hidden" asp-for="Code" name="SourceCode" />
+            <div class="row g-3">
+                <label class="col-md-6 d-flex flex-column gap-1">
+                    <span class="form-label mb-0">First name</span>
+                    <input asp-for="FirstName" class="form-control" required />
+                    <span asp-validation-for="FirstName" class="text-danger small"></span>
+                </label>
+                <label class="col-md-6 d-flex flex-column gap-1">
+                    <span class="form-label mb-0">Last name</span>
+                    <input asp-for="LastName" class="form-control" required />
+                    <span asp-validation-for="LastName" class="text-danger small"></span>
+                </label>
+                <label class="col-md-6 d-flex flex-column gap-1">
+                    <span class="form-label mb-0">Email</span>
+                    <input asp-for="Email" type="email" class="form-control" required />
+                    <span asp-validation-for="Email" class="text-danger small"></span>
+                </label>
+                <label class="col-md-6 d-flex flex-column gap-1">
+                    <span class="form-label mb-0">Phone</span>
+                    <input asp-for="Phone" class="form-control" />
+                    <span asp-validation-for="Phone" class="text-danger small"></span>
+                </label>
             </div>
-        </div>
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label asp-for="Email" class="form-label">Email</label>
-                <input asp-for="Email" type="email" class="form-control" required />
-                <span asp-validation-for="Email" class="text-danger small"></span>
+            <label class="d-flex flex-column gap-1">
+                <span class="form-label mb-0">Resume (PDF or Word, max 5 MB)</span>
+                <input name="resume" type="file" accept=".pdf,.doc,.docx" class="form-control" required />
+            </label>
+            <div>
+                <button type="submit" class="btn btn-primary">Submit application <span class="ms ms-sm">arrow_forward</span></button>
             </div>
-            <div class="col-md-6 mb-3">
-                <label asp-for="Phone" class="form-label">Phone</label>
-                <input asp-for="Phone" class="form-control" />
-                <span asp-validation-for="Phone" class="text-danger small"></span>
-            </div>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Resume (PDF or Word, max 5 MB)</label>
-            <input name="resume" type="file" accept=".pdf,.doc,.docx" class="form-control" required />
-        </div>
-        <button type="submit" class="btn btn-primary">Submit application</button>
-    </form>
-    <p class="text-muted small mt-2 mb-0">A resume in PDF or Word format is required.</p>
-</div></div>
+            <p class="ats-xsmall ats-muted mb-0">A resume in PDF or Word format is required.</p>
+        </form>
+    </div>
+</main>

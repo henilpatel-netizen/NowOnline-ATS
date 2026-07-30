@@ -52,6 +52,13 @@ Applied MANUALLY by a developer. See `.claude/rules/migrations.md`.
 Frozen contract in `docs/integration/referraltool-contract.md` — the source of truth. Do not
 re-derive it from the ReferralTool repo.
 
+## UI: NowOnline design system
+The whole product (back office + public career site) is on the NowOnline design system — tokenised
+CSS (`wwwroot/css/ats-*.css`) over Bootstrap, Urbanist/Lexend/Sometype Mono, Material Symbols icons,
+per-tenant branding. See `.claude/skills/ui/SKILL.md` before building any view. Design source: the
+Claude Design handoff spec `docs/specs/2026-07-30-ats-nowonline-redesign-design.md`; implemented in
+four phases (`docs/plans/2026-07-30-ats-redesign-phase-{1..4}-*.md`).
+
 ## Conventions
 - Auth behind `IIdentityService` (ASP.NET Core Identity impl); swappable later.
 - No hardcoded secrets; config per environment, secrets outside source control.

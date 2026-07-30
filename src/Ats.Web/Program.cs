@@ -44,7 +44,10 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseStatusCodePagesWithReExecute("/Home/Status/{0}");
+// Re-execute error pages. The status code is passed as a query parameter (?code=404) so it binds to
+// HomeController.Status(int code); the default route's third segment is {id?}, which would NOT bind to
+// a parameter named "code" and would leave it 0 (then Response.StatusCode = 0 resets the connection).
+app.UseStatusCodePagesWithReExecute("/Home/Status", "?code={0}");
 
 app.UseHttpsRedirection();
 app.UseRouting();

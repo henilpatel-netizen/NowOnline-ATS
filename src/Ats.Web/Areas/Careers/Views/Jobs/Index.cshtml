@@ -1,25 +1,82 @@
-@model List<Ats.Domain.Entities.Job>
-@{ var slug = ViewData["Slug"] as string; }
-<h1 class="h3 mb-4">Open positions</h1>
-@if (Model.Count == 0)
-{
-    <p class="text-muted">There are no open positions right now. Please check back later.</p>
+@model Ats.Web.Areas.Careers.Models.CareerIndexViewModel
+@{
+    Layout = "_CareersLayout";
+    var b = Model.Branding;
+    var headline = string.IsNullOrWhiteSpace(b.CareerHeroHeadline) ? "Build things that" : b.CareerHeroHeadline;
+    var outlined = string.IsNullOrWhiteSpace(b.CareerHeroHeadlineOutlined) ? "actually ship." : b.CareerHeroHeadlineOutlined;
+    var intro = string.IsNullOrWhiteSpace(b.CareerHeroIntro)
+        ? "Open roles, one team, no noise. Find the one that fits."
+        : b.CareerHeroIntro;
+
+    var depts = Model.Jobs
+        .Select(j => j.Department?.Name)
+        .Where(n => !string.IsNullOrWhiteSpace(n))
+        .Select(n => n!)
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(n => n)
+        .ToList();
 }
-<div class="row g-3">
-    @foreach (var j in Model)
+
+<header class="careers-hero">
+    <span class="careers-hero-blob careers-hero-blob--1"></span>
+    <span class="careers-hero-blob careers-hero-blob--2"></span>
+    <div class="careers-hero-inner">
+        <span class="ats-eyebrow careers-hero-eyebrow">@b.TenantName · careers</span>
+        <h1 class="careers-hero-title">@headline<br /><span class="outlined">@outlined</span></h1>
+        <p class="careers-hero-intro">@intro</p>
+    </div>
+</header>
+
+<main class="careers-body">
+    @if (Model.Jobs.Count == 0)
     {
-        <div class="col-md-6">
-            <div class="card h-100"><div class="card-body">
-                <h2 class="h5 mb-1">
-                    <a class="text-decoration-none" asp-controller="Jobs" asp-action="Detail"
-                       asp-route-slug="@slug" asp-route-externalRef="@j.ExternalRef">@j.Title</a>
-                </h2>
-                <div class="text-muted small mb-2">
-                    @j.EmploymentType
-                    @if (j.Location is not null) { <span>&middot; @(j.Location.City ?? j.Location.Name)</span> }
-                    @if (j.Department is not null) { <span>&middot; @j.Department.Name</span> }
-                </div>
-            </div></div>
+        <partial name="Partials/_EmptyState" model="@(new EmptyStateModel("work_outline", "No open positions right now.", "Please check back later."))" />
+    }
+    else
+    {
+        <div class="careers-filter mb-4">
+            <button type="button" class="careers-filter-pill active" data-filter="*">All roles</button>
+            @foreach (var d in depts)
+            {
+                <button type="button" class="careers-filter-pill" data-filter="@d">@d</button>
+            }
+            <span class="ms-auto ats-mono ats-xsmall ats-muted">@Model.Jobs.Count open @(Model.Jobs.Count == 1 ? "position" : "positions")</span>
+        </div>
+
+        <div class="careers-roles">
+            @foreach (var j in Model.Jobs)
+            {
+                <a class="careers-role-card" data-dept="@(j.Department?.Name ?? "")"
+                   asp-controller="Jobs" asp-action="Detail" asp-route-slug="@Model.Slug" asp-route-externalRef="@j.ExternalRef">
+                    <span class="careers-role-title">@j.Title</span>
+                    <span class="d-flex gap-2 flex-wrap">
+                        <span class="ats-chip ats-chip--neutral">@j.EmploymentType</span>
+                        @if (j.Location is not null) { <span class="ats-chip ats-chip--neutral">@(j.Location.City ?? j.Location.Name)</span> }
+                        @if (j.Department is not null) { <span class="ats-chip ats-chip--neutral">@j.Department.Name</span> }
+                    </span>
+                    <span class="careers-role-cta">Bekijk vacature <span class="ms ms-sm">arrow_forward</span></span>
+                </a>
+            }
         </div>
     }
-</div>
+</main>
+
+@section Scripts {
+    <script>
+        // Client-side department filter over the already-loaded role cards.
+        (function () {
+            const pills = document.querySelectorAll('.careers-filter-pill');
+            const cards = document.querySelectorAll('.careers-role-card');
+            pills.forEach(function (pill) {
+                pill.addEventListener('click', function () {
+                    pills.forEach(p => p.classList.remove('active'));
+                    pill.classList.add('active');
+                    const f = pill.getAttribute('data-filter');
+                    cards.forEach(function (card) {
+                        card.style.display = (f === '*' || card.getAttribute('data-dept') === f) ? '' : 'none';
+                    });
+                });
+            });
+        })();
+    </script>
+}

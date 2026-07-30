@@ -1,4 +1,5 @@
 using Ats.Application.Abstractions;
+using Ats.Application.Branding;
 using Ats.Application.Career;
 using Ats.Web.Areas.Careers.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -30,19 +31,31 @@ public class JobsController : Controller
 
     private readonly ICareerService _career;
     private readonly IFileStore _files;
+    private readonly ITenantBrandingService _branding;
 
-    public JobsController(ICareerService career, IFileStore files)
+    public JobsController(ICareerService career, IFileStore files, ITenantBrandingService branding)
     {
-        _career = career; _files = files;
+        _career = career; _files = files; _branding = branding;
     }
+
+    // Tenant name for the public layout nav + footer. GetAsync is request-cached, so repeated
+    // calls across an action are one query.
+    private async Task SetLayoutBrandingAsync()
+        => ViewData["CareerTenantName"] = (await _branding.GetAsync()).TenantName;
 
     [HttpGet("")]
     public async Task<IActionResult> Index(string slug)
     {
         ViewData["Title"] = "Open positions";
         ViewData["Slug"] = slug;
+        await SetLayoutBrandingAsync();
         ResolveReferralCode(slug, await _career.GetCodeParameterNameAsync()); // capture ?ref on the landing page
-        return View(await _career.GetPublishedJobsAsync());
+        return View(new CareerIndexViewModel
+        {
+            Branding = await _branding.GetAsync(),
+            Slug = slug,
+            Jobs = await _career.GetPublishedJobsAsync()
+        });
     }
 
     [HttpGet("jobs/{externalRef}")]
@@ -52,6 +65,7 @@ public class JobsController : Controller
         if (job is null) return NotFound();
         var codeParam = await _career.GetCodeParameterNameAsync();
         ViewData["Title"] = job.Title;
+        await SetLayoutBrandingAsync();
         return View(new CareerJobDetailViewModel
         {
             Job = job, Slug = slug, CodeParamName = codeParam,
@@ -77,6 +91,7 @@ public class JobsController : Controller
         {
             var codeParam = await _career.GetCodeParameterNameAsync();
             ViewData["Title"] = job.Title;
+            await SetLayoutBrandingAsync();
             return View("Detail", new CareerJobDetailViewModel
             {
                 Job = job, Slug = slug, CodeParamName = codeParam, Code = form.SourceCode,
@@ -107,10 +122,11 @@ public class JobsController : Controller
     }
 
     [HttpGet("thank-you")]
-    public IActionResult ThankYou(string slug)
+    public async Task<IActionResult> ThankYou(string slug)
     {
         ViewData["Title"] = "Application received";
         ViewData["Slug"] = slug;
+        await SetLayoutBrandingAsync();
         return View();
     }
 
