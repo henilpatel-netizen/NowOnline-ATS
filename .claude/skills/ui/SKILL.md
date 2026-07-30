@@ -99,6 +99,15 @@ by `IGlobalSearchService` (jobs by title/ExternalRef, candidates by name/email, 
 referral code), capped 5 per category, tenant-scoped by the global query filter, `LIKE`
 metacharacters escaped.
 
+## Candidate drawer
+A right-side overlay used on the board. The board card click issues an htmx GET to
+`Applications/Card`, which returns the `_CandidateDrawer` partial (model `ApplicationCard`) into
+`#ats-drawer-host`; `site.js` wraps that body in the backdrop + sliding panel and closes it on
+backdrop click, the close button (`data-drawer-close`), Escape, or the `ats:drawer-close` event.
+`Applications/Details` renders the same `_CandidateDrawer` partial full-page as a deep-link / no-JS
+fallback, so the two surfaces never drift. A page with its own bespoke header (the board) sets
+`ViewData["HidePageHead"] = true` so the layout does not also emit the auto H1.
+
 ## Icon subsetting caveat
 The Material Symbols woff2 self-hosts the full variable font (~3.5 MB). If it has been subset to the
 icons actually in use, adding a new icon means regenerating the subset — grep `class="ms"` blocks and

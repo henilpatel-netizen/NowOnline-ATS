@@ -14,19 +14,20 @@ namespace Ats.Web.Controllers;
 public class CandidatesController : Controller
 {
     private readonly ICandidateService _service;
+    private readonly ICandidateListQuery _candidateList;
     private readonly IJobService _jobs;
     private readonly IApplicationService _applications;
     private readonly IAuditLogger _audit;
 
-    public CandidatesController(ICandidateService service, IJobService jobs, IApplicationService applications, IAuditLogger audit)
+    public CandidatesController(ICandidateService service, ICandidateListQuery candidateList, IJobService jobs, IApplicationService applications, IAuditLogger audit)
     {
-        _service = service; _jobs = jobs; _applications = applications; _audit = audit;
+        _service = service; _candidateList = candidateList; _jobs = jobs; _applications = applications; _audit = audit;
     }
 
     public async Task<IActionResult> Index(string? q, int page = 1)
     {
         if (page < 1) page = 1;
-        var results = await _service.SearchAsync(q, page, 20);
+        var results = await _candidateList.SearchAsync(q, page, 20);
         var jobs = (await _jobs.ListAsync())
             .Where(j => j.Status == JobStatus.Published)
             .Select(j => new SelectListItem($"{j.ExternalRef} - {j.Title}", j.Id.ToString())).ToList();

@@ -10,6 +10,7 @@ namespace Ats.Application.Applications;
 public interface IApplicationService
 {
     Task<Job?> GetJobAsync(int jobId, CancellationToken ct = default);
+    Task<Dictionary<int, DateTimeOffset>> LatestEventTimesForJobAsync(int jobId, CancellationToken ct = default);
     Task<List<PipelineStage>> GetStagesForJobAsync(int jobId, CancellationToken ct = default);
     Task<List<JobApplication>> ListForJobAsync(int jobId, CancellationToken ct = default);
     Task<JobApplication?> GetAsync(int id, CancellationToken ct = default);
@@ -32,6 +33,7 @@ public sealed class ApplicationService : IApplicationService
     }
 
     public Task<Job?> GetJobAsync(int jobId, CancellationToken ct = default) => _repo.GetJobAsync(jobId, ct);
+    public Task<Dictionary<int, DateTimeOffset>> LatestEventTimesForJobAsync(int jobId, CancellationToken ct = default) => _repo.LatestEventTimesForJobAsync(jobId, ct);
     public Task<List<PipelineStage>> GetStagesForJobAsync(int jobId, CancellationToken ct = default) => _repo.GetStagesForJobAsync(jobId, ct);
     public Task<List<JobApplication>> ListForJobAsync(int jobId, CancellationToken ct = default) => _repo.ListForJobAsync(jobId, ct);
     public Task<JobApplication?> GetAsync(int id, CancellationToken ct = default) => _repo.GetAsync(id, ct);
@@ -83,6 +85,7 @@ public sealed class ApplicationService : IApplicationService
             CandidateId = candidate.Id,
             JobId = jobId,
             CurrentStageId = firstStage.Id,
+            Origin = ApplicationOrigin.Manual,
             AppliedAt = DateTimeOffset.UtcNow,
             Status = ApplicationStatus.Active
         };

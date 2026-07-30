@@ -37,3 +37,26 @@ document.addEventListener('submit', function (e) {
         if (!wrap.contains(e.target)) results.innerHTML = '';
     });
 })();
+
+// Candidate drawer: htmx swaps the drawer BODY into #ats-drawer-host; wrap it in the overlay,
+// and close on backdrop click, the close button, Escape, or the ats:drawer-close event.
+(function () {
+    var host = document.getElementById('ats-drawer-host');
+    if (!host) return;
+
+    function close() { host.innerHTML = ''; }
+
+    document.body.addEventListener('htmx:afterSwap', function (e) {
+        if (e.target.id !== 'ats-drawer-host') return;
+        var body = host.innerHTML;
+        host.innerHTML =
+            '<div class="ats-drawer-backdrop" data-drawer-backdrop>' +
+            '<div class="ats-drawer ats-drawer-in ats-scroll" role="dialog" aria-modal="true">' + body + '</div></div>';
+    });
+
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('[data-drawer-close]') || e.target.hasAttribute('data-drawer-backdrop')) close();
+    });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+    document.addEventListener('ats:drawer-close', close);
+})();

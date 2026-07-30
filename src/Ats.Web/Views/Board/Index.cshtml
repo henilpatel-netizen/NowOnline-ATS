@@ -1,17 +1,51 @@
 @model Ats.Web.Models.BoardViewModel
-@{ ViewData["Title"] = $"Board: {Model.Job.Title}"; }
+@using Ats.Web.Models.Shared
+@{
+    ViewData["Title"] = Model.Job.Title;
+    ViewData["HidePageHead"] = true;   // this view renders its own bespoke header (tabs + stats)
+    var pubTone = Model.Job.Status == Ats.Domain.Enums.JobStatus.Published ? PillTone.Success : PillTone.Neutral;
+}
 
-<div class="mb-3 d-flex gap-2">
-    <a class="btn btn-outline-secondary btn-sm" asp-controller="Jobs" asp-action="Index"><span class="ms ms-sm">arrow_back</span> Jobs</a>
-    <button class="btn btn-primary btn-sm" data-bs-toggle="collapse" data-bs-target="#add-candidate"><span class="ms ms-sm">add</span> Add candidate</button>
+<div class="ats-pagehead">
+    <div class="ats-pagehead-text">
+        <a class="ats-eyebrow d-inline-flex align-items-center gap-1" asp-controller="Jobs" asp-action="Index" style="text-decoration:none">
+            <span class="ms ms-sm">arrow_back</span> All jobs
+        </a>
+        <div class="d-flex align-items-center gap-2">
+            <h1 class="mb-0">@Model.Job.Title</h1>
+            <partial name="Partials/_StatusPill" model="new StatusPillModel(Model.Job.Status.ToString(), pubTone)" />
+        </div>
+        <div class="ats-cell-sub"><code>@Model.Job.ExternalRef</code>
+            @if (Model.Job.Department is not null) { <text>· @Model.Job.Department.Name</text> }
+            @if (Model.Job.Location is not null) { <text>· @(Model.Job.Location.City ?? Model.Job.Location.Name)</text> }
+            <text>· @Model.Job.EmploymentType</text>
+        </div>
+    </div>
+    <div class="ats-pagehead-actions">
+        <button class="btn btn-primary btn-sm" data-bs-toggle="collapse" data-bs-target="#add-candidate">
+            <span class="ms ms-sm">person_add</span> Add candidate
+        </button>
+    </div>
+</div>
+
+<div class="ats-tabs mb-3">
+    <span class="active">Pipeline</span>
+    <a asp-controller="Jobs" asp-action="Edit" asp-route-id="@Model.Job.Id">Job details</a>
+</div>
+
+<div class="ats-stat-strip mb-3">
+    <span><span class="ats-eyebrow">In process</span><span class="ats-stat-mini">@Model.InProcess</span></span>
+    <span><span class="ats-eyebrow">Avg. days in stage</span><span class="ats-stat-mini">@(Model.AvgDaysInStage?.ToString() ?? "—")</span></span>
+    <span><span class="ats-eyebrow">From ReferralTool</span><span class="ats-stat-mini">@Model.FromReferral</span></span>
+    <span><span class="ats-eyebrow">Oldest application</span><span class="ats-stat-mini">@Model.OldestDays<span class="ats-small ats-muted"> days</span></span></span>
 </div>
 
 <div class="collapse mb-3" id="add-candidate">
-    <form asp-action="AddCandidate" method="post" class="card card-body">
+    <form asp-action="AddCandidate" method="post" class="ats-card">
         <input type="hidden" name="JobId" value="@Model.Job.Id" />
         <div class="row g-2 align-items-end">
             <div class="col-md-5">
-                <label class="form-label small mb-1">Existing candidate</label>
+                <label class="form-label mb-1">Existing candidate</label>
                 <select name="CandidateId" id="candidate-picker" class="form-select form-select-sm">
                     <option value="">-- New candidate --</option>
                     @foreach (var opt in Model.CandidateOptions)
@@ -35,28 +69,35 @@
 
 @section Scripts {
     <script src="~/lib/sortablejs/Sortable.min.js"></script>
-    <script src="~/lib/htmx/dist/htmx.min.js"></script>
     <script>
         function initBoard() {
-            document.querySelectorAll('.board-cards').forEach(function (el) {
+            document.querySelectorAll('.ats-board-cards').forEach(function (el) {
                 Sortable.create(el, {
                     group: 'stages',
                     animation: 120,
                     onEnd: function (evt) {
-                        const card = evt.item;                       // the moved .board-card form
-                        const destCol = evt.to.closest('.board-col');
+                        const card = evt.item;                          // the moved .ats-board-card form
+                        const destCol = evt.to.closest('.ats-board-col');
                         const stageId = destCol.getAttribute('data-stage-id');
                         card.querySelector('.to-stage').value = stageId;
-                        htmx.trigger(card, 'submit');                // posts the move, swaps #board-container
+                        htmx.trigger(card, 'submit');                   // posts the move, swaps #board-container
                     }
                 });
             });
-            // fallback: the per-card select submits the same form
+            // Fallback: the per-card select submits the same form.
             document.querySelectorAll('.move-select').forEach(function (sel) {
                 sel.addEventListener('change', function () {
                     const form = sel.closest('form');
                     form.querySelector('.to-stage').value = sel.value;
                     htmx.trigger(form, 'submit');
+                });
+            });
+            // Card click (not on the dropdown) opens the candidate drawer.
+            document.querySelectorAll('.ats-board-card').forEach(function (card) {
+                card.addEventListener('click', function (e) {
+                    if (e.target.closest('.move-select') || e.target.closest('option')) return;
+                    const url = card.getAttribute('hx-get-card');
+                    if (url) htmx.ajax('GET', url, { target: '#ats-drawer-host', swap: 'innerHTML' });
                 });
             });
         }

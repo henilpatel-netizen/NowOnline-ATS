@@ -71,6 +71,7 @@ public sealed class CareerService : ICareerService
             JobId = job.Id,
             CurrentStageId = firstStage.Id,
             SourceCode = code,
+            Origin = code is not null ? ApplicationOrigin.Referral : ApplicationOrigin.CareerSite,
             AppliedAt = DateTimeOffset.UtcNow,
             Status = ApplicationStatus.Active
         };

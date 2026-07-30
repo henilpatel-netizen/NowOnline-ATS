@@ -1,39 +1,81 @@
 @model Ats.Web.Models.CandidatesIndexViewModel
-@{ ViewData["Title"] = "Candidates"; }
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <a class="btn btn-primary" asp-action="Create"><span class="ms ms-sm">add</span> New candidate</a>
-    <form asp-action="Index" method="get" class="d-flex gap-2">
-        <input name="q" value="@Model.Q" class="form-control form-control-sm" placeholder="Search name or email" style="width:16rem" />
-        <button class="btn btn-outline-secondary btn-sm" type="submit">Search</button>
+@using Ats.Web.Models.Shared
+@using Ats.Application.Common
+@{
+    ViewData["Title"] = "Candidates";
+    ViewData["Eyebrow"] = $"{Model.Results.Total} people in your talent pool:";
+    var now = DateTimeOffset.UtcNow;
+    const string cols = "grid-template-columns:2.2fr 1.8fr 1.4fr 1.6fr 1fr 44px;";
+}
+
+@section PageActions {
+    <a class="btn btn-primary" asp-action="Create"><span class="ms ms-sm">person_add</span> Add candidate</a>
+}
+
+<div class="ats-toolbar mb-3">
+    <form asp-action="Index" method="get" class="ats-search" style="width:300px" role="search">
+        <span class="ms ms-sm ats-muted">search</span>
+        <input name="q" value="@Model.Q" placeholder="Name or email" aria-label="Search candidates" />
     </form>
+    <span class="ms-auto ats-muted ats-small">@Model.Results.Total candidates</span>
 </div>
-<table class="table table-hover bg-white align-middle">
-    <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th class="text-end">Actions</th></tr></thead>
-    <tbody>
+
+<div class="ats-card-flush">
+    <div class="ats-thead" style="@cols">
+        <span>Candidate</span><span>Contact</span><span>Source</span><span>Applications</span><span>Last activity</span><span></span>
+    </div>
     @foreach (var c in Model.Results.Items)
     {
-        <tr>
-            <td>@c.FullName</td>
-            <td>@c.Email</td>
-            <td>@c.Phone</td>
-            <td class="text-end">
-                <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@c.Id">Edit</a>
+        <div class="ats-trow ats-trow--link" style="@cols"
+             onclick="location.href='@Url.Action("Edit", new { id = c.Id })'">
+            <span class="d-flex align-items-center gap-2" style="min-width:0">
+                <partial name="Partials/_Avatar" model="new AvatarModel(c.FullName, 2.125)" />
+                <span class="ats-cell-stack">
+                    <span class="ats-cell-title">@c.FullName</span>
+                    @if (c.LatestJobTitle is not null) { <span class="ats-cell-sub">@c.LatestJobTitle</span> }
+                </span>
+            </span>
+            <span class="ats-cell-stack ats-small">
+                <span>@c.Email</span>
+                <span class="ats-muted">@(string.IsNullOrEmpty(c.Phone) ? "No phone" : c.Phone)</span>
+            </span>
+            <span><partial name="Partials/_SourceChip" model="new SourceChipModel(c.LatestOrigin)" /></span>
+            <span class="ats-cell-stack">
+                @if (c.LatestStageName is not null)
+                {
+                    <span class="ats-small">@c.LatestStageName</span>
+                    @if (c.ApplicationCount > 1) { <span class="ats-faint ats-xsmall">+@(c.ApplicationCount - 1) more</span> }
+                }
+                else { <span class="ats-faint ats-small">No applications</span> }
+            </span>
+            <span class="ats-small ats-muted">@(c.LastActivity is null ? "—" : RelativeTime.Long(c.LastActivity, now))</span>
+            <span class="d-flex justify-content-end" onclick="event.stopPropagation()">
                 @if (Model.PublishedJobs.Count > 0)
                 {
-                    <form asp-action="AddToJob" method="post" class="d-inline-flex gap-1 align-items-center ms-1">
-                        <input type="hidden" name="candidateId" value="@c.Id" />
-                        <select name="jobId" class="form-select form-select-sm" style="width:auto" asp-items="Model.PublishedJobs">
-                            <option value="">Add to job...</option>
-                        </select>
-                        <button class="btn btn-sm btn-outline-primary" type="submit">Add</button>
-                    </form>
+                    <div class="dropdown">
+                        <button type="button" class="btn btn-sm btn-outline-secondary border-0 px-2" data-bs-toggle="dropdown" aria-label="Add to job">
+                            <span class="ms ms-sm">more_horiz</span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end p-2" style="min-width:16rem">
+                            <form asp-action="AddToJob" method="post" class="d-flex gap-1">
+                                <input type="hidden" name="candidateId" value="@c.Id" />
+                                <select name="jobId" class="form-select form-select-sm" asp-items="Model.PublishedJobs">
+                                    <option value="">Add to job…</option>
+                                </select>
+                                <button class="btn btn-sm btn-primary" type="submit">Add</button>
+                            </form>
+                        </div>
+                    </div>
                 }
-            </td>
-        </tr>
+            </span>
+        </div>
     }
-    @if (Model.Results.Items.Count == 0) { <tr><td colspan="4" class="text-muted">No candidates match.</td></tr> }
-    </tbody>
-</table>
+    @if (Model.Results.Items.Count == 0)
+    {
+        <partial name="Partials/_EmptyState" model="@(new EmptyStateModel("group", "No candidates match."))" />
+    }
+</div>
+
 @{
     var cq = new Dictionary<string, string>();
     if (!string.IsNullOrEmpty(Model.Q)) cq["q"] = Model.Q;
@@ -42,5 +84,5 @@
 <partial name="_Pager" model="pager" />
 @if (Model.PublishedJobs.Count == 0)
 {
-    <p class="text-muted small">Publish a job to enable "Add to job" here.</p>
+    <p class="ats-muted ats-small mt-2">Publish a job to enable "Add to job" here.</p>
 }

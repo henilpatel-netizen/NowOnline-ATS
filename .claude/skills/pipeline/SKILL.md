@@ -32,3 +32,12 @@ status when the target stage is terminal, and uses `RowVersion` optimistic concu
 returns a friendly reload message and re-renders the board partial). The card carries `RowVersion` as
 base64; `Board/Move` returns the `_Board` partial for htmx requests and redirects otherwise. Every move
 (forward or backward) is recorded; nothing is emitted to ReferralTool in Phase 1 (that is Phase 3).
+
+## Board UI (redesign)
+The rebuilt board keeps this exact move flow (SortableJS drag + the per-card `move-select` fallback +
+htmx swap of `#board-container` + `RowVersion`). Only markup changed: cards now show an avatar, email,
+source chip, a days-in-stage chip (neutral / amber >3d / red >7d) and stage-progress dots, and a click
+on a card body (not the dropdown) opens the candidate drawer via htmx (`Applications/Card`). Terminal
+columns are tinted (Hired green, Rejected red) with a dashed drop hint on an empty Hired column. The
+board header carries a stats strip (in process, avg days in stage, from ReferralTool, oldest) built in
+`BoardController.BuildBoardAsync` from `IApplicationService.LatestEventTimesForJobAsync`.

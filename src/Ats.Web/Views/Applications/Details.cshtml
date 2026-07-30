@@ -1,36 +1,19 @@
 @model Ats.Web.Models.ApplicationDetailsViewModel
-@{ ViewData["Title"] = $"Application: {Model.CandidateName}"; }
-<div class="mb-3">
-    <a class="btn btn-outline-secondary btn-sm" asp-controller="Board" asp-action="Index" asp-route-jobId="@Model.Application.JobId">
-        <span class="ms ms-sm">arrow_back</span> Board
-    </a>
-</div>
-<dl class="row">
-    <dt class="col-sm-3">Candidate</dt><dd class="col-sm-9">@Model.CandidateName</dd>
-    <dt class="col-sm-3">Current stage</dt><dd class="col-sm-9">@Model.StageName(Model.Application.CurrentStageId)</dd>
-    <dt class="col-sm-3">Status</dt><dd class="col-sm-9">@Model.Application.Status</dd>
-    <dt class="col-sm-3">Applied</dt><dd class="col-sm-9">@Model.Application.AppliedAt.ToLocalTime().ToString("g")</dd>
-</dl>
+@{ ViewData["Title"] = Model.CandidateName; ViewData["Eyebrow"] = "Application:"; }
 
-@if (Model.Application.Candidate?.ResumeFileKey is not null)
-{
-    <a class="btn btn-outline-secondary btn-sm mb-3" asp-controller="Resume" asp-action="Download" asp-route-applicationId="@Model.Application.Id">
-        <span class="ms ms-sm">download</span> Download resume
+@section PageActions {
+    <a class="btn btn-outline-secondary" asp-controller="Board" asp-action="Index" asp-route-jobId="@Model.Application.JobId">
+        <span class="ms ms-sm">arrow_back</span> Board
     </a>
 }
 
-<h2 class="h5 mt-4">Stage history</h2>
-<ul class="list-group">
-    @foreach (var e in Model.Events)
+<div class="ats-card-flush" style="max-width:640px">
+    @if (Model.Card is not null)
     {
-        <li class="list-group-item d-flex justify-content-between">
-            <span>
-                @(e.FromStageId is null ? "Applied" : Model.StageName(e.FromStageId.Value))
-                <span class="ms ms-sm mx-1">arrow_forward</span>
-                @Model.StageName(e.ToStageId)
-            </span>
-            <span class="text-muted small">@e.OccurredAt.ToLocalTime().ToString("g")</span>
-        </li>
+        <partial name="Partials/_CandidateDrawer" model="Model.Card" />
     }
-    @if (Model.Events.Count == 0) { <li class="list-group-item text-muted">No history yet.</li> }
-</ul>
+    else
+    {
+        <div class="ats-drawer-section"><span class="ats-muted">This application is no longer available.</span></div>
+    }
+</div>

@@ -27,7 +27,7 @@
             <vc:top-bar></vc:top-bar>
             <main class="ats-content ats-scroll">
                 <partial name="_Alerts" />
-                @if (!string.IsNullOrEmpty(heading))
+                @if (ViewData["HidePageHead"] is null && !string.IsNullOrEmpty(heading))
                 {
                     <div class="ats-pagehead">
                         <div class="ats-pagehead-text">

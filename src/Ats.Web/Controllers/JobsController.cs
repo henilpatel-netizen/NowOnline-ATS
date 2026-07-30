@@ -14,21 +14,22 @@ namespace Ats.Web.Controllers;
 public class JobsController : Controller
 {
     private readonly IJobService _jobs;
+    private readonly IJobListQuery _jobList;
     private readonly IDepartmentService _departments;
     private readonly ILocationService _locations;
     private readonly IPipelineTemplateService _pipelines;
     private readonly IAuditLogger _audit;
 
-    public JobsController(IJobService jobs, IDepartmentService departments,
+    public JobsController(IJobService jobs, IJobListQuery jobList, IDepartmentService departments,
         ILocationService locations, IPipelineTemplateService pipelines, IAuditLogger audit)
     {
-        _jobs = jobs; _departments = departments; _locations = locations; _pipelines = pipelines; _audit = audit;
+        _jobs = jobs; _jobList = jobList; _departments = departments; _locations = locations; _pipelines = pipelines; _audit = audit;
     }
 
     public async Task<IActionResult> Index(string? q, Ats.Domain.Enums.JobStatus? status, int page = 1)
     {
         if (page < 1) page = 1;
-        var results = await _jobs.SearchAsync(status, q, page, 20);
+        var results = await _jobList.SearchAsync(status, q, page, 20);
         return View(new JobsIndexViewModel { Results = results, Q = q, Status = status });
     }
 

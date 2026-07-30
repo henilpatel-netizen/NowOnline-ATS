@@ -13,12 +13,15 @@ using Ats.Application.Pipelines;
 using Ats.Application.Search;
 using Ats.Application.Shell;
 using Ats.Application.Tenancy;
+using Ats.Infrastructure.Applications;
 using Ats.Infrastructure.Auditing;
 using Ats.Infrastructure.Branding;
+using Ats.Infrastructure.Candidates;
 using Ats.Infrastructure.Dashboard;
 using Ats.Infrastructure.Files;
 using Ats.Infrastructure.Identity;
 using Ats.Infrastructure.Integration;
+using Ats.Infrastructure.Jobs;
 using Ats.Infrastructure.Persistence;
 using Ats.Infrastructure.Persistence.Repositories;
 using Ats.Infrastructure.Search;
@@ -76,6 +79,11 @@ public static class DependencyInjection
         services.AddScoped<ITenantBrandingService, TenantBrandingService>();
         services.AddScoped<IShellSummaryService, ShellSummaryService>();
         services.AddScoped<IGlobalSearchService, GlobalSearchService>();
+
+        // Screen read-model projections (Phase 2).
+        services.AddScoped<IJobListQuery, JobListQuery>();
+        services.AddScoped<ICandidateListQuery, CandidateListQuery>();
+        services.AddScoped<IApplicationCardQuery, ApplicationCardQuery>();
 
         services.AddHttpClient<IReferralToolClient, ReferralToolClient>();
 

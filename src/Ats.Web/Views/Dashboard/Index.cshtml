@@ -1,45 +1,125 @@
 @model Ats.Application.Dashboard.DashboardSummary
-@{ ViewData["Title"] = "Dashboard"; }
-<div class="row g-3 mb-4">
-    <div class="col-sm-4"><div class="card h-100"><div class="card-body">
-        <div class="text-muted small">Published jobs</div><div class="fs-3 fw-semibold">@Model.PublishedJobs</div>
-    </div></div></div>
-    <div class="col-sm-4"><div class="card h-100"><div class="card-body">
-        <div class="text-muted small">Candidates</div><div class="fs-3 fw-semibold">@Model.TotalCandidates</div>
-    </div></div></div>
-    <div class="col-sm-4"><div class="card h-100"><div class="card-body">
-        <div class="text-muted small">Active applications</div><div class="fs-3 fw-semibold">@Model.ActiveApplications</div>
-    </div></div></div>
+@using Ats.Web.Models.Shared
+@using Ats.Domain.Enums
+@{
+    ViewData["Title"] = "Dashboard";
+    ViewData["Eyebrow"] = DateTimeOffset.Now.ToString("dddd d MMMM") + ":";
+    var maxStage = Model.ByStage.Count == 0 ? 1 : Math.Max(1, Model.ByStage.Max(s => s.Count));
+    var ramp = new[] { "var(--no-stage-1)", "var(--no-stage-2)", "var(--no-stage-3)", "var(--no-stage-4)", "var(--no-stage-5)" };
+    string SourceLabel(ApplicationOrigin o) => o switch
+    {
+        ApplicationOrigin.CareerSite => "Career site",
+        ApplicationOrigin.Referral => "ReferralTool",
+        ApplicationOrigin.Manual => "Added manually",
+        _ => "Other"
+    };
+}
+
+<div class="row g-3 mb-3">
+    <div class="col-sm-6 col-xl-3"><partial name="Partials/_StatTile" model="@(new StatTileModel("Open jobs:", Model.OpenJobs.ToString()))" /></div>
+    <div class="col-sm-6 col-xl-3"><partial name="Partials/_StatTile" model="@(new StatTileModel("Active applications:", Model.ActiveApplications.ToString(), null, Model.TotalCandidates + " candidates total", "group"))" /></div>
+    <div class="col-sm-6 col-xl-3"><partial name="Partials/_StatTile" model="@(new StatTileModel("Time to hire:", Model.TimeToHireDays?.ToString() ?? "—", Model.TimeToHireDays is null ? null : " days"))" /></div>
+    <div class="col-sm-6 col-xl-3"><partial name="Partials/_StatTile" model="@(new StatTileModel("Offer acceptance:", Model.OfferAcceptanceRate?.ToString() ?? "—", Model.OfferAcceptanceRate is null ? null : "%"))" /></div>
 </div>
 
-<div class="row g-3">
-    <div class="col-md-6">
-        <div class="card h-100"><div class="card-body">
-            <h2 class="h6">Active applications by stage</h2>
-            <table class="table table-sm mb-0">
-                <tbody>
-                @foreach (var s in Model.ByStage)
-                {
-                    <tr><td>@s.Stage</td><td class="text-end">@s.Count</td></tr>
-                }
-                @if (Model.ByStage.Count == 0) { <tr><td class="text-muted">No active applications.</td></tr> }
-                </tbody>
-            </table>
-        </div></div>
-    </div>
-    <div class="col-md-6">
-        <div class="card h-100"><div class="card-body">
-            <h2 class="h6">Recent applications</h2>
-            <ul class="list-unstyled mb-0">
-            @foreach (var r in Model.Recent)
+<div class="row g-3 align-items-start">
+    <div class="col-lg-7">
+        <div class="ats-card">
+            <span class="ats-eyebrow">Across all open jobs:</span>
+            <h2 class="mt-1 mb-3">Pipeline right now.</h2>
+            @if (Model.ByStage.Count == 0)
             {
-                <li class="d-flex justify-content-between border-bottom py-1">
-                    <span>@r.Candidate <span class="text-muted small">- @r.Job</span></span>
-                    <span class="text-muted small">@r.AppliedAt.ToLocalTime().ToString("g")</span>
-                </li>
+                <partial name="Partials/_EmptyState" model="@(new EmptyStateModel("view_week", "No active applications yet."))" />
             }
-            @if (Model.Recent.Count == 0) { <li class="text-muted">No applications yet.</li> }
-            </ul>
-        </div></div>
+            else
+            {
+                <div class="d-flex flex-column gap-2">
+                    @for (var i = 0; i < Model.ByStage.Count; i++)
+                    {
+                        var s = Model.ByStage[i];
+                        <div class="ats-pipebar-row">
+                            <span class="ats-pipebar-row-label">@s.Stage</span>
+                            <span class="ats-pipebar-row-track"><span class="ats-pipebar-row-fill" style="width:@(s.Count * 100 / maxStage)%;background:@ramp[i % ramp.Length]"></span></span>
+                            <span class="ats-pipebar-row-count">@s.Count</span>
+                        </div>
+                    }
+                </div>
+            }
+            @if (Model.Sources.Count > 0)
+            {
+                <div class="ats-stat-strip mt-3 pt-3" style="border-top:1px solid var(--ats-border-subtle)">
+                    @foreach (var src in Model.Sources)
+                    {
+                        <span><span class="ats-eyebrow">@SourceLabel(src.Origin)</span><span class="ats-stat-mini">@src.Percent%</span></span>
+                    }
+                </div>
+            }
+        </div>
     </div>
+
+    <div class="col-lg-5 d-flex flex-column gap-3">
+        <div class="ats-card">
+            <span class="ats-eyebrow">Needs you:</span>
+            <h2 class="mt-1 mb-2">Open loops.</h2>
+            @if (Model.NeedsAttention.Count == 0)
+            {
+                <p class="ats-small ats-muted mb-0">Nothing needs you right now.</p>
+            }
+            else
+            {
+                <div class="d-flex flex-column">
+                    @foreach (var item in Model.NeedsAttention)
+                    {
+                        var tone = item.Tone switch { "danger" => "ats-pill--danger", "warning" => "ats-pill--warning", _ => "ats-pill--info" };
+                        <a href="@item.Url" class="d-flex align-items-center gap-3 py-2 px-1" style="color:var(--ats-ink);border-radius:var(--no-radius-md)">
+                            <span class="ats-pill @tone" style="width:2rem;height:2rem;padding:0;justify-content:center;border-radius:var(--no-radius-sm)"><span class="ms ms-sm">@item.Icon</span></span>
+                            <span class="ats-cell-stack flex-grow-1">
+                                <span class="ats-small">@item.Headline</span>
+                                <span class="ats-xsmall ats-muted">@item.Subline</span>
+                            </span>
+                            <span class="ms ms-sm ats-faint">chevron_right</span>
+                        </a>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="ats-card-dark">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="ats-board-col-dot" style="background:@(Model.Integration.Connected ? "var(--no-medium-aqua)" : "var(--no-roman-silver)")"></span>
+                <span class="ats-eyebrow">ReferralTool · @(Model.Integration.Connected ? "connected" : "off")</span>
+            </div>
+            <p class="ats-small mb-3" style="color:#D6DDE5">
+                @(Model.Integration.FeedLastPulledAt is null
+                    ? "No vacancy feed pull recorded yet."
+                    : $"Vacancy feed pulled {Ats.Application.Common.RelativeTime.Long(Model.Integration.FeedLastPulledAt, DateTimeOffset.UtcNow)}.")
+                @Model.Integration.Delivered24h delivered, @Model.Integration.Failed24h failed, @Model.Integration.Pending pending.
+            </p>
+            <a asp-controller="Integration" asp-action="Index" class="btn btn-outline-light btn-sm">
+                Integration health <span class="ms ms-sm">arrow_forward</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="ats-card mt-3">
+    <span class="ats-eyebrow">Latest activity:</span>
+    <h2 class="mt-1 mb-2">What moved.</h2>
+    @if (Model.Activity.Count == 0)
+    {
+        <p class="ats-small ats-muted mb-0">No activity recorded yet.</p>
+    }
+    else
+    {
+        <div class="d-flex flex-column">
+            @foreach (var a in Model.Activity)
+            {
+                <div class="d-flex align-items-center gap-3 py-2" style="border-bottom:1px solid var(--ats-border-subtle)">
+                    <partial name="Partials/_Avatar" model="new AvatarModel(a.Actor, 2)" />
+                    <span class="ats-small flex-grow-1">@a.Text</span>
+                    <span class="ats-mono ats-xsmall ats-muted">@a.Time</span>
+                </div>
+            }
+        </div>
+    }
 </div>

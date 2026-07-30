@@ -30,3 +30,13 @@ One service + repository interface per aggregate in `Ats.Application/<Area>`, im
 `Ats.Application/Departments/DepartmentService.cs`). Stage moves use
 `IApplicationRepository.SetExpectedRowVersion` + `TrySaveChangesAsync` for concurrency; the
 `DbUpdateConcurrencyException` is caught in the repository so the Application layer stays EF-free.
+
+## Read-model projections (redesign)
+Screen read models live beside the aggregate they serve, contract in `Ats.Application/<Area>`,
+EF projection in `Ats.Infrastructure/<Area>` (not the repositories folder): `IJobListQuery`
+(jobs list: per-stage counts + applicant avatars), `ICandidateListQuery` (latest origin/job/stage
++ last activity), `IApplicationCardQuery` (drawer/detail: days-in-stage, referral code, delivery
+state, resume size via `IFileStore.StatAsync`, stage progress, history). These are read-only and do
+not go through the aggregate repositories. `Origin` (`ApplicationOrigin`) is stamped at creation
+(career apply -> Referral/CareerSite, board/candidates add -> Manual); rows predating it are
+`Unknown`, shown as "Not recorded".

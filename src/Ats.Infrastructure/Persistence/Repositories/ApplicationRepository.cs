@@ -10,7 +10,17 @@ public sealed class ApplicationRepository : IApplicationRepository
     public ApplicationRepository(AtsDbContext db) => _db = db;
 
     public Task<Job?> GetJobAsync(int jobId, CancellationToken ct = default) =>
-        _db.Jobs.FirstOrDefaultAsync(j => j.Id == jobId, ct);
+        _db.Jobs.Include(j => j.Department).Include(j => j.Location)
+            .FirstOrDefaultAsync(j => j.Id == jobId, ct);
+
+    public async Task<Dictionary<int, DateTimeOffset>> LatestEventTimesForJobAsync(int jobId, CancellationToken ct = default) =>
+        await (
+            from e in _db.ApplicationEvents
+            join a in _db.Applications on e.ApplicationId equals a.Id
+            where a.JobId == jobId
+            group e by e.ApplicationId into g
+            select new { ApplicationId = g.Key, Last = g.Max(x => x.OccurredAt) })
+            .ToDictionaryAsync(x => x.ApplicationId, x => x.Last, ct);
 
     public async Task<List<PipelineStage>> GetStagesForJobAsync(int jobId, CancellationToken ct = default)
     {

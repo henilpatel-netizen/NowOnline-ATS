@@ -9,7 +9,13 @@ namespace Ats.Web.Controllers;
 public class ApplicationsController : Controller
 {
     private readonly IApplicationService _service;
-    public ApplicationsController(IApplicationService service) => _service = service;
+    private readonly IApplicationCardQuery _card;
+
+    public ApplicationsController(IApplicationService service, IApplicationCardQuery card)
+    {
+        _service = service;
+        _card = card;
+    }
 
     [HttpGet]
     public async Task<IActionResult> Details(int id)
@@ -21,9 +27,19 @@ public class ApplicationsController : Controller
         var withCandidate = (await _service.ListForJobAsync(app.JobId)).FirstOrDefault(a => a.Id == id);
         app.Candidate = withCandidate?.Candidate;
         var name = app.Candidate?.FullName ?? "(unknown)";
+        var card = await _card.GetAsync(id);
         return View(new ApplicationDetailsViewModel
         {
-            Application = app, CandidateName = name, Stages = stages, Events = events
+            Application = app, CandidateName = name, Stages = stages, Events = events, Card = card
         });
+    }
+
+    // Drawer body, loaded by htmx into #ats-drawer-host from the board.
+    [HttpGet]
+    public async Task<IActionResult> Card(int id, CancellationToken ct)
+    {
+        var card = await _card.GetAsync(id, ct);
+        if (card is null) return NotFound();
+        return PartialView("Partials/_CandidateDrawer", card);
     }
 }

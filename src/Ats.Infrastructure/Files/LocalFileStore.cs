@@ -28,31 +28,42 @@ public sealed class LocalFileStore : IFileStore
 
     public Task<FileDownload?> OpenAsync(string key, CancellationToken ct = default)
     {
-        // Reject anything that is not a bare key (no path separators or traversal).
-        if (string.IsNullOrWhiteSpace(key) || key.Contains('/') || key.Contains('\\') || key.Contains(".."))
-            return Task.FromResult<FileDownload?>(null);
-
+        if (!IsBareKey(key)) return Task.FromResult<FileDownload?>(null);
         var path = Path.Combine(_root, key);
         if (!File.Exists(path)) return Task.FromResult<FileDownload?>(null);
 
         Stream stream = File.OpenRead(path);
         var ext = Path.GetExtension(key).ToLowerInvariant();
-        var contentType = ext switch
-        {
-            ".pdf" => "application/pdf",
-            ".doc" => "application/msword",
-            ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            _ => "application/octet-stream"
-        };
-        return Task.FromResult<FileDownload?>(new FileDownload(stream, contentType, "resume" + ext));
+        return Task.FromResult<FileDownload?>(new FileDownload(stream, ContentTypeFor(key), "resume" + ext));
+    }
+
+    public Task<StoredFileInfo?> StatAsync(string key, CancellationToken ct = default)
+    {
+        if (!IsBareKey(key)) return Task.FromResult<StoredFileInfo?>(null);
+        var path = Path.Combine(_root, key);
+        if (!File.Exists(path)) return Task.FromResult<StoredFileInfo?>(null);
+        var info = new FileInfo(path);
+        return Task.FromResult<StoredFileInfo?>(
+            new StoredFileInfo(info.Length, ContentTypeFor(key), "resume" + Path.GetExtension(key)));
     }
 
     public Task DeleteAsync(string key, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(key) || key.Contains('/') || key.Contains('\\') || key.Contains(".."))
-            return Task.CompletedTask;
+        if (!IsBareKey(key)) return Task.CompletedTask;
         var path = Path.Combine(_root, key);
         if (File.Exists(path)) File.Delete(path);
         return Task.CompletedTask;
     }
+
+    // A valid stored key is a bare file name: no path separators, no traversal.
+    private static bool IsBareKey(string key) =>
+        !string.IsNullOrWhiteSpace(key) && !key.Contains('/') && !key.Contains('\\') && !key.Contains("..");
+
+    private static string ContentTypeFor(string key) => Path.GetExtension(key).ToLowerInvariant() switch
+    {
+        ".pdf" => "application/pdf",
+        ".doc" => "application/msword",
+        ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        _ => "application/octet-stream"
+    };
 }

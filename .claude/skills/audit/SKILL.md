@@ -24,3 +24,11 @@ The Integration page shows the count of jobs the feed would return and a Test-co
 calls `IReferralToolClient.CheckVacancyExistsAsync` with the saved settings and a sample published
 `ExternalRef`. It is a read-only probe: it never sends a status update or writes a `WebhookDelivery`.
 The ReferralTool HttpClient is registered in `AddAtsInfrastructure` (shared by Web and Worker).
+
+## Dashboard use of the audit log (redesign)
+`DashboardService` projects the most recent `AuditEntry` rows into the dashboard's "What moved."
+activity feed, and derives the "Needs you" list from live counts (idle applications, failed outbox
+deliveries, draft jobs) rather than any notification store. Time-to-hire, offer acceptance and the
+source split are computed there too via `DashboardMath` (unit-tested in `Ats.Tests`). Offer
+acceptance currently uses a documented proxy denominator (applications that progressed in the last
+90 days); see the comment in `DashboardService`.

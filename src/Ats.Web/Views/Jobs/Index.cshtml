@@ -1,65 +1,120 @@
 @model Ats.Web.Models.JobsIndexViewModel
 @using Ats.Domain.Enums
-@{ ViewData["Title"] = "Jobs"; }
-<div class="d-flex justify-content-between align-items-center mb-3">
+@using Ats.Web.Models.Shared
+@{
+    ViewData["Title"] = "Jobs";
+    ViewData["Eyebrow"] = $"{Model.Results.Total} total:";
+
+    PillTone Tone(JobStatus s) => s switch
+    {
+        JobStatus.Published => PillTone.Success,
+        JobStatus.Closed => PillTone.Neutral,
+        _ => PillTone.Warning
+    };
+
+    (string Text, string? Val)[] filters =
+    {
+        ("All", null), ("Published", nameof(JobStatus.Published)),
+        ("Draft", nameof(JobStatus.Draft)), ("Closed", nameof(JobStatus.Closed))
+    };
+    var current = Model.Status?.ToString();
+    const string cols = "grid-template-columns:2.4fr 1fr 1.6fr 1fr .8fr 44px;";
+}
+
+@section PageActions {
     <a class="btn btn-primary" asp-action="Create"><span class="ms ms-sm">add</span> New job</a>
-    <form asp-action="Index" method="get" class="d-flex gap-2">
-        <input name="q" value="@Model.Q" class="form-control form-control-sm" placeholder="Search title or ref" style="width:14rem" />
-        <select name="status" class="form-select form-select-sm" style="width:auto">
-            <option value="">All statuses</option>
-            @foreach (var st in Enum.GetValues<JobStatus>())
-            {
-                <option value="@st" selected="@(Model.Status == st)">@st</option>
-            }
-        </select>
-        <button class="btn btn-outline-secondary btn-sm" type="submit">Filter</button>
+}
+
+<div class="ats-toolbar mb-3">
+    <form asp-action="Index" method="get" class="ats-search" style="width:280px" role="search">
+        @if (Model.Status is not null) { <input type="hidden" name="status" value="@Model.Status" /> }
+        <span class="ms ms-sm ats-muted">search</span>
+        <input name="q" value="@Model.Q" placeholder="Title or reference" aria-label="Search jobs" />
     </form>
+    <div class="ats-filter-group">
+        @foreach (var f in filters)
+        {
+            var active = (f.Val ?? "") == (current ?? "") ? "active" : "";
+            <a class="@active" asp-action="Index" asp-route-status="@f.Val" asp-route-q="@Model.Q">@f.Text</a>
+        }
+    </div>
+    <span class="ms-auto ats-muted ats-small">@Model.Results.Total jobs</span>
 </div>
-<table class="table table-hover bg-white">
-    <thead><tr><th>Ref</th><th>Title</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
-    <tbody>
+
+<div class="ats-card-flush">
+    <div class="ats-thead" style="@cols">
+        <span>Job</span><span>Status</span><span>Pipeline</span><span>Candidates</span><span>Published</span><span></span>
+    </div>
     @foreach (var j in Model.Results.Items)
     {
-        <tr>
-            <td><code>@j.ExternalRef</code></td>
-            <td>@j.Title</td>
-            <td>
-                @{
-                    var badge = j.Status switch {
-                        JobStatus.Published => "bg-success",
-                        JobStatus.Closed => "bg-secondary",
-                        _ => "bg-warning text-dark"
-                    };
-                }
-                <span class="badge @badge">@j.Status</span>
-            </td>
-            <td class="text-end">
-                <a class="btn btn-sm btn-outline-primary" asp-controller="Board" asp-action="Index" asp-route-jobId="@j.Id">Board</a>
-                <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@j.Id">Edit</a>
-                @if (j.Status != JobStatus.Published)
+        var segments = j.StageCounts.Select(s => new PipelineSegment(s.Stage, s.Count)).ToList();
+        <div class="ats-trow ats-trow--link" style="@cols"
+             onclick="location.href='@Url.Action("Index", "Board", new { jobId = j.Id })'">
+            <span class="ats-cell-stack">
+                <span class="ats-cell-title">@j.Title</span>
+                <span class="ats-cell-sub"><code>@j.ExternalRef</code>
+                    @if (j.Department is not null) { <text>· @j.Department</text> }
+                    @if (j.Location is not null) { <text>· @j.Location</text> }
+                </span>
+            </span>
+            <span><partial name="Partials/_StatusPill" model="new StatusPillModel(j.Status.ToString(), Tone(j.Status))" /></span>
+            <span class="ats-cell-stack">
+                <partial name="Partials/_PipelineBar" model="new PipelineBarModel(segments, true)" />
+            </span>
+            <span class="ats-avatar-stack">
+                @foreach (var name in j.TopApplicantNames)
                 {
-                    <form asp-action="Publish" asp-route-id="@j.Id" method="post" class="d-inline"
-                          onsubmit="return confirm('Publish this job? It becomes visible on the public career site.');">
-                        <button class="btn btn-sm btn-outline-success" type="submit">Publish</button>
-                    </form>
+                    <partial name="Partials/_Avatar" model="new AvatarModel(name, 1.625, true)" />
                 }
-                @if (j.Status == JobStatus.Published)
-                {
-                    <form asp-action="Close" asp-route-id="@j.Id" method="post" class="d-inline"
-                          onsubmit="return confirm('Close this job? It is removed from the public career site.');">
-                        <button class="btn btn-sm btn-outline-secondary" type="submit">Close</button>
-                    </form>
-                }
-                <form asp-action="Delete" asp-route-id="@j.Id" method="post" class="d-inline"
-                      onsubmit="return confirm('Delete this job?');">
-                    <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
-                </form>
-            </td>
-        </tr>
+                @{ var extra = j.TotalApplications - j.TopApplicantNames.Count; }
+                @if (extra > 0) { <span class="ats-avatar-stack-more">+@extra</span> }
+                @if (j.TotalApplications == 0) { <span class="ats-faint ats-small">—</span> }
+            </span>
+            <span class="ats-small ats-muted">@(j.PublishedAt?.ToLocalTime().ToString("dd MMM") ?? "—")</span>
+            <span class="d-flex justify-content-end" onclick="event.stopPropagation()">
+                <div class="dropdown">
+                    <button type="button" class="btn btn-sm btn-outline-secondary border-0 px-2" data-bs-toggle="dropdown" aria-label="Actions">
+                        <span class="ms ms-sm">more_horiz</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" asp-controller="Board" asp-action="Index" asp-route-jobId="@j.Id">Open board</a></li>
+                        <li><a class="dropdown-item" asp-action="Edit" asp-route-id="@j.Id">Edit</a></li>
+                        @if (j.Status != JobStatus.Published)
+                        {
+                            <li>
+                                <form asp-action="Publish" asp-route-id="@j.Id" method="post"
+                                      onsubmit="return confirm('Publish this job? It becomes visible on the public career site.');">
+                                    <button class="dropdown-item" type="submit">Publish</button>
+                                </form>
+                            </li>
+                        }
+                        else
+                        {
+                            <li>
+                                <form asp-action="Close" asp-route-id="@j.Id" method="post"
+                                      onsubmit="return confirm('Close this job? It is removed from the public career site.');">
+                                    <button class="dropdown-item" type="submit">Close</button>
+                                </form>
+                            </li>
+                        }
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form asp-action="Delete" asp-route-id="@j.Id" method="post"
+                                  onsubmit="return confirm('Delete this job?');">
+                                <button class="dropdown-item text-danger" type="submit">Delete</button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </span>
+        </div>
     }
-    @if (Model.Results.Items.Count == 0) { <tr><td colspan="4" class="text-muted">No jobs match.</td></tr> }
-    </tbody>
-</table>
+    @if (Model.Results.Items.Count == 0)
+    {
+        <partial name="Partials/_EmptyState" model="@(new EmptyStateModel("work_outline", "No jobs match.", "Try clearing the filter, or create a new job."))" />
+    }
+</div>
+
 @{
     var jq = new Dictionary<string, string>();
     if (!string.IsNullOrEmpty(Model.Q)) jq["q"] = Model.Q;
