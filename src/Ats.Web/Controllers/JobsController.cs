@@ -60,9 +60,13 @@ public class JobsController : Controller
         if (job is null) return NotFound();
         var vm = new JobEditViewModel
         {
-            Id = job.Id, Title = job.Title, Description = job.Description,
-            DepartmentId = job.DepartmentId, LocationId = job.LocationId,
-            EmploymentType = job.EmploymentType, PipelineTemplateId = job.PipelineTemplateId
+            Id = job.Id,
+            Title = job.Title,
+            Description = job.Description,
+            DepartmentId = job.DepartmentId,
+            LocationId = job.LocationId,
+            EmploymentType = job.EmploymentType,
+            PipelineTemplateId = job.PipelineTemplateId
         };
         await PopulateLists(vm);
         return View("Form", vm);

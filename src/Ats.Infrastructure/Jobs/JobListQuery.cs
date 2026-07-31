@@ -30,7 +30,11 @@ public sealed class JobListQuery : IJobListQuery
             .Skip((page - 1) * pageSize).Take(pageSize)
             .Select(j => new
             {
-                j.Id, j.Title, j.ExternalRef, j.Status, j.PublishedAt,
+                j.Id,
+                j.Title,
+                j.ExternalRef,
+                j.Status,
+                j.PublishedAt,
                 Department = j.Department != null ? j.Department.Name : null,
                 Location = j.Location != null ? (j.Location.City ?? j.Location.Name) : null
             })

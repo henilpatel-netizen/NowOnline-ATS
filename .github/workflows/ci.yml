@@ -1,0 +1,50 @@
+name: CI
+
+# Build/test/format gate. Runs on every push to master and on pull requests targeting master.
+# Any failing step fails the run, so regressions cannot merge unnoticed.
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Build, test, format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # Cache the NuGet package store keyed on the lock/project files.
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.Build.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore Ats.slnx
+
+      - name: Build
+        run: dotnet build Ats.slnx --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test Ats.slnx --configuration Release --no-build --verbosity normal
+
+      # Style/format gate: fails if any file diverges from .editorconfig.
+      - name: Format check
+        run: dotnet format Ats.slnx --verify-no-changes --no-restore

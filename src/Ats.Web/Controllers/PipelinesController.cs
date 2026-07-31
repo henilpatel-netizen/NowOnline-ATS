@@ -39,8 +39,12 @@ public class PipelinesController : Controller
             Name = t.Name,
             Stages = t.Stages.OrderBy(s => s.Order).Select(s => new StageRow
             {
-                Id = s.Id, Name = s.Name, Order = s.Order, IsTerminal = s.IsTerminal,
-                TerminalOutcome = s.TerminalOutcome, ReferralStatusOverride = s.ReferralStatusOverride
+                Id = s.Id,
+                Name = s.Name,
+                Order = s.Order,
+                IsTerminal = s.IsTerminal,
+                TerminalOutcome = s.TerminalOutcome,
+                ReferralStatusOverride = s.ReferralStatusOverride
             }).ToList()
         };
         return View("Form", vm);

@@ -30,7 +30,11 @@ public class ApplicationsController : Controller
         var card = await _card.GetAsync(id);
         return View(new ApplicationDetailsViewModel
         {
-            Application = app, CandidateName = name, Stages = stages, Events = events, Card = card
+            Application = app,
+            CandidateName = name,
+            Stages = stages,
+            Events = events,
+            Card = card
         });
     }
 

@@ -40,8 +40,11 @@ public sealed class CareerService : ICareerService
         {
             candidate = new Candidate
             {
-                FirstName = input.FirstName.Trim(), LastName = input.LastName.Trim(),
-                Email = email, Phone = input.Phone?.Trim(), ResumeFileKey = input.ResumeFileKey
+                FirstName = input.FirstName.Trim(),
+                LastName = input.LastName.Trim(),
+                Email = email,
+                Phone = input.Phone?.Trim(),
+                ResumeFileKey = input.ResumeFileKey
             };
             await _candidates.AddAsync(candidate, ct);
             await _candidates.SaveChangesAsync(ct); // assigns candidate.Id

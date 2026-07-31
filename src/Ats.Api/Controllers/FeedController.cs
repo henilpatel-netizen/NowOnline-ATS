@@ -3,7 +3,6 @@ using Ats.Api.Models.Feed;
 using Ats.Application.Integration;
 using Ats.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace Ats.Api.Controllers;
 

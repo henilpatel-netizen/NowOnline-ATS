@@ -3,8 +3,8 @@ using Ats.Application.Applications;
 using Ats.Application.Auditing;
 using Ats.Application.Branding;
 using Ats.Application.Candidates;
-using Ats.Application.Dashboard;
 using Ats.Application.Career;
+using Ats.Application.Dashboard;
 using Ats.Application.Departments;
 using Ats.Application.Integration;
 using Ats.Application.Jobs;
@@ -47,7 +47,11 @@ public static class DependencyInjection
 
         services.AddDbContext<AtsDbContext>((sp, options) =>
         {
-            options.UseSqlServer(config.GetConnectionString("DefaultConnection"));
+            options.UseSqlServer(config.GetConnectionString("DefaultConnection"),
+                sql => sql.EnableRetryOnFailure(
+                    maxRetryCount: 5,
+                    maxRetryDelay: TimeSpan.FromSeconds(10),
+                    errorNumbersToAdd: null));
             options.AddInterceptors(sp.GetRequiredService<TenantSaveChangesInterceptor>());
         });
 

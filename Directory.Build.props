@@ -4,6 +4,15 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
+    <!-- Enforce .editorconfig code-style rules during build (IDExxxx) and run the
+         recommended .NET analyzers. Warnings surface as warnings (not errors), so the build
+         still succeeds; keeping the tree warning-clean is a working discipline. -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <!-- Required for IDE0005 (remove unnecessary usings) to run at build time; we don't ship
+         XML docs, so silence the "missing doc comment" noise it would otherwise produce. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
   </PropertyGroup>
 </Project>

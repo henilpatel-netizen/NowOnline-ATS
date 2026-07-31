@@ -1,15 +1,31 @@
+using System.Security.Claims;
 using Ats.Infrastructure;
+using Ats.Infrastructure.Persistence;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog((ctx, cfg) => cfg
-    .ReadFrom.Configuration(ctx.Configuration)
+    .ReadFrom.Configuration(ctx.Configuration)   // sinks (console + rolling file) + enrichers from appsettings
     .Enrich.FromLogContext()
     .WriteTo.Console());
 
-builder.Services.AddHealthChecks();
+// Health: liveness (process only) and readiness (verifies the database).
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<AtsDbContext>("database", tags: new[] { "ready" });
+
+// Persist Data Protection keys so auth cookies (and encrypted data) survive restarts and are shared
+// across instances. Defaults to a local folder for dev; override DataProtection:KeyPath in production
+// (a shared volume, or move to Azure Blob + Key Vault). Application name pins the key purpose.
+var keyPath = builder.Configuration["DataProtection:KeyPath"];
+if (string.IsNullOrWhiteSpace(keyPath))
+    keyPath = Path.Combine(builder.Environment.ContentRootPath, "App_Data", "keys");
+Directory.CreateDirectory(keyPath);
+builder.Services.AddDataProtection()
+    .SetApplicationName("Ats")
+    .PersistKeysToFileSystem(new DirectoryInfo(keyPath));
 
 builder.Services.AddAtsInfrastructure(builder.Configuration);
 
@@ -33,8 +49,32 @@ builder.Services.AddControllersWithViews(o =>
 
 var app = builder.Build();
 
-app.UseSerilogRequestLogging();
-app.MapHealthChecks("/health");
+app.UseSerilogRequestLogging(opts =>
+{
+    // Attach tenant + user to the request-completion log for tenant-scoped diagnostics (no PII).
+    opts.EnrichDiagnosticContext = (diag, http) =>
+    {
+        var user = http.User;
+        if (user?.Identity?.IsAuthenticated == true)
+        {
+            var tenantId = user.FindFirst("tenant_id")?.Value;
+            if (!string.IsNullOrEmpty(tenantId)) diag.Set("TenantId", tenantId);
+            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId)) diag.Set("UserId", userId);
+        }
+    };
+});
+
+// Liveness = process up; readiness = database reachable (tagged "ready").
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false
+});
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+});
+app.MapHealthChecks("/health");   // default: all checks (kept for backwards compatibility)
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

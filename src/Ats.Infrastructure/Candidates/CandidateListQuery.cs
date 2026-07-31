@@ -39,8 +39,12 @@ public sealed class CandidateListQuery : ICandidateListQuery
             join st in _db.PipelineStages on a.CurrentStageId equals st.Id
             select new
             {
-                a.CandidateId, a.Id, a.AppliedAt, a.Origin,
-                JobTitle = j.Title, StageName = st.Name,
+                a.CandidateId,
+                a.Id,
+                a.AppliedAt,
+                a.Origin,
+                JobTitle = j.Title,
+                StageName = st.Name,
                 LastEvent = _db.ApplicationEvents.Where(e => e.ApplicationId == a.Id).Max(e => (DateTimeOffset?)e.OccurredAt)
             })
             .ToListAsync(ct);

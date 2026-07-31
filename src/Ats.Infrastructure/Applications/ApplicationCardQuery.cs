@@ -21,7 +21,14 @@ public sealed class ApplicationCardQuery : IApplicationCardQuery
             .Where(x => x.Id == applicationId)
             .Select(x => new
             {
-                x.Id, x.JobId, x.CandidateId, x.CurrentStageId, x.SourceCode, x.Origin, x.AppliedAt, x.Status,
+                x.Id,
+                x.JobId,
+                x.CandidateId,
+                x.CurrentStageId,
+                x.SourceCode,
+                x.Origin,
+                x.AppliedAt,
+                x.Status,
                 JobTitle = _db.Jobs.Where(j => j.Id == x.JobId).Select(j => j.Title).FirstOrDefault(),
                 Cand = _db.Candidates.Where(c => c.Id == x.CandidateId)
                     .Select(c => new { c.FirstName, c.LastName, c.Email, c.Phone, c.ResumeFileKey }).FirstOrDefault()

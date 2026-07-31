@@ -68,7 +68,9 @@ public class JobsController : Controller
         await SetLayoutBrandingAsync();
         return View(new CareerJobDetailViewModel
         {
-            Job = job, Slug = slug, CodeParamName = codeParam,
+            Job = job,
+            Slug = slug,
+            CodeParamName = codeParam,
             Code = ResolveReferralCode(slug, codeParam) ?? string.Empty // query wins, else the captured cookie
         });
     }
@@ -94,8 +96,14 @@ public class JobsController : Controller
             await SetLayoutBrandingAsync();
             return View("Detail", new CareerJobDetailViewModel
             {
-                Job = job, Slug = slug, CodeParamName = codeParam, Code = form.SourceCode,
-                FirstName = form.FirstName, LastName = form.LastName, Email = form.Email, Phone = form.Phone,
+                Job = job,
+                Slug = slug,
+                CodeParamName = codeParam,
+                Code = form.SourceCode,
+                FirstName = form.FirstName,
+                LastName = form.LastName,
+                Email = form.Email,
+                Phone = form.Phone,
                 Error = error
             });
         }

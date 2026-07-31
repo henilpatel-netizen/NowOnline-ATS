@@ -18,31 +18,38 @@ public sealed class OnboardingStore : IOnboardingStore
         Tenant tenant, TenantSettings settings, PipelineTemplate template,
         string ownerName, string ownerEmail, string ownerPasswordHash, CancellationToken ct)
     {
-        await using var tx = await _db.Database.BeginTransactionAsync(ct);
-
-        _db.Tenants.Add(tenant);
-        await _db.SaveChangesAsync(ct);            // tenant.Id now assigned
-
-        settings.TenantId = tenant.Id;
-        template.TenantId = tenant.Id;
-        foreach (var stage in template.Stages) stage.TenantId = tenant.Id;
-
-        var owner = new AppUser
+        // A retrying execution strategy (EnableRetryOnFailure) forbids user-initiated transactions
+        // unless they run inside the strategy, so the whole unit of work is wrapped here and retried
+        // atomically on a transient fault.
+        var strategy = _db.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
         {
-            TenantId = tenant.Id,
-            Email = ownerEmail,
-            DisplayName = ownerName,
-            PasswordHash = ownerPasswordHash,
-            Role = Domain.Enums.AtsRole.Owner,
-            CreatedAt = DateTimeOffset.UtcNow
-        };
+            await using var tx = await _db.Database.BeginTransactionAsync(ct);
 
-        _db.TenantSettings.Add(settings);
-        _db.PipelineTemplates.Add(template);
-        _db.Users.Add(owner);
-        await _db.SaveChangesAsync(ct);
+            _db.Tenants.Add(tenant);
+            await _db.SaveChangesAsync(ct);            // tenant.Id now assigned
 
-        await tx.CommitAsync(ct);
-        return (tenant.Id, owner.Id);
+            settings.TenantId = tenant.Id;
+            template.TenantId = tenant.Id;
+            foreach (var stage in template.Stages) stage.TenantId = tenant.Id;
+
+            var owner = new AppUser
+            {
+                TenantId = tenant.Id,
+                Email = ownerEmail,
+                DisplayName = ownerName,
+                PasswordHash = ownerPasswordHash,
+                Role = Domain.Enums.AtsRole.Owner,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+
+            _db.TenantSettings.Add(settings);
+            _db.PipelineTemplates.Add(template);
+            _db.Users.Add(owner);
+            await _db.SaveChangesAsync(ct);
+
+            await tx.CommitAsync(ct);
+            return (tenant.Id, owner.Id);
+        });
     }
 }

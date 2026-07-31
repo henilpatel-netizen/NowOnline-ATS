@@ -36,8 +36,10 @@ public sealed class CandidateService : ICandidateService
             return OperationResult.Fail("A candidate with this email already exists.");
         await _repo.AddAsync(new Candidate
         {
-            FirstName = firstName.Trim(), LastName = lastName.Trim(),
-            Email = normalized, Phone = phone?.Trim()
+            FirstName = firstName.Trim(),
+            LastName = lastName.Trim(),
+            Email = normalized,
+            Phone = phone?.Trim()
         }, ct);
         await _repo.SaveChangesAsync(ct);
         return OperationResult.Ok;

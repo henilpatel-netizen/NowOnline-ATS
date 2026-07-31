@@ -28,7 +28,11 @@ public class AuditController : Controller
             .Select(a => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem(a, a, a == actionFilter)).ToList();
         return View(new Ats.Web.Models.AuditIndexViewModel
         {
-            Results = results, Q = q, Action = actionFilter, Range = range, Actions = actions
+            Results = results,
+            Q = q,
+            Action = actionFilter,
+            Range = range,
+            Actions = actions
         });
     }
 }

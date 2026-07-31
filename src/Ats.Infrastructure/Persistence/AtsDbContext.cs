@@ -1,8 +1,8 @@
+using System.Linq.Expressions;
 using Ats.Application.Abstractions;
 using Ats.Domain.Common;
 using Ats.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
-using System.Linq.Expressions;
 
 namespace Ats.Infrastructure.Persistence;
 
