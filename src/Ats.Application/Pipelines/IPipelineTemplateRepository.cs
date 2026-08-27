@@ -12,4 +12,9 @@ public interface IPipelineTemplateRepository
     Task<bool> IsUsedByJobAsync(int id, CancellationToken ct = default);
     Task<Dictionary<int, int>> JobCountsByTemplateAsync(CancellationToken ct = default);
     Task SaveChangesAsync(CancellationToken ct = default);
+
+    // Optimistic concurrency: pin the template's expected RowVersion (from page load) and save,
+    // returning false if another edit won the race.
+    void SetExpectedRowVersion(PipelineTemplate template, byte[] rowVersion);
+    Task<bool> TrySaveChangesAsync(CancellationToken ct = default);
 }

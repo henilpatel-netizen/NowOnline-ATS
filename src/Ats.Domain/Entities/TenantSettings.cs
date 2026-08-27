@@ -24,4 +24,7 @@ public class TenantSettings : TenantEntity
 
     // Telemetry for the integration health panels. Written by the vacancy feed endpoint.
     public DateTimeOffset? FeedLastPulledAt { get; set; }
+
+    // Optimistic-concurrency token for the integration settings screen.
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 }

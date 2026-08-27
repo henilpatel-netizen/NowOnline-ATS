@@ -15,5 +15,7 @@ public class CandidateConfiguration : IEntityTypeConfiguration<Candidate>
         b.Property(c => c.Email).IsRequired().HasMaxLength(256);
         b.Property(c => c.Phone).HasMaxLength(40);
         b.HasIndex(c => new { c.TenantId, c.Email }).IsUnique();
+        // Default candidate-list sort (LastName, FirstName).
+        b.HasIndex(c => new { c.TenantId, c.LastName, c.FirstName });
     }
 }

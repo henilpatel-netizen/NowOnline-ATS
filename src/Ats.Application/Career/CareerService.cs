@@ -78,19 +78,24 @@ public sealed class CareerService : ICareerService
             AppliedAt = DateTimeOffset.UtcNow,
             Status = ApplicationStatus.Active
         };
-        await _applications.AddApplicationAsync(application, ct);
-        await _applications.SaveChangesAsync(ct);
 
-        await _applications.AddEventAsync(new ApplicationEvent
+        // Atomic: the application, its initial event, and the outbox message commit together.
+        return await _applications.InTransactionAsync(async innerCt =>
         {
-            ApplicationId = application.Id,
-            FromStageId = null,
-            ToStageId = firstStage.Id,
-            OccurredAt = DateTimeOffset.UtcNow,
-            MovedByUserId = null   // public apply, no signed-in user
+            await _applications.AddApplicationAsync(application, innerCt);
+            await _applications.SaveChangesAsync(innerCt);
+
+            await _applications.AddEventAsync(new ApplicationEvent
+            {
+                ApplicationId = application.Id,
+                FromStageId = null,
+                ToStageId = firstStage.Id,
+                OccurredAt = DateTimeOffset.UtcNow,
+                MovedByUserId = null   // public apply, no signed-in user
+            }, innerCt);
+            await _outbox.StageAsync(application.Id, firstStage.Id, innerCt);
+            await _applications.SaveChangesAsync(innerCt);
+            return OperationResult.Ok;
         }, ct);
-        await _outbox.StageAsync(application.Id, firstStage.Id, ct);
-        await _applications.SaveChangesAsync(ct);
-        return OperationResult.Ok;
     }
 }

@@ -29,10 +29,14 @@ Delivered; 5xx/timeout transient (exponential backoff, dead-letter after `MaxAtt
 vacancy-not-imported is transient. Per-application ordering: stop a chain on the first non-delivered.
 Every attempt logs a `WebhookDelivery`.
 
-**Run a single `Ats.Worker` instance.** `OutboxMessage.RowVersion` is a concurrency token (a second
-writer's save fails), but messages are not claim-locked, so two worker instances could double-attempt a
-message (ReferralTool's duplicate-event guard then 4xx-rejects the second). For multi-instance, add a
-`SKIP LOCKED`/status-claim strategy first.
+**Multi-instance safe (Phase 3, DATA-3).** `OutboxClaimStore` claims due messages atomically in one
+statement (`UPDATE ... WITH (READPAST, UPDLOCK, ROWLOCK) ... SET Status = Processing OUTPUT inserted.*`),
+so two worker instances can never claim the same row. A claim sets `NextAttemptAt` to a visibility-timeout
+lease (`Integration:ClaimLeaseSeconds`, default 300s); a crashed worker's `Processing` messages are
+reclaimed once the lease elapses. `OutboxProcessor` accepts a `Processing` message, resets it to `Pending`
+on a transient defer, and (DATA-2) treats a duplicate-guard 4xx that appears only after a prior send
+attempt as `Delivered` (idempotent re-delivery; the frozen payload has no idempotency-key field, so we
+dedupe on our side). `OutboxMessage.RowVersion` remains a concurrency token.
 
 ## ReferralTool-side setup (required before the loop runs; data/config only, no RT code change)
 The integration is wire-compatible with ReferralTool, but the developer must configure ReferralTool and

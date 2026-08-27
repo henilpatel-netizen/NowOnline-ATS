@@ -15,7 +15,10 @@
                    hx-get="@Url.Action("Index", "Search")"
                    hx-trigger="keyup changed delay:250ms, search"
                    hx-target="#ats-search-results"
-                   hx-swap="innerHTML" />
+                   hx-swap="innerHTML"
+                   hx-indicator="#ats-search-spinner" />
+            @* Sits in the search box, so a slow query no longer looks like nothing happened. *@
+            <span id="ats-search-spinner" class="ats-spinner ats-spinner--inline" role="status" aria-hidden="true"></span>
             <span class="ats-kbd">Ctrl K</span>
         </label>
         <div id="ats-search-results" class="ats-topbar-results" role="listbox"></div>

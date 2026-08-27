@@ -104,6 +104,8 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
-app.MapControllers();
+// WithStaticAssets so attribute-routed pages (the Careers area) also resolve the fingerprinted,
+// immutable asset URLs rather than the revalidated no-cache ones.
+app.MapControllers().WithStaticAssets();
 
 app.Run();

@@ -16,7 +16,7 @@ public sealed class IntegrationSettingsService : IIntegrationSettingsService
         return await _db.TenantSettings.FirstAsync(ct);
     }
 
-    public async Task UpdateAsync(IntegrationSettingsInput input, CancellationToken ct = default)
+    public async Task<bool> UpdateAsync(IntegrationSettingsInput input, CancellationToken ct = default)
     {
         var settings = await _db.TenantSettings.FirstAsync(ct);
         settings.IntegrationEnabled = input.IntegrationEnabled;
@@ -30,7 +30,24 @@ public sealed class IntegrationSettingsService : IIntegrationSettingsService
         if (!string.IsNullOrWhiteSpace(input.ReferralToolApiKey))
             settings.ReferralToolApiKey = input.ReferralToolApiKey.Trim();
 
-        await _db.SaveChangesAsync(ct);
+        // Concurrency: pin the version the editor loaded so a competing save is detected. Force an
+        // UPDATE (mark a column modified) so the token is always checked, even if no field changed.
+        if (input.RowVersion is { Length: > 0 })
+        {
+            var entry = _db.Entry(settings);
+            entry.Property(s => s.RowVersion).OriginalValue = input.RowVersion;
+            entry.Property(s => s.CodeParameterName).IsModified = true;
+        }
+
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+            return true;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return false;
+        }
     }
 
     public async Task<string> GenerateFeedKeyAsync(CancellationToken ct = default)

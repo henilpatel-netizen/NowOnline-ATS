@@ -19,4 +19,7 @@ public class PipelineEditViewModel
     public int? Id { get; set; }
     [Required, StringLength(120)] public string Name { get; set; } = "";
     public List<StageRow> Stages { get; set; } = new();
+
+    // Optimistic-concurrency token, round-tripped as base64 through a hidden field.
+    public byte[]? RowVersion { get; set; }
 }

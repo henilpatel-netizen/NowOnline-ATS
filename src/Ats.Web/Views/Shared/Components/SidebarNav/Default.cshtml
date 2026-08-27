@@ -8,7 +8,7 @@
         [NavGroup.Admin] = "Admin:"
     };
 }
-<aside class="ats-sidebar">
+<aside id="ats-sidebar" class="ats-sidebar">
     <div class="ats-brand">
         <span class="ats-brand-mark">A</span>
         <span class="d-flex flex-column" style="line-height:1.1">
@@ -25,7 +25,18 @@
         </span>
     </div>
 
-    <nav class="ats-nav">
+    @* Boosted navigation (NAV-1). Scoped to this container so that hx-target/hx-select are inherited
+       ONLY by the nav links, never by other htmx elements (search, drawer, board). Swaps just
+       #ats-content, so the shell, CSS, fonts and global scripts are never re-fetched or re-executed;
+       #ats-sidebar is re-sent out-of-band to keep the active item and counts server-authoritative.
+       With JS off, or on a hard refresh, these remain ordinary links. *@
+    <nav class="ats-nav"
+         hx-boost="true"
+         hx-target="#ats-content"
+         hx-select="#ats-content"
+         hx-select-oob="#ats-sidebar"
+         hx-swap="outerHTML"
+         hx-indicator="#ats-nav-progress">
         @foreach (var group in Model.Groups)
         {
             <div class="ats-nav-group">
@@ -64,7 +75,8 @@
                 <span class="ats-sidebar-user-role">@Model.Role</span>
             }
         </span>
-        <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
+        @* Not boosted: the response is the login page, a different layout. *@
+        <form asp-controller="Account" asp-action="Logout" method="post" class="m-0" hx-boost="false">
             <button type="submit" class="ats-sidebar-signout" title="Sign out" aria-label="Sign out">
                 <span class="ms ms-sm">logout</span>
             </button>

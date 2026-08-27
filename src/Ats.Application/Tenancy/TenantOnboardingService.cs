@@ -29,13 +29,19 @@ public sealed class TenantOnboardingService : ITenantOnboardingService
         if (await _store.SlugExistsAsync(slug, ct))
             return new RegisterTenantResult(false, 0, 0, "That URL slug is already taken.");
 
+        // Email is globally unique across tenants, so reject an address already in use before we try
+        // to insert (avoids surfacing the DB unique-index violation as an unhandled error).
+        var ownerEmail = input.OwnerEmail.Trim().ToLowerInvariant();
+        if (await _store.EmailExistsAsync(ownerEmail, ct))
+            return new RegisterTenantResult(false, 0, 0, "That email address is already registered.");
+
         var tenant = new Tenant { Name = input.CompanyName.Trim(), Slug = slug };
         var settings = new TenantSettings { CodeParameterName = "ref" };
         var defaultTemplate = BuildDefaultPipeline();
         var ownerHash = _identity.HashPassword(input.Password);
 
         var (tenantId, ownerId) = await _store.CreateTenantGraphAsync(
-            tenant, settings, defaultTemplate, input.OwnerName.Trim(), input.OwnerEmail.Trim().ToLowerInvariant(), ownerHash, ct);
+            tenant, settings, defaultTemplate, input.OwnerName.Trim(), ownerEmail, ownerHash, ct);
 
         return new RegisterTenantResult(true, tenantId, ownerId, null);
     }

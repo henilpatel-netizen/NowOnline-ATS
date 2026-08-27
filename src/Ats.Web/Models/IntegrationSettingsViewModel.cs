@@ -18,4 +18,7 @@ public class IntegrationSettingsViewModel
     public bool HasApiKey { get; set; }
     public bool HasFeedKey { get; set; }
     public int PublishedJobCount { get; set; }
+
+    // Optimistic-concurrency token, round-tripped as base64 through a hidden field.
+    public byte[]? RowVersion { get; set; }
 }

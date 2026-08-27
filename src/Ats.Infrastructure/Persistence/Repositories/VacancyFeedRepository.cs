@@ -14,7 +14,8 @@ public sealed class VacancyFeedRepository : IVacancyFeedRepository
     public async Task<(List<Job> Jobs, int Total)> GetPageAsync(int page, int perPage, CancellationToken ct = default)
     {
         // Draft is never exposed; the global filter already excludes soft-deleted and scopes by tenant.
-        var query = _db.Jobs.Include(j => j.Location)
+        // Read-only feed projection: no change tracking needed.
+        var query = _db.Jobs.AsNoTracking().Include(j => j.Location)
             .Where(j => j.Status != JobStatus.Draft)
             .OrderBy(j => j.Id);
 

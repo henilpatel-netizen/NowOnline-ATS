@@ -13,6 +13,8 @@
   - `IdentityService.ValidateCredentialsAsync` (sign-in: no tenant claim yet; matches unique `(TenantId, Email)`).
   - `OnboardingStore.CreateTenantGraphAsync` (creates the tenant graph before a tenant claim exists;
     stamps `TenantId` explicitly on settings/template/stages/owner).
+  - `OnboardingStore.SlugExistsAsync` / `EmailExistsAsync` (sign-up uniqueness checks run before a
+    tenant claim exists; email is globally unique across tenants, so both read unfiltered).
 - Public career-site requests resolve the tenant from the `{slug}` route value:
   `TenantResolutionMiddleware` sets `HttpContext.Items["TenantId"]` and `HttpTenantContext` reads it
   after the `tenant_id` claim. Unknown/suspended slug returns 404. Querying `Tenants` by slug is
@@ -22,8 +24,9 @@
   key: `FeedApiKeyFilter` matches `TenantSettings.FeedApiKeyHash` via `IgnoreQueryFilters` and sets
   `HttpContext.Items["TenantId"]`. This is a documented filter-bypass spot (no tenant claim on feed
   requests). Invalid/missing key returns 401.
-- The outbox worker (`Ats.Worker`) drains `OutboxMessages` across all tenants with `IgnoreQueryFilters`
-  (`OutboxClaimStore`), then sets a settable `WorkerTenantContext.CurrentTenantId` to each message's
+- The outbox worker (`Ats.Worker`) drains `OutboxMessages` across all tenants via a raw-SQL atomic
+  claim (`OutboxClaimStore`, `UPDATE ... WITH (READPAST, UPDLOCK, ROWLOCK) ... OUTPUT`, which bypasses
+  the LINQ query filter by construction), then sets a settable `WorkerTenantContext.CurrentTenantId` to each message's
   `TenantId` before processing, so per-tenant reads, `TenantId` stamping, and the `WebhookDelivery`
   insert scope correctly. The worker registers `WorkerTenantContext` in place of `HttpTenantContext`
   (no HttpContext). This is a documented filter-bypass spot.

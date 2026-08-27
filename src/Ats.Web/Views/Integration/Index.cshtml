@@ -21,7 +21,7 @@
         <span style="width:44px;height:44px;border-radius:var(--no-radius-md);background:rgba(105,202,167,.18);color:var(--no-medium-aqua);display:inline-flex;align-items:center;justify-content:center"><span class="ms">cable</span></span>
         <span class="ats-cell-stack">
             <span style="font-family:var(--no-font-display);font-weight:700;font-size:1.0625rem">ReferralTool</span>
-            <span class="ats-small" style="color:#B9C4D0">
+            <span class="ats-small ats-on-dark-subtle">
                 <span class="ats-board-col-dot d-inline-block" style="background:@(Model.IntegrationEnabled ? "var(--no-medium-aqua)" : "var(--no-roman-silver)")"></span>
                 @(Model.IntegrationEnabled ? "Connected" : "Disabled")
                 @if (Model.ReferralToolCustomerId is not null) { <text>· customer @Model.ReferralToolCustomerId</text> }
@@ -30,9 +30,9 @@
         </span>
     </div>
     <div class="ats-stat-strip">
-        <span><span class="ats-eyebrow" style="color:#8FA0B4">Delivered</span><span class="ats-stat-mini" style="color:#fff">@ViewData["Delivered"]</span></span>
-        <span><span class="ats-eyebrow" style="color:#8FA0B4">Failed</span><span class="ats-stat-mini" style="color:#FF7A96">@ViewData["Failed"]</span></span>
-        <span><span class="ats-eyebrow" style="color:#8FA0B4">Pending</span><span class="ats-stat-mini" style="color:#fff">@ViewData["Pending"]</span></span>
+        <span><span class="ats-eyebrow ats-on-dark-label">Delivered</span><span class="ats-stat-mini ats-on-dark-strong">@ViewData["Delivered"]</span></span>
+        <span><span class="ats-eyebrow ats-on-dark-label">Failed</span><span class="ats-stat-mini ats-on-dark-danger">@ViewData["Failed"]</span></span>
+        <span><span class="ats-eyebrow ats-on-dark-label">Pending</span><span class="ats-stat-mini ats-on-dark-strong">@ViewData["Pending"]</span></span>
     </div>
     <form asp-action="TestConnection" method="post" class="m-0">
         <button type="submit" class="btn btn-outline-light btn-sm"><span class="ms ms-sm">bolt</span> Test connection</button>
@@ -42,6 +42,10 @@
 <div class="row g-3 align-items-start">
     <div class="col-lg-7">
         <form asp-action="Index" method="post" class="ats-card d-flex flex-column gap-3">
+            @if (Model.RowVersion is { Length: > 0 })
+            {
+                <input type="hidden" name="RowVersion" value="@Convert.ToBase64String(Model.RowVersion)" />
+            }
             <div><span class="ats-eyebrow">Connection:</span><h2 class="mt-1 mb-0">Where we push status updates.</h2></div>
             <div asp-validation-summary="All" class="text-danger small"></div>
             <label class="d-flex align-items-center gap-3 p-3" style="background:var(--ats-bg);border-radius:var(--no-radius-md);cursor:pointer">
@@ -92,4 +96,3 @@
     <div class="p-3"><a class="ats-small" asp-action="Deliveries">View full delivery log <span class="ms ms-sm">arrow_forward</span></a></div>
 </div>
 
-@section Scripts { <partial name="_ValidationScriptsPartial" /> }

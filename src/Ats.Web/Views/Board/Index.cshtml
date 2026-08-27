@@ -67,8 +67,9 @@
 
 <partial name="_Board" model="Model" />
 
+@* Sortable itself is loaded globally in _Layout: an external <script src> inserted by an htmx
+   swap loads asynchronously, so this inline init would run before the library existed. *@
 @section Scripts {
-    <script src="~/lib/sortablejs/Sortable.min.js"></script>
     <script>
         function initBoard() {
             document.querySelectorAll('.ats-board-cards').forEach(function (el) {
@@ -97,7 +98,10 @@
                 card.addEventListener('click', function (e) {
                     if (e.target.closest('.move-select') || e.target.closest('option')) return;
                     const url = card.getAttribute('hx-get-card');
-                    if (url) htmx.ajax('GET', url, { target: '#ats-drawer-host', swap: 'innerHTML' });
+                    if (!url) return;
+                    // Paint a skeleton first: the drawer used to stay blank for the whole round-trip.
+                    if (window.Ats && Ats.showDrawerSkeleton) Ats.showDrawerSkeleton();
+                    htmx.ajax('GET', url, { target: '#ats-drawer-host', swap: 'innerHTML' });
                 });
             });
         }

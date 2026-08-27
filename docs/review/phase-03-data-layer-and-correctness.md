@@ -6,9 +6,27 @@ volume grows. One additive migration covers the new indexes + concurrency tokens
 
 Raises: Backend, Scalability. Verified against `c7f4614`.
 
+> **Status (2026-07-31):** All eight items implemented. Migration
+> `DataLayerIndexesAndConcurrency` (5 indexes + `RowVersion` on `PipelineTemplates`/`TenantSettings`)
+> must be applied manually before the app runs (the new mapped columns). DATA-4 uses a browser-timezone
+> `<local-time>` tag helper (per-user-correct, no schema change). DATA-2 dedupes on our side (the frozen
+> contract has no idempotency-key field). The atomic outbox claim was verified running live against
+> LocalDB.
+>
+> **Live smoke test (2026-08-27, after the migration was applied):** all items verified against the
+> running app. Three DATA-4 follow-ups were found and fixed during testing:
+> (1) `<local-time>` must be written with an explicit end tag — a self-closing tag-helper element makes
+> Razor swallow the markup that follows it (it had silently dropped "· N attempt(s)" from the delivery
+> log and the ":" from the dashboard eyebrow); the helper now forces `TagMode.StartTagAndEndTag`.
+> (2) the drawer's stage history was still formatted server-local in `ApplicationCardQuery`, now carried
+> as a UTC instant and rendered per viewer. (3) the dashboard "today" eyebrow used `DateTimeOffset.Now`;
+> it now renders in the viewer's timezone via a new `weekday` format. Rendering assembles date parts
+> explicitly so the house day-first, 24-hour format is preserved on every machine — only the ZONE
+> follows the viewer, never the format.
+
 ---
 
-### [ ] DATA-1 · Add indexes for the hot query paths — Priority: High · Effort: S
+### [x] DATA-1 · Add indexes for the hot query paths — Priority: High · Effort: S
 **Files:** `src/Ats.Infrastructure/Persistence/Configurations/JobApplicationConfiguration.cs:15`
 (only unique `(TenantId,JobId,CandidateId)`), `CandidateConfiguration.cs:17` (only `(TenantId,Email)`),
 `ApplicationEventConfiguration.cs:12` (`(TenantId,ApplicationId,OccurredAt)`).
@@ -27,7 +45,7 @@ optionally check an actual plan for a seek.
 
 ---
 
-### [ ] DATA-2 · Outbox delivery idempotency + correct duplicate handling — Priority: High · Effort: M
+### [x] DATA-2 · Outbox delivery idempotency + correct duplicate handling — Priority: High · Effort: M
 **Files:** `src/Ats.Infrastructure/Integration/OutboxProcessor.cs:50-69`,
 `.../ReferralToolClient.cs`, dashboard failure tile `DashboardService.cs:76-78`.
 **Problem:** At-least-once delivery with no idempotency key. A lost response after ReferralTool
@@ -43,7 +61,7 @@ status per application).
 
 ---
 
-### [ ] DATA-3 · Atomic outbox claim (scale-out safety) — Priority: Medium · Effort: M
+### [x] DATA-3 · Atomic outbox claim (scale-out safety) — Priority: Medium · Effort: M
 **Files:** `src/Ats.Infrastructure/Integration/OutboxClaimStore.cs:13-19`,
 `OutboxMessageConfiguration.cs:18`.
 **Problem:** `ClaimDueAsync` selects `Pending && NextAttemptAt<=now` but never transitions state or
@@ -57,7 +75,7 @@ lead). Add a `Processing` state + a stuck-message reclaim (e.g. Processing older
 
 ---
 
-### [ ] DATA-4 · Store and display times in UTC with per-user timezone — Priority: Medium · Effort: M
+### [x] DATA-4 · Store and display times in UTC with per-user timezone — Priority: Medium · Effort: M
 **Files:** views call `.ToLocalTime()` → renders the **server's** local time:
 `Views/Audit/Index.cshtml`, `Views/Integration/_DeliveryRows.cshtml`, `Views/Jobs/Index.cshtml`,
 `Views/Shared/Partials/_CandidateDrawer.cshtml`. Data is stored `DateTimeOffset.UtcNow` (good).
@@ -73,7 +91,7 @@ pass UTC consistently.
 
 ---
 
-### [ ] DATA-5 · Correct the offer-acceptance KPI — Priority: Medium · Effort: S
+### [x] DATA-5 · Correct the offer-acceptance KPI — Priority: Medium · Effort: S
 **Files:** `src/Ats.Infrastructure/Dashboard/DashboardService.cs:38-55`.
 **Problem:** Numerator `hires = hireSpans.Count` counts *events* into any Hired-outcome stage, not
 distinct applications; re-entry or multiple hired stages over-count. `Math.Max(hires, progressed)`
@@ -86,7 +104,7 @@ offer-stage-reached.
 
 ---
 
-### [ ] DATA-6 · Atomic application-create — Priority: Medium · Effort: S
+### [x] DATA-6 · Atomic application-create — Priority: Medium · Effort: S
 **Files:** `src/Ats.Application/Applications/ApplicationService.cs:92-104` (two `SaveChanges`:
 row, then event+outbox). Note `MoveStageAsync:126-138` is already atomic — good.
 **Problem:** A crash between the two saves leaves an application with no initial `ApplicationEvent`
@@ -99,7 +117,7 @@ and no outbox message → orphan + silent under-delivery to ReferralTool.
 
 ---
 
-### [ ] DATA-7 · `AsNoTracking` on entity-returning reads — Priority: Low · Effort: S
+### [x] DATA-7 · `AsNoTracking` on entity-returning reads — Priority: Low · Effort: S
 **Files:** `src/Ats.Infrastructure/Integration/DeliveryLogService.cs:20-26`,
 `.../Persistence/Repositories/VacancyFeedRepository.cs:17-22`. (Projection query services are already
 untracked — good.)
@@ -111,7 +129,7 @@ default and opt back in for the write repositories).
 
 ---
 
-### [ ] DATA-8 · Optimistic concurrency on pipeline & tenant-settings edits — Priority: Low · Effort: M
+### [x] DATA-8 · Optimistic concurrency on pipeline & tenant-settings edits — Priority: Low · Effort: M
 **Files:** `RowVersion` exists only on `JobApplication` and `OutboxMessage`
 (`Configurations/JobApplicationConfiguration.cs`, `OutboxMessageConfiguration.cs`). Pipeline template
 edit (`PipelineTemplateService.SaveAsync`) and integration settings (`IntegrationSettingsService`)
@@ -126,8 +144,8 @@ have none.
 ---
 
 ## Exit criteria
-- [ ] Indexes migration created (and applied by the developer); hot paths seek.
-- [ ] Outbox is idempotent; duplicates aren't false failures; claim is atomic + seekable.
-- [ ] Times render in the user's timezone; offer-acceptance KPI is correct.
-- [ ] Application-create is atomic; pure reads untracked; pipeline/settings edits are concurrency-safe.
-- [ ] `dotnet build` clean, `dotnet test` green.
+- [x] Indexes migration created (apply manually); hot paths seek. (5 `CreateIndex` in `DataLayerIndexesAndConcurrency`)
+- [x] Outbox is idempotent; duplicates aren't false failures; claim is atomic + seekable. (atomic claim verified live; duplicate-guard 4xx after a prior attempt -> Delivered; `IX_OutboxMessages_Status_NextAttemptAt`)
+- [x] Times render in the user's timezone; offer-acceptance KPI is correct. (`<local-time>` tag helper + site.js; distinct-application numerator with re-entry test)
+- [x] Application-create is atomic; pure reads untracked; pipeline/settings edits are concurrency-safe. (transaction via execution strategy; `AsNoTracking`; `RowVersion` round-trip with conflict message)
+- [x] `dotnet build` clean, `dotnet test` green. (0/0 warnings; 75/75 tests)

@@ -10,6 +10,8 @@ public class ApplicationEventConfiguration : IEntityTypeConfiguration<Applicatio
     {
         b.HasKey(e => e.Id);
         b.HasIndex(e => new { e.TenantId, e.ApplicationId, e.OccurredAt });
+        // Dashboard time-to-hire / idle scans filter events by stage + time across the tenant.
+        b.HasIndex(e => new { e.TenantId, e.ToStageId, e.OccurredAt });
         b.HasOne<JobApplication>().WithMany().HasForeignKey(e => e.ApplicationId).OnDelete(DeleteBehavior.Cascade);
     }
 }

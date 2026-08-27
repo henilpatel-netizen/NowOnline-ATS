@@ -29,6 +29,7 @@
                         <form class="ats-board-card @(card.Rejected ? "ats-board-card--rejected" : "")"
                               asp-controller="Board" asp-action="Move" method="post"
                               hx-post="@Url.Action("Move", "Board")" hx-target="#board-container" hx-swap="outerHTML"
+                              hx-indicator="this" hx-disabled-elt="find select"
                               hx-get-card="@Url.Action("Card", "Applications", new { id = card.ApplicationId })">
                             <input type="hidden" name="jobId" value="@Model.Job.Id" />
                             <input type="hidden" name="applicationId" value="@card.ApplicationId" />
@@ -62,9 +63,18 @@
                             </select>
                         </form>
                     }
-                    @if (col.Cards.Count == 0 && col.Stage.IsTerminal && col.Stage.TerminalOutcome == Ats.Domain.Entities.StageOutcome.Hired)
+                    @if (col.Cards.Count == 0)
                     {
-                        <div class="ats-board-drop">Drop a candidate here to mark them hired. Their referral status is pushed to ReferralTool automatically.</div>
+                        @* Every empty column needs a placeholder: a blank column reads as broken or
+                           still loading. The hired column keeps its richer explanatory hint. *@
+                        if (col.Stage.IsTerminal && col.Stage.TerminalOutcome == Ats.Domain.Entities.StageOutcome.Hired)
+                        {
+                            <div class="ats-board-drop">Drop a candidate here to mark them hired. Their referral status is pushed to ReferralTool automatically.</div>
+                        }
+                        else
+                        {
+                            <div class="ats-board-empty">No candidates</div>
+                        }
                     }
                 </div>
             </div>

@@ -24,10 +24,16 @@
   background: var(--no-oxford-blue);
   border-radius: var(--no-radius-lg);
   padding: 1.375rem;
-  color: #fff;
+  color: var(--ats-on-dark);
 }
 
-.ats-card-dark .ats-eyebrow { color: #8FA0B4; }
+.ats-card-dark .ats-eyebrow { color: var(--ats-on-dark-label); }
+
+/* Dark-surface text helpers, so views stop carrying inline hex (UX-5). */
+.ats-on-dark-muted { color: var(--ats-on-dark-muted); }
+.ats-on-dark-subtle { color: var(--ats-on-dark-subtle); }
+.ats-on-dark-strong { color: var(--ats-on-dark); }
+.ats-on-dark-danger { color: var(--ats-on-dark-danger); }
 
 .ats-card-hover { transition: box-shadow .15s ease, transform .15s ease; }
 
@@ -362,6 +368,35 @@
 .ats-trow--link:hover { background: var(--ats-surface-subtle); }
 .ats-trow--danger { background: var(--no-danger-row); }
 
+/* ---------- Per-screen column templates (UX-1) ----------
+   These live here, never as an inline style on the row: an inline grid-template-columns beats every
+   stylesheet rule, which made the tables impossible to make responsive. Apply the same class to the
+   matching .ats-thead and .ats-trow. */
+.ats-table--jobs { grid-template-columns: 2.4fr 1fr 1.6fr 1fr .8fr 44px; }
+.ats-table--candidates { grid-template-columns: 2.2fr 1.8fr 1.4fr 1.6fr 1fr 44px; }
+.ats-table--deliveries { grid-template-columns: .6fr 1.2fr 1fr 1fr .9fr 1.8fr; }
+.ats-table--org { grid-template-columns: 1fr auto auto; }
+
+/* Phones: stack every cell. Column headers carry no meaning once stacked, so they are hidden.
+   Declared after the templates above, so the single-class selectors below win on source order —
+   no !important needed. */
+@media (max-width: 767.98px) {
+  .ats-thead.ats-table--jobs,
+  .ats-thead.ats-table--candidates,
+  .ats-thead.ats-table--deliveries { display: none; }
+
+  .ats-table--jobs,
+  .ats-table--candidates,
+  .ats-table--deliveries,
+  .ats-table--org {
+    grid-template-columns: 1fr;
+    gap: .5rem;
+  }
+
+  /* The row-actions cell sits right-aligned on desktop; stacked it reads better on the left. */
+  .ats-trow > .d-flex.justify-content-end { justify-content: flex-start !important; }
+}
+
 .ats-cell-stack { display: flex; flex-direction: column; gap: .25rem; min-width: 0; }
 
 .ats-cell-title {
@@ -686,4 +721,87 @@
   font-family: var(--no-font-mono);
   font-size: .6875rem;
   color: var(--ats-ink-subtle);
+}
+
+/* ---------- Async feedback: spinner, skeleton, toasts (UX-2 / UX-3) ----------
+   htmx toggles .htmx-request on whatever hx-indicator points at, so showing and hiding these
+   needs no JavaScript. All colours come from tokens. */
+.ats-spinner {
+  display: none;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--ats-border);
+  border-top-color: var(--ats-accent);
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.ats-spinner.htmx-request { display: inline-block; animation: ats-spin .6s linear infinite; }
+.ats-spinner--inline { margin-left: .25rem; }
+
+@keyframes ats-spin { to { transform: rotate(360deg); } }
+
+/* A card being moved: dimmed and non-interactive until the server answers. */
+.ats-board-card.htmx-request { opacity: .55; pointer-events: none; }
+
+.ats-skeleton-stack { display: flex; flex-direction: column; gap: .75rem; padding: 1.5rem; }
+
+.ats-skeleton {
+  background: linear-gradient(90deg, var(--ats-surface-subtle) 25%, var(--ats-border-subtle) 37%, var(--ats-surface-subtle) 63%);
+  background-size: 400% 100%;
+  border-radius: var(--no-radius-sm);
+  animation: ats-skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.ats-skeleton--title { height: 1.5rem; width: 55%; }
+.ats-skeleton--line { height: .875rem; width: 90%; }
+.ats-skeleton--block { height: 8rem; width: 100%; }
+
+@keyframes ats-skeleton-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+/* Empty board column placeholder (UX-4). */
+.ats-board-empty {
+  padding: .875rem;
+  text-align: center;
+  font-size: .8125rem;
+  color: var(--ats-ink-subtle);
+  border: 1px dashed var(--ats-border);
+  border-radius: var(--no-radius-md);
+}
+
+/* Toasts (UX-3). */
+.ats-toasts {
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  z-index: 2100;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  max-width: min(24rem, calc(100vw - 2.5rem));
+}
+
+.ats-toast {
+  padding: .75rem 1rem;
+  border-radius: var(--no-radius-md);
+  background: var(--ats-surface);
+  color: var(--ats-ink);
+  border-left: 3px solid var(--ats-border);
+  box-shadow: 0 6px 24px rgba(16, 32, 52, .16);
+  font-size: .875rem;
+  opacity: 1;
+  transition: opacity .35s ease, transform .35s ease;
+}
+
+.ats-toast--danger { border-left-color: var(--no-danger-ink); }
+.ats-toast--success { border-left-color: var(--no-medium-aqua); }
+.ats-toast--out { opacity: 0; transform: translateY(.5rem); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ats-spinner.htmx-request,
+  .ats-skeleton { animation: none; }
+  .ats-toast { transition: none; }
 }

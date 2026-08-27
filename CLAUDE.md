@@ -34,6 +34,12 @@ Sometype Mono, Material Symbols icons, four layered `ats-*.css` files). Client l
 by LibMan (`libman.json`); run `libman restore` to populate `src/Ats.Web/wwwroot/lib`. UI
 conventions: `.claude/skills/ui/SKILL.md`.
 
+Back-office navigation is **htmx-boosted**: only `#ats-content` is swapped. Three rules you must not
+break (details + rationale in the UI skill): never put `hx-target`/`hx-select` on a broad ancestor
+(htmx inherits them and it silently breaks search/drawer/board); shared libraries go in `<head>` while
+page `@section Scripts` renders inside `<main>`; the document title comes from `data-page-title`.
+Never set `grid-template-columns` inline, and never put a raw hex colour in a view.
+
 ## Architecture (strict layering)
 Controllers -> Application services -> repositories -> EF Core (Infrastructure).
 `Ats.Domain` has no EF/framework deps. Always `async/await`.
@@ -63,6 +69,18 @@ four phases (`docs/plans/2026-07-30-ats-redesign-phase-{1..4}-*.md`).
 - Auth behind `IIdentityService` (ASP.NET Core Identity impl); swappable later.
 - No hardcoded secrets; config per environment, secrets outside source control.
 - Code comments only when they say something the code/names cannot.
+- **Build must stay warning-clean.** `.editorconfig` + `latest-recommended` analyzers run on build
+  (`TreatWarningsAsErrors` is deliberately `false`, but leave no new warnings). `dotnet format
+  --verify-no-changes` must pass; CI (`.github/workflows/ci.yml`) gates build + tests + format.
+- **User email is globally unique** across tenants (`IX_Users_Email`), so sign-in resolves to exactly
+  one tenant. See `.claude/rules/multi-tenancy.md`.
+- **Times:** store UTC, never `ToLocalTime()`/`DateTime.Now`. Render with the `<local-time>` tag helper
+  (explicit end tag required) so timestamps show in the **viewer's** timezone. Details: UI skill.
+- **Explicit transactions must run inside the EF execution strategy** (`EnableRetryOnFailure` is on) —
+  use `IApplicationRepository.InTransactionAsync`. Do not adopt `AddDbContextPool` (it would capture
+  the scoped tenant context in the interceptor). Details: architecture skill.
+- **No server-side data cache by design** (freshness requirement). Read the phase-04 status note before
+  adding one.
 
 ## Documentation maintenance (MANDATORY, after each phase)
 1. Refresh the skill-index table below and any changed conventions.

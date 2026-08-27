@@ -340,3 +340,45 @@
   .ats-content { padding: 1rem 1rem 3rem; }
   .ats-drawer { width: 100%; }
 }
+
+/* Boosted-navigation progress bar (NAV-1 / UX-2). htmx puts .htmx-request on the hx-indicator
+   target for the duration of the request, so no JS is needed to show or hide it. The bar is a
+   fixed overlay and never participates in layout, so it cannot shift the page. */
+.ats-nav-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 2000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms linear;
+}
+
+.ats-nav-progress > span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--ats-accent);
+}
+
+.ats-nav-progress.htmx-request {
+  opacity: 1;
+}
+
+/* Eases towards 90% while in flight: real progress is not knowable for an XHR document swap,
+   so this communicates "working" without ever claiming completion. */
+.ats-nav-progress.htmx-request > span {
+  animation: ats-nav-progress-grow 1.2s ease-out forwards;
+}
+
+@keyframes ats-nav-progress-grow {
+  0%   { width: 0; }
+  40%  { width: 55%; }
+  100% { width: 90%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ats-nav-progress.htmx-request > span { animation: none; width: 90%; }
+}

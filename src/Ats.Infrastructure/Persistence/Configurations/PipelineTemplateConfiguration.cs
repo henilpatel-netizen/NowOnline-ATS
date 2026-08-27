@@ -10,6 +10,7 @@ public class PipelineTemplateConfiguration : IEntityTypeConfiguration<PipelineTe
     {
         b.HasKey(p => p.Id);
         b.Property(p => p.Name).IsRequired().HasMaxLength(120);
+        b.Property(p => p.RowVersion).IsRowVersion();
         b.HasMany(p => p.Stages).WithOne().HasForeignKey(s => s.PipelineTemplateId);
     }
 }

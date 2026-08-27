@@ -45,7 +45,7 @@
             {
                 var look = Look(a.Action);
                 <div class="d-flex gap-3 py-3" style="border-bottom:1px solid var(--ats-border-subtle)">
-                    <span class="ats-mono ats-xsmall ats-muted" style="width:6.25rem;flex:0 0 6.25rem;padding-top:.2rem">@a.OccurredAt.ToLocalTime().ToString("dd/MM HH:mm")</span>
+                    <span class="ats-mono ats-xsmall ats-muted" style="width:6.25rem;flex:0 0 6.25rem;padding-top:.2rem"><local-time utc="@a.OccurredAt" format="short"></local-time></span>
                     <span class="ats-pill @look.Cls" style="width:2.125rem;height:2.125rem;padding:0;justify-content:center;border-radius:var(--no-radius-pill);flex:0 0 2.125rem"><span class="ms ms-sm">@look.Icon</span></span>
                     <span class="ats-cell-stack flex-grow-1">
                         <span class="ats-small"><strong style="font-weight:500">@a.UserName</strong> @a.Summary</span>

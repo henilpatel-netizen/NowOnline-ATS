@@ -73,7 +73,7 @@ public sealed class ApplicationCardQuery : IApplicationCardQuery
         string StageName(int id) => stages.FirstOrDefault(s => s.Id == id)?.Name ?? $"#{id}";
         var history = events.Select((e, i) => new ApplicationHistoryItem(
             e.FromStageId is null ? $"Applied — {StageName(e.ToStageId)}" : $"Moved to {StageName(e.ToStageId)}",
-            e.OccurredAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm"),
+            e.OccurredAt,
             i == 0)).ToList();
 
         StoredFileInfo? file = a.Cand.ResumeFileKey is null ? null : await _files.StatAsync(a.Cand.ResumeFileKey, ct);

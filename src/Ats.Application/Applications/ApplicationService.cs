@@ -91,20 +91,26 @@ public sealed class ApplicationService : IApplicationService
             AppliedAt = DateTimeOffset.UtcNow,
             Status = ApplicationStatus.Active
         };
-        await _repo.AddApplicationAsync(application, ct);
-        await _repo.SaveChangesAsync(ct);   // assigns application.Id
 
-        await _repo.AddEventAsync(new ApplicationEvent
+        // Atomic: the application, its initial event, and the outbox message commit together, so a
+        // crash never leaves an application without its first event or a silent under-delivery.
+        return await _repo.InTransactionAsync(async innerCt =>
         {
-            ApplicationId = application.Id,
-            FromStageId = null,
-            ToStageId = firstStage.Id,
-            OccurredAt = DateTimeOffset.UtcNow,
-            MovedByUserId = _currentUser.UserId
+            await _repo.AddApplicationAsync(application, innerCt);
+            await _repo.SaveChangesAsync(innerCt);   // assigns application.Id
+
+            await _repo.AddEventAsync(new ApplicationEvent
+            {
+                ApplicationId = application.Id,
+                FromStageId = null,
+                ToStageId = firstStage.Id,
+                OccurredAt = DateTimeOffset.UtcNow,
+                MovedByUserId = _currentUser.UserId
+            }, innerCt);
+            await _outbox.StageAsync(application.Id, firstStage.Id, innerCt);
+            await _repo.SaveChangesAsync(innerCt);
+            return OperationResult.Ok;
         }, ct);
-        await _outbox.StageAsync(application.Id, firstStage.Id, ct);
-        await _repo.SaveChangesAsync(ct);
-        return OperationResult.Ok;
     }
 
     public async Task<OperationResult> MoveStageAsync(int applicationId, int toStageId, byte[] rowVersion, CancellationToken ct = default)

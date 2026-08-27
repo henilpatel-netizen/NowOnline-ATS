@@ -29,7 +29,7 @@
         }
         @if (Model.ResumeFileName is not null)
         {
-            <a class="btn btn-outline-secondary btn-sm" asp-controller="Resume" asp-action="Download" asp-route-applicationId="@Model.ApplicationId">Download CV</a>
+            <a class="btn btn-outline-secondary btn-sm" asp-controller="Resume" asp-action="Download" asp-route-applicationId="@Model.ApplicationId" hx-boost="false">Download CV</a>
         }
     </div>
 </div>
@@ -51,7 +51,7 @@
     <span class="ats-eyebrow">Application:</span>
     <div class="ats-drawer-facts">
         <span class="k">Job</span><span>@Model.JobTitle</span>
-        <span class="k">Applied</span><span>@Model.AppliedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+        <span class="k">Applied</span><span><local-time utc="@Model.AppliedAt" format="datetime"></local-time></span>
         <span class="k">Source</span><span><partial name="Partials/_SourceChip" model="new SourceChipModel(Model.Origin)" /></span>
         <span class="k">Days in stage</span><span>@Model.DaysInStage</span>
         @if (Model.ReferralCode is not null)
@@ -71,12 +71,12 @@
                 <span class="ats-small">@Model.ResumeFileName</span>
                 <span class="ats-xsmall ats-muted">@Size(Model.ResumeSizeBytes)</span>
             </span>
-            <a class="ms ms-sm" asp-controller="Resume" asp-action="Download" asp-route-applicationId="@Model.ApplicationId" aria-label="Download">download</a>
+            <a class="ms ms-sm" asp-controller="Resume" asp-action="Download" asp-route-applicationId="@Model.ApplicationId" aria-label="Download" hx-boost="false">download</a>
         </div>
     }
 </div>
 
 <div class="ats-drawer-section">
     <span class="ats-eyebrow">History:</span>
-    <partial name="Partials/_Timeline" model="new TimelineModel(Model.History.Select(h => new TimelineItem(h.Title, h.Subtitle, h.IsCurrent)).ToList())" />
+    <partial name="Partials/_Timeline" model="new TimelineModel(Model.History.Select(h => new TimelineItem(h.Title, null, h.IsCurrent, h.OccurredAt)).ToList())" />
 </div>

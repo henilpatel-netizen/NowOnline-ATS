@@ -10,10 +10,10 @@
     <title>@ViewData["Title"] · @tenantName</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230085CA'/%3E%3Cpath d='M5 5V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1h2v7H3V5h2zm1 0h4V4H6v1z' fill='white'/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/ats-tokens.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/ats-base.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/ats-components.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/ats-careers.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/ats-tokens.css" />
+    <link rel="stylesheet" href="~/css/ats-base.css" />
+    <link rel="stylesheet" href="~/css/ats-components.css" />
+    <link rel="stylesheet" href="~/css/ats-careers.css" />
     @* Emits --ats-accent for this tenant so public CTAs pick up the brand colour. *@
     <vc:branding></vc:branding>
 </head>
@@ -31,7 +31,7 @@
     <footer class="careers-footer">
         <div class="careers-footer-inner">
             <span style="font-family:var(--no-font-display);font-weight:800;font-size:1.25rem;letter-spacing:-.01em">@tenantName</span>
-            <span class="ats-small" style="color:#8FA0B4">Powered by ATS · when you know, you know.</span>
+            <span class="ats-small" style="color:var(--ats-on-dark-label)">Powered by ATS · when you know, you know.</span>
         </div>
     </footer>
 

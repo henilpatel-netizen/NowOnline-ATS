@@ -16,4 +16,8 @@ public interface IApplicationRepository
     void SetExpectedRowVersion(JobApplication application, byte[] rowVersion);
     Task<bool> TrySaveChangesAsync(CancellationToken ct = default); // false on concurrency conflict
     Task SaveChangesAsync(CancellationToken ct = default);
+
+    // Runs work inside a single database transaction (via the retrying execution strategy), so
+    // multi-step writes commit all-or-nothing. Use for the create-application unit of work.
+    Task<T> InTransactionAsync<T>(Func<CancellationToken, Task<T>> work, CancellationToken ct = default);
 }

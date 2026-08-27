@@ -127,3 +127,75 @@ scans every view + the icon-name literals in `SidebarNavViewComponent` and `Dash
 intersects with the ligatures the full font defines, rewrites the subset + `tools/material-symbols.icons.txt`,
 and fails if any used icon would be missing. LibMan still restores the full `material-symbols-outlined.woff2`
 as the re-subset source (not served at runtime).
+
+## Timestamps (Phase 3, DATA-4)
+Never render a stored time directly and never call `ToLocalTime()` — that would show the **server's**
+timezone. Store UTC; display via the tag helper:
+
+```cshtml
+<local-time utc="@Model.OccurredAt" format="short"></local-time>
+```
+
+- Formats: `date` | `datetime` | `short` | `monthday` | `time` | `weekday`. `empty="—"` covers nulls.
+- **Always write the explicit `></local-time>` end tag.** A self-closing `<local-time ... />` makes
+  Razor swallow the markup that follows it (this silently dropped trailing text in the delivery log and
+  the dashboard eyebrow). `LocalTimeTagHelper` forces `TagMode.StartTagAndEndTag` as a backstop.
+- The helper emits `<time datetime="...UTC..." data-local="format">` with a UTC-labelled fallback;
+  `site.js` rewrites the text to the viewer's zone and re-runs on `htmx:afterSwap`.
+- Only the **zone** follows the viewer. The format is assembled from parts explicitly so the house
+  day-first, 24-hour style (`30/06 15:22`) is identical on every machine.
+- For "today" in the page header, set `ViewData["EyebrowUtc"] = DateTimeOffset.UtcNow` (the layout
+  renders it per viewer) rather than formatting a date string.
+
+## Static assets (Phase 4, PERF-6)
+`MapStaticAssets` fingerprints everything under `wwwroot` at build time and serves the hashed route as
+`Cache-Control: max-age=31536000, immutable`. **Do not add `asp-append-version`** — it suppresses the
+fingerprinted-URL substitution and the asset falls back to a revalidated `no-cache` route. Any new
+endpoint group needs `.WithStaticAssets()` (both `MapControllerRoute` and `MapControllers` have it) or
+its views will emit unfingerprinted URLs.
+
+## Boosted navigation (Phase 5, NAV-1) — read before touching the layout or adding htmx
+Back-office navigation is AJAX: only `#ats-content` is swapped, so the shell, CSS, fonts and the
+shared libraries are never re-fetched or re-executed (measured: 1 request per navigation, 0 asset
+re-fetches).
+
+**Three rules that are easy to break:**
+1. **Never put `hx-target` / `hx-select` on `<body>` or another broad ancestor.** htmx *inherits*
+   them, so every other htmx element (global search, candidate drawer, board move form) would filter
+   its own response for `#ats-content` and swap nothing. The boost config lives on the sidebar
+   `<nav class="ats-nav">` only — a container holding nav links exclusively. New htmx features are
+   unaffected as long as they stay outside that container.
+2. **Shared libraries load in `<head>`; page scripts render inside `<main>`.** `@section Scripts` is
+   rendered inside `#ats-content` so page JS re-runs after a swap — and `<main>` parses *before* the
+   end of `<body>`, so anything a page's inline init needs (htmx, jQuery, Sortable, validation) must
+   already be defined. Add a new shared library to `<head>`, never per-page.
+3. **Document title comes from `data-page-title` on `#ats-content`,** not from parsing the response:
+   htmx replays cached DOM on Back/Forward with no HTTP response.
+
+Opt out with `hx-boost="false"` for anything whose response is not a back-office page (file
+downloads; the sign-out form, whose response is the login page on `_AuthLayout`). `site.js` also
+falls back to a real navigation for any non-HTML response, any page lacking `#ats-content`, and any
+non-2xx or network error — so a boosted click can never silently do nothing.
+
+## Tables (Phase 5, UX-1)
+Column templates are CSS classes (`.ats-table--jobs`, `--candidates`, `--deliveries`, `--org`) applied
+to both the `.ats-thead` and each `.ats-trow`. **Never set `grid-template-columns` inline** — an inline
+style beats every media query, which is what made the tables impossible to make responsive. Under
+768px the templates collapse to a single column and the header row is hidden. Adding a screen means
+adding one class next to the others, not a `style=` attribute.
+
+## Async feedback (Phase 5, UX-2/UX-3)
+htmx toggles `.htmx-request` on whatever `hx-indicator` points at, so progress needs no JS:
+- `.ats-spinner` — inline spinner (global search).
+- `.ats-nav-progress` — top progress bar for boosted navigation.
+- `.ats-board-card.htmx-request` — dims the card being moved; `hx-disabled-elt="find select"` blocks
+  the double-submits that used to cause duplicate moves.
+- `Ats.showDrawerSkeleton()` — paints the drawer skeleton synchronously on click.
+- `Ats.toast(message, tone)` — transient message. Board move failures raise one and then re-fetch the
+  board, so the UI can never silently disagree with the server.
+
+## Colour (Phase 5, UX-5)
+No one-off hex in views. Text on dark surfaces uses `--ats-on-dark`, `--ats-on-dark-muted`,
+`--ats-on-dark-subtle`, `--ats-on-dark-label`, `--ats-on-dark-danger` (helper classes
+`.ats-on-dark-*`). The only file that may contain raw hex is the Branding view component, which
+*defines* the per-tenant token values. A dark theme is now a token swap; it has not been built.

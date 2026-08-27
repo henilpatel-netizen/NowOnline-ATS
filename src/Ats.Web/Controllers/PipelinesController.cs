@@ -37,6 +37,7 @@ public class PipelinesController : Controller
         {
             Id = t.Id,
             Name = t.Name,
+            RowVersion = t.RowVersion,
             Stages = t.Stages.OrderBy(s => s.Order).Select(s => new StageRow
             {
                 Id = s.Id,
@@ -59,7 +60,8 @@ public class PipelinesController : Controller
             vm.Id,
             vm.Name,
             vm.Stages.Select(s => new StageInput(
-                s.Id, s.Name, s.Order, s.IsTerminal, s.TerminalOutcome, s.ReferralStatusOverride, s.Delete)).ToList());
+                s.Id, s.Name, s.Order, s.IsTerminal, s.TerminalOutcome, s.ReferralStatusOverride, s.Delete)).ToList(),
+            vm.RowVersion);
 
         var result = await _service.SaveAsync(input);
         if (!result.Succeeded) { ModelState.AddModelError("", result.Error!); return View("Form", vm); }

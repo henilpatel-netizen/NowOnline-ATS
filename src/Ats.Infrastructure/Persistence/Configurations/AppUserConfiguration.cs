@@ -13,7 +13,8 @@ public class AppUserConfiguration : IEntityTypeConfiguration<AppUser>
         b.Property(u => u.DisplayName).IsRequired().HasMaxLength(200);
         b.Property(u => u.PasswordHash).IsRequired();
         b.Property(u => u.Role).IsRequired().HasMaxLength(40);
-        // email unique per tenant
-        b.HasIndex(u => new { u.TenantId, u.Email }).IsUnique();
+        // Email is globally unique across all tenants: one email maps to exactly one user in exactly
+        // one tenant, so back-office sign-in resolves deterministically (see IdentityService).
+        b.HasIndex(u => u.Email).IsUnique().HasDatabaseName("IX_Users_Email");
     }
 }

@@ -17,6 +17,15 @@ public static class DashboardMath
         return (int)Math.Round(numerator * 100.0 / denominator, MidpointRounding.AwayFromZero);
     }
 
+    // Offer-acceptance ratio. The numerator counts DISTINCT applications that reached a hired-outcome
+    // stage (a re-entry or multiple hired stages must not over-count), over a progressed-application
+    // denominator. Math.Max keeps the ratio defensible (<= 100%) if a hire wasn't counted as progressed.
+    public static int? OfferAcceptancePercent(IEnumerable<int> hiredApplicationIds, int progressed)
+    {
+        var hires = hiredApplicationIds.Distinct().Count();
+        return Percent(hires, Math.Max(hires, progressed));
+    }
+
     // Whole-percent split of counts that always totals 100 (0 when everything is zero).
     // Rounding drift is handed to the buckets with the largest fractional parts so bars never
     // over- or under-shoot 100.

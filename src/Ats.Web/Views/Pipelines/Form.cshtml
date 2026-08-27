@@ -7,6 +7,10 @@
 <form asp-action="Save" method="post" class="ats-card" style="max-width:960px">
     <div asp-validation-summary="All" class="text-danger small mb-2"></div>
     <input type="hidden" asp-for="Id" />
+    @if (Model.RowVersion is { Length: > 0 })
+    {
+        <input type="hidden" name="RowVersion" value="@Convert.ToBase64String(Model.RowVersion)" />
+    }
     <div class="mb-3" style="max-width:420px">
         <label asp-for="Name" class="form-label">Pipeline name</label>
         <input asp-for="Name" class="form-control" />
@@ -44,7 +48,6 @@
 </form>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
     <script>
         (function () {
             const tbody = document.querySelector('#stages tbody');

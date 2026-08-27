@@ -39,3 +39,16 @@ screen; `RecentAsync` still backs the dashboard feed. `DistinctActionsAsync` pop
 filter. Gotcha: the controller's action-filter parameter binds from the query key `act`, NOT
 `action` — `action` is a reserved MVC route token and would bind to the current action name, silently
 filtering out every row. Keep it named `act`.
+
+## Dashboard correctness notes (Phase 3/4)
+- **Offer acceptance** counts **distinct applications** that reached a hired-outcome stage, via
+  `DashboardMath.OfferAcceptancePercent`. Counting hire *events* over-counted a re-entry into a hired
+  stage. Time-to-hire likewise uses each application's **first** arrival at a hired stage.
+- Both metrics need at least one stage flagged `IsTerminal` with `TerminalOutcome = Hired`. A pipeline
+  whose stages are merely *named* "Hired"/"Rejected" reports no hires and leaves applications `Active`.
+- Outbox tiles come from **one** `GroupBy(Status)` query, not a COUNT per status.
+- `OutboxStatus.Processing` (a worker has claimed the message) is transient and counts as **Pending**
+  for display, in both the tiles and the delivery-log filter. Treating it as its own bucket makes
+  in-flight messages vanish from the UI.
+- Activity rows carry `OccurredAt` as a UTC instant and render through `<local-time>`; do not
+  pre-format times in the read model.

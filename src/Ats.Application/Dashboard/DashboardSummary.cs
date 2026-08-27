@@ -5,7 +5,7 @@ namespace Ats.Application.Dashboard;
 public sealed record StageCount(string Stage, int Count);
 public sealed record SourceSlice(ApplicationOrigin Origin, int Percent);
 public sealed record AttentionItem(string Icon, string Tone, string Headline, string Subline, string Url);
-public sealed record ActivityItem(string Actor, string Text, string Time);
+public sealed record ActivityItem(string Actor, string Text, DateTimeOffset OccurredAt);
 
 public sealed record IntegrationHealth(
     bool Connected, int? CustomerId, DateTimeOffset? FeedLastPulledAt,

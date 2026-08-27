@@ -11,7 +11,11 @@
             </span>
             <span class="ats-timeline-body @(last ? "" : "ats-timeline-body--spaced")">
                 <span class="ats-timeline-title">@item.Title</span>
-                @if (item.Subtitle is not null) { <span class="ats-timeline-sub">@item.Subtitle</span> }
+                @if (item.SubtitleUtc is not null)
+                {
+                    <span class="ats-timeline-sub"><local-time utc="@item.SubtitleUtc" format="datetime"></local-time></span>
+                }
+                else if (item.Subtitle is not null) { <span class="ats-timeline-sub">@item.Subtitle</span> }
             </span>
         </div>
     }

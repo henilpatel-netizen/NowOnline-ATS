@@ -17,5 +17,8 @@ public class OutboxMessageConfiguration : IEntityTypeConfiguration<OutboxMessage
         b.Property(m => m.RowVersion).IsRowVersion();
         b.HasIndex(m => new { m.TenantId, m.Status, m.NextAttemptAt });
         b.HasIndex(m => new { m.TenantId, m.ApplicationId, m.Id });
+        // The worker claims across ALL tenants by (Status, NextAttemptAt); a tenant-led index can't
+        // serve that predicate, so add one without the tenant lead.
+        b.HasIndex(m => new { m.Status, m.NextAttemptAt }).HasDatabaseName("IX_OutboxMessages_Status_NextAttemptAt");
     }
 }

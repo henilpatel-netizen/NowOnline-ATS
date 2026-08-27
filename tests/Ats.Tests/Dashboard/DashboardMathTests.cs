@@ -69,4 +69,27 @@ public class DashboardMathTests
     {
         Assert.All(DashboardMath.Split(new[] { 0, 0, 0 }), p => Assert.Equal(0, p));
     }
+
+    [Fact]
+    public void OfferAcceptance_counts_each_application_once_despite_reentry()
+    {
+        // Application 1 entered a hired-outcome stage twice (re-entry); it must count as one hire,
+        // not two, so the ratio stays a defensible <= 100%.
+        var hiredApplicationIds = new[] { 1, 1, 2 };  // two distinct applications hired
+        Assert.Equal(50, DashboardMath.OfferAcceptancePercent(hiredApplicationIds, progressed: 4));
+    }
+
+    [Fact]
+    public void OfferAcceptance_never_exceeds_100_percent()
+    {
+        // Even if the progressed denominator is understated, the ratio is capped.
+        var hiredApplicationIds = new[] { 1, 2, 3 };
+        Assert.Equal(100, DashboardMath.OfferAcceptancePercent(hiredApplicationIds, progressed: 0));
+    }
+
+    [Fact]
+    public void OfferAcceptance_is_null_when_nothing_progressed_or_hired()
+    {
+        Assert.Null(DashboardMath.OfferAcceptancePercent(Array.Empty<int>(), progressed: 0));
+    }
 }

@@ -1,36 +1,60 @@
 @{
     var title = ViewData["Title"] as string ?? "";
     var eyebrow = ViewData["Eyebrow"] as string;
+    // EyebrowUtc renders "today" in the VIEWER's timezone rather than the server's.
+    var eyebrowUtc = ViewData["EyebrowUtc"] as DateTimeOffset?;
     var heading = string.IsNullOrEmpty(title) || title.EndsWith('.') ? title : title + ".";
+    var docTitle = string.IsNullOrEmpty(title) ? "ATS" : title + " - ATS";
 }
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@(string.IsNullOrEmpty(title) ? "ATS" : title + " - ATS")</title>
+    <title>@docTitle</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230085CA'/%3E%3Cpath d='M5 5V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1h2v7H3V5h2zm1 0h4V4H6v1z' fill='white'/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/ats-tokens.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/ats-base.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/ats-components.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/ats-shell.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/Ats.Web.styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/ats-tokens.css" />
+    <link rel="stylesheet" href="~/css/ats-base.css" />
+    <link rel="stylesheet" href="~/css/ats-components.css" />
+    <link rel="stylesheet" href="~/css/ats-shell.css" />
+    <link rel="stylesheet" href="~/Ats.Web.styles.css" />
     @* Per-tenant overrides must come last so they win over the token defaults. *@
     <vc:branding></vc:branding>
+
+    @* Shared libraries load here, not at the end of <body>: page-specific scripts render inside
+       <main> so they re-run after a boosted swap, and <main> parses first. Anything a page's inline
+       init depends on (Sortable, htmx, jQuery, validation) must already exist at that point.
+       These files are fingerprinted and served immutable, so the blocking cost is first-load only. *@
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/htmx/dist/htmx.min.js"></script>
+    <script src="~/lib/sortablejs/Sortable.min.js"></script>
+    <partial name="_ValidationScriptsPartial" />
 </head>
+@* Boosted navigation (NAV-1) is configured on the sidebar nav container, NOT here: hx-target /
+   hx-select are inherited by every descendant, so putting them on <body> would make the global
+   search, the candidate drawer and the board-move form filter their own responses for #ats-content
+   and swap nothing. See Components/SidebarNav/Default.cshtml. *@
 <body>
+    <div id="ats-nav-progress" class="ats-nav-progress" aria-hidden="true"><span></span></div>
     <div class="ats-shell">
         <vc:sidebar-nav></vc:sidebar-nav>
         <div class="ats-main">
             <vc:top-bar></vc:top-bar>
-            <main class="ats-content ats-scroll">
+            @* data-page-title lets site.js keep document.title correct on boosted swaps AND on
+               history restore (htmx replays cached content with no HTTP response to read). *@
+            <main id="ats-content" class="ats-content ats-scroll" data-page-title="@docTitle">
                 <partial name="_Alerts" />
                 @if (ViewData["HidePageHead"] is null && !string.IsNullOrEmpty(heading))
                 {
                     <div class="ats-pagehead">
                         <div class="ats-pagehead-text">
-                            @if (!string.IsNullOrEmpty(eyebrow))
+                            @if (eyebrowUtc is not null)
+                            {
+                                <span class="ats-eyebrow"><local-time utc="@eyebrowUtc" format="weekday"></local-time>:</span>
+                            }
+                            else if (!string.IsNullOrEmpty(eyebrow))
                             {
                                 <span class="ats-eyebrow">@eyebrow</span>
                             }
@@ -43,16 +67,16 @@
                     </div>
                 }
                 @RenderBody()
+                @* Inside the swapped region on purpose: page-specific scripts must re-run after a
+                   boosted navigation. Shared libraries are loaded once at the end of <body>. *@
+                @await RenderSectionAsync("Scripts", required: false)
             </main>
         </div>
     </div>
     @* htmx swaps the candidate drawer in here (Phase 2). *@
     <div id="ats-drawer-host"></div>
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/lib/htmx/dist/htmx.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
-    @await RenderSectionAsync("Scripts", required: false)
+    @* site.js registers listeners on document.body, so it must load after the body exists. *@
+    <script src="~/js/site.js"></script>
 </body>
 </html>

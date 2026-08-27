@@ -62,4 +62,18 @@ public sealed class ApplicationRepository : IApplicationRepository
     }
 
     public Task SaveChangesAsync(CancellationToken ct = default) => _db.SaveChangesAsync(ct);
+
+    public async Task<T> InTransactionAsync<T>(Func<CancellationToken, Task<T>> work, CancellationToken ct = default)
+    {
+        // EnableRetryOnFailure forbids a user transaction unless it runs inside the execution strategy,
+        // so the whole unit of work is wrapped and retried atomically on a transient fault.
+        var strategy = _db.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
+        {
+            await using var tx = await _db.Database.BeginTransactionAsync(ct);
+            var result = await work(ct);
+            await tx.CommitAsync(ct);
+            return result;
+        });
+    }
 }

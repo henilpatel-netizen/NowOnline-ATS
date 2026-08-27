@@ -41,3 +41,11 @@ on a card body (not the dropdown) opens the candidate drawer via htmx (`Applicat
 columns are tinted (Hired green, Rejected red) with a dashed drop hint on an empty Hired column. The
 board header carries a stats strip (in process, avg days in stage, from ReferralTool, oldest) built in
 `BoardController.BuildBoardAsync` from `IApplicationService.LatestEventTimesForJobAsync`.
+
+## Template concurrency (Phase 3, DATA-8)
+`PipelineTemplate` now carries a `RowVersion`. `PipelinesController.Edit` round-trips it through a
+hidden field and `PipelineTemplateService.SaveAsync` pins it via
+`IPipelineTemplateRepository.SetExpectedRowVersion` + `TrySaveChangesAsync`, so a second admin saving
+the same template gets "changed by someone else, reload" instead of silently overwriting. The
+repository marks `Name` modified so the token is checked even when only child stages changed.
+`TenantSettings` has the same treatment on the Integrations screen.

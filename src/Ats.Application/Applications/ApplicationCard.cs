@@ -4,7 +4,8 @@ namespace Ats.Application.Applications;
 
 public sealed record StageProgressItem(string Name, bool Reached, bool IsCurrent);
 
-public sealed record ApplicationHistoryItem(string Title, string Subtitle, bool IsCurrent);
+// OccurredAt stays a UTC instant; the view converts it to the viewer's timezone (DATA-4).
+public sealed record ApplicationHistoryItem(string Title, DateTimeOffset OccurredAt, bool IsCurrent);
 
 public sealed record ApplicationCard(
     int ApplicationId,

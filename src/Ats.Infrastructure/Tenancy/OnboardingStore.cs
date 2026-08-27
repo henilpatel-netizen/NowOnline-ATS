@@ -14,6 +14,11 @@ public sealed class OnboardingStore : IOnboardingStore
     public Task<bool> SlugExistsAsync(string slug, CancellationToken ct) =>
         _db.Tenants.IgnoreQueryFilters().AnyAsync(t => t.Slug == slug, ct);
 
+    // Sign-up runs before a tenant claim exists, and email is globally unique, so the filter is
+    // bypassed to check across all tenants (a documented onboarding-scope bypass).
+    public Task<bool> EmailExistsAsync(string email, CancellationToken ct) =>
+        _db.Users.IgnoreQueryFilters().AnyAsync(u => u.Email == email, ct);
+
     public async Task<(int tenantId, int ownerUserId)> CreateTenantGraphAsync(
         Tenant tenant, TenantSettings settings, PipelineTemplate template,
         string ownerName, string ownerEmail, string ownerPasswordHash, CancellationToken ct)

@@ -39,8 +39,9 @@ public sealed class IdentityService : IIdentityService
     public async Task<SignInResult> ValidateCredentialsAsync(string email, string password, CancellationToken ct = default)
     {
         var normalized = email.Trim().ToLowerInvariant();
-        // IgnoreQueryFilters: sign-in happens before a tenant is in context
-        var user = await _db.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Email == normalized, ct);
+        // IgnoreQueryFilters: sign-in happens before a tenant is in context. Email is globally unique
+        // (IX_Users_Email), so this resolves to at most one user, in exactly one tenant.
+        var user = await _db.Users.IgnoreQueryFilters().SingleOrDefaultAsync(u => u.Email == normalized, ct);
         if (user is null || !VerifyPassword(user.PasswordHash, password))
             return new SignInResult(false, null, null, null, null, "Invalid email or password.");
 

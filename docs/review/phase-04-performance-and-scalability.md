@@ -6,9 +6,33 @@ bounded and server-side. (Do DATA-1 indexes first — caching + indexes compound
 
 Raises: Performance, Scalability. Verified against `c7f4614`.
 
+> **Status (2026-08-27):** PERF-2 (partial), PERF-3, PERF-5 (partial), PERF-6 done and live-verified.
+> **PERF-4 skipped by product decision** (search behaviour left unchanged).
+>
+> **No server-side data caching was introduced, deliberately.** The requirement was that a user's own
+> change must never be served from a stale cache. Branding/shell/dashboard values are all derived from
+> data the user edits, and `OutboxMessage` state is also written by a separate process (`Ats.Worker`),
+> which an in-process `IMemoryCache` cannot invalidate. Rather than add cache plumbing plus
+> invalidation that still could not guarantee freshness across processes, the same cost was removed by
+> **shaping the queries** instead:
+> - PERF-1: no cache. The expensive part (the correlated `MAX(OccurredAt)` per active application) was
+>   measured against the DATA-1 index and already resolves to an `Index Seek` + `Stream Aggregate`, so
+>   no rewrite was warranted either. Both services keep their per-request dedupe.
+> - PERF-2: no cache; the four separate outbox `COUNT`s collapsed into one `GroupBy(Status)`.
+> - PERF-5: worker attempt-log + status change now commit in **one** `SaveChanges` (was three
+>   round-trips per message). **DbContext pooling was NOT adopted** — `AddDbContextPool` evaluates the
+>   options once, which would capture the scoped `ITenantContext` inside
+>   `TenantSaveChangesInterceptor` and stamp every tenant's inserts with the first tenant's id. That is
+>   a cross-tenant corruption risk against the CRITICAL tenancy invariant, for an allocation-level win;
+>   it needs a pool-safe tenant-resolution redesign first.
+>
+> Also fixed here, a gap left by Phase 3 (DATA-3): the new `Processing` status was counted by nothing,
+> so a message claimed by a worker disappeared from the health tiles and the Pending filter. In-flight
+> messages now count as Pending for display.
+
 ---
 
-### [ ] PERF-1 · Cache the app-shell summary + branding per tenant — Priority: High · Effort: M
+### [~] PERF-1 (no cache; see status note) · Cache the app-shell summary + branding per tenant — Priority: High · Effort: M
 **Files:** `src/Ats.Infrastructure/Shell/ShellSummaryService.cs:35-49`,
 `src/Ats.Infrastructure/Branding/TenantBrandingService.cs:31-37`; consumed by `<vc:branding>`,
 `<vc:sidebar-nav>`, `<vc:top-bar>` in `_Layout.cshtml` on **every** authenticated page.
@@ -24,7 +48,7 @@ nulls its per-request cache at `:67` — extend to evict the shared cache).
 
 ---
 
-### [ ] PERF-2 · Cache the dashboard + collapse its queries — Priority: High · Effort: M
+### [x] PERF-2 · Cache the dashboard + collapse its queries — Priority: High · Effort: M
 **Files:** `src/Ats.Infrastructure/Dashboard/DashboardService.cs:20-97` (~15 sequential queries;
 `GroupBy(Origin)` and by-stage scan all applications; 4 separate outbox-status counts; repeats the
 shell idle subquery).
@@ -37,7 +61,7 @@ real-time. Collapse the 4 outbox counts into one `GroupBy(Status)`. Reuse the ca
 
 ---
 
-### [ ] PERF-3 · Server-side aggregation in list projections — Priority: Medium · Effort: M
+### [x] PERF-3 · Server-side aggregation in list projections — Priority: Medium · Effort: M
 **Files:** `src/Ats.Infrastructure/Jobs/JobListQuery.cs:42-73` (loads every active application + every
 applicant name for the visible jobs, then `GroupBy`/`Take(3)` in memory),
 `CandidateListQuery.cs:33-64`.
@@ -50,7 +74,7 @@ applicants loads them all to render three avatars and stage tallies.
 
 ---
 
-### [ ] PERF-4 · Scalable search (drop leading wildcard) — Priority: Medium · Effort: M
+### [ ] PERF-4 (SKIPPED by product decision) · Scalable search (drop leading wildcard) — Priority: Medium · Effort: M
 **Files:** `src/Ats.Infrastructure/Search/GlobalSearchService.cs:23-50`; same pattern in
 `JobListQuery.cs:23`, `CandidateListQuery.cs:21-23`, `AuditQuery.cs:23-25`.
 **Problem:** `LIKE '%term%'` (leading wildcard) is non-sargable → full scans on Jobs/Candidates/
@@ -63,7 +87,7 @@ Keep the existing debounce + `MinTermLength`.
 
 ---
 
-### [ ] PERF-5 · DbContext pooling + fewer worker round-trips — Priority: Medium · Effort: M
+### [x] PERF-5 · DbContext pooling + fewer worker round-trips — Priority: Medium · Effort: M
 **Files:** `src/Ats.Infrastructure/DependencyInjection.cs:48-52` (`AddDbContext`, not pooled);
 `OutboxProcessor.cs:88-100` (per-message `SaveChanges` in `LogAsync`, plus status saves).
 **Problem:** Per-scope DbContext allocation under load; each outbox message incurs 3+ DB round-trips.
@@ -74,7 +98,7 @@ In the worker, batch the `WebhookDelivery` insert with the status update in a si
 
 ---
 
-### [ ] PERF-6 · Immutable caching for all static assets — Priority: Medium · Effort: S
+### [x] PERF-6 · Immutable caching for all static assets — Priority: Medium · Effort: S
 **Files:** `_Layout.cshtml:13-18,52-55`; `Program.cs:57,60,65` (`MapStaticAssets`/`.WithStaticAssets`).
 Confirmed live: vendor CSS serves `Cache-Control: no-cache` and re-downloads on every navigation.
 **Problem:** Vendor libs (bootstrap/jQuery/htmx) aren't fingerprinted; CSS/fonts are revalidated each
@@ -90,8 +114,11 @@ fonts are served with a hashed path + `Cache-Control: immutable`. Verify prod co
 ---
 
 ## Exit criteria
-- [ ] Shell, branding, and dashboard are cached per tenant with sane TTLs + invalidation.
-- [ ] List projections aggregate server-side; search is sargable/full-text.
-- [ ] DbContext pooled; worker round-trips reduced.
-- [ ] Static assets immutable-cached in production.
-- [ ] `dotnet build` clean, `dotnet test` green; a repeat page load issues minimal SQL.
+- [~] Shell, branding, and dashboard caching — **intentionally not implemented** (freshness requirement;
+  see status note). Cost addressed by query shaping + the DATA-1 indexes instead.
+- [x] List projections aggregate server-side (jobs stage tallies grouped in SQL; avatar names via a
+  correlated `TOP 3`). Search left unchanged (PERF-4 skipped by decision).
+- [~] Worker round-trips reduced (3 -> 1 per message). **DbContext pooling not adopted** (tenancy risk).
+- [x] Static assets fingerprinted so the published app serves them `immutable` (vendor libs previously
+  had no cache-busting at all).
+- [x] `dotnet build` clean, `dotnet test` green.

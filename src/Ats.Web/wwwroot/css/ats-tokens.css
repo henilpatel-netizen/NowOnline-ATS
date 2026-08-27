@@ -90,6 +90,14 @@
   --ats-sidebar-active: rgba(0, 133, 202, .22);
 
   --ats-sidebar-width: 252px;
+
+  /* Text on dark surfaces (.ats-card-dark, the dark health banners). These were previously one-off
+     hex literals scattered through the views, which made a dark theme impossible to retarget. */
+  --ats-on-dark: var(--no-white);
+  --ats-on-dark-muted: #D6DDE5;
+  --ats-on-dark-subtle: #B9C4D0;
+  --ats-on-dark-label: #8FA0B4;
+  --ats-on-dark-danger: #FF7A96;
   --ats-topbar-height: 60px;
 }
 

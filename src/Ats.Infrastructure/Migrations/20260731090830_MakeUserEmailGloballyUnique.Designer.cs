@@ -4,6 +4,7 @@ using Ats.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Ats.Infrastructure.Migrations
 {
     [DbContext(typeof(AtsDbContext))]
-    partial class AtsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260731090830_MakeUserEmailGloballyUnique")]
+    partial class MakeUserEmailGloballyUnique
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -107,8 +110,6 @@ namespace Ats.Infrastructure.Migrations
                     b.HasIndex("ApplicationId");
 
                     b.HasIndex("TenantId", "ApplicationId", "OccurredAt");
-
-                    b.HasIndex("TenantId", "ToStageId", "OccurredAt");
 
                     b.ToTable("ApplicationEvents");
                 });
@@ -219,8 +220,6 @@ namespace Ats.Infrastructure.Migrations
 
                     b.HasIndex("TenantId", "Email")
                         .IsUnique();
-
-                    b.HasIndex("TenantId", "LastName", "FirstName");
 
                     b.ToTable("Candidates");
                 });
@@ -386,10 +385,6 @@ namespace Ats.Infrastructure.Migrations
 
                     b.HasIndex("JobId");
 
-                    b.HasIndex("TenantId", "CandidateId");
-
-                    b.HasIndex("TenantId", "Status");
-
                     b.HasIndex("TenantId", "JobId", "CandidateId")
                         .IsUnique();
 
@@ -495,9 +490,6 @@ namespace Ats.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Status", "NextAttemptAt")
-                        .HasDatabaseName("IX_OutboxMessages_Status_NextAttemptAt");
-
                     b.HasIndex("TenantId", "ApplicationId", "Id");
 
                     b.HasIndex("TenantId", "Status", "NextAttemptAt");
@@ -569,12 +561,6 @@ namespace Ats.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(120)
                         .HasColumnType("nvarchar(120)");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
 
                     b.Property<int>("TenantId")
                         .HasColumnType("int");
@@ -687,12 +673,6 @@ namespace Ats.Infrastructure.Migrations
 
                     b.Property<int?>("ReferralToolCustomerId")
                         .HasColumnType("int");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
 
                     b.Property<int>("TenantId")
                         .HasColumnType("int");

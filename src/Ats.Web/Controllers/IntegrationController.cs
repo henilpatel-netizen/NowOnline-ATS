@@ -44,7 +44,8 @@ public class IntegrationController : Controller
             HasAuthToken = !string.IsNullOrEmpty(s.ReferralToolAuthToken),
             HasApiKey = !string.IsNullOrEmpty(s.ReferralToolApiKey),
             HasFeedKey = !string.IsNullOrEmpty(s.FeedApiKeyHash),
-            PublishedJobCount = total
+            PublishedJobCount = total,
+            RowVersion = s.RowVersion
         });
     }
 
@@ -52,9 +53,14 @@ public class IntegrationController : Controller
     public async Task<IActionResult> Index(IntegrationSettingsViewModel vm)
     {
         if (!ModelState.IsValid) return View(vm);
-        await _settings.UpdateAsync(new IntegrationSettingsInput(
+        var saved = await _settings.UpdateAsync(new IntegrationSettingsInput(
             vm.IntegrationEnabled, vm.ReferralToolBaseUrl, vm.ReferralToolCustomerId,
-            vm.CodeParameterName, vm.ReferralToolAuthToken, vm.ReferralToolApiKey));
+            vm.CodeParameterName, vm.ReferralToolAuthToken, vm.ReferralToolApiKey, vm.RowVersion));
+        if (!saved)
+        {
+            TempData["Error"] = "These settings were changed by someone else. Reload the page and try again.";
+            return RedirectToAction(nameof(Index));
+        }
         await _audit.LogAsync("IntegrationSettingsSaved", "TenantSettings", null, "Updated integration settings");
         TempData["Success"] = "Integration settings saved.";
         return RedirectToAction(nameof(Index));

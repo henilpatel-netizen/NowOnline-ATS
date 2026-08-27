@@ -3,7 +3,7 @@
 @using Ats.Domain.Enums
 @{
     ViewData["Title"] = "Dashboard";
-    ViewData["Eyebrow"] = DateTimeOffset.Now.ToString("dddd d MMMM") + ":";
+    ViewData["EyebrowUtc"] = DateTimeOffset.UtcNow;
     var maxStage = Model.ByStage.Count == 0 ? 1 : Math.Max(1, Model.ByStage.Max(s => s.Count));
     var ramp = new[] { "var(--no-stage-1)", "var(--no-stage-2)", "var(--no-stage-3)", "var(--no-stage-4)", "var(--no-stage-5)" };
     string SourceLabel(ApplicationOrigin o) => o switch
@@ -89,7 +89,7 @@
                 <span class="ats-board-col-dot" style="background:@(Model.Integration.Connected ? "var(--no-medium-aqua)" : "var(--no-roman-silver)")"></span>
                 <span class="ats-eyebrow">ReferralTool · @(Model.Integration.Connected ? "connected" : "off")</span>
             </div>
-            <p class="ats-small mb-3" style="color:#D6DDE5">
+            <p class="ats-small ats-on-dark-muted mb-3">
                 @(Model.Integration.FeedLastPulledAt is null
                     ? "No vacancy feed pull recorded yet."
                     : $"Vacancy feed pulled {Ats.Application.Common.RelativeTime.Long(Model.Integration.FeedLastPulledAt, DateTimeOffset.UtcNow)}.")
@@ -117,7 +117,7 @@
                 <div class="d-flex align-items-center gap-3 py-2" style="border-bottom:1px solid var(--ats-border-subtle)">
                     <partial name="Partials/_Avatar" model="new AvatarModel(a.Actor, 2)" />
                     <span class="ats-small flex-grow-1">@a.Text</span>
-                    <span class="ats-mono ats-xsmall ats-muted">@a.Time</span>
+                    <span class="ats-mono ats-xsmall ats-muted"><local-time utc="@a.OccurredAt" format="time"></local-time></span>
                 </div>
             }
         </div>

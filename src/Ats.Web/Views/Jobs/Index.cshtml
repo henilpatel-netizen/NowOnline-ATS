@@ -18,7 +18,6 @@
         ("Draft", nameof(JobStatus.Draft)), ("Closed", nameof(JobStatus.Closed))
     };
     var current = Model.Status?.ToString();
-    const string cols = "grid-template-columns:2.4fr 1fr 1.6fr 1fr .8fr 44px;";
 }
 
 @section PageActions {
@@ -42,13 +41,13 @@
 </div>
 
 <div class="ats-card-flush">
-    <div class="ats-thead" style="@cols">
+    <div class="ats-thead ats-table--jobs">
         <span>Job</span><span>Status</span><span>Pipeline</span><span>Candidates</span><span>Published</span><span></span>
     </div>
     @foreach (var j in Model.Results.Items)
     {
         var segments = j.StageCounts.Select(s => new PipelineSegment(s.Stage, s.Count)).ToList();
-        <div class="ats-trow ats-trow--link" style="@cols"
+        <div class="ats-trow ats-trow--link ats-table--jobs"
              onclick="location.href='@Url.Action("Index", "Board", new { jobId = j.Id })'">
             <span class="ats-cell-stack">
                 <span class="ats-cell-title">@j.Title</span>
@@ -70,7 +69,7 @@
                 @if (extra > 0) { <span class="ats-avatar-stack-more">+@extra</span> }
                 @if (j.TotalApplications == 0) { <span class="ats-faint ats-small">—</span> }
             </span>
-            <span class="ats-small ats-muted">@(j.PublishedAt?.ToLocalTime().ToString("dd MMM") ?? "—")</span>
+            <span class="ats-small ats-muted"><local-time utc="@j.PublishedAt" format="monthday" empty="—"></local-time></span>
             <span class="d-flex justify-content-end" onclick="event.stopPropagation()">
                 <div class="dropdown">
                     <button type="button" class="btn btn-sm btn-outline-secondary border-0 px-2" data-bs-toggle="dropdown" aria-label="Actions">

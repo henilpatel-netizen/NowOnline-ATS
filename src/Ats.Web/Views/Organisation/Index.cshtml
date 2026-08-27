@@ -14,7 +14,7 @@
             </div>
             @foreach (var d in Model.Overview.Departments)
             {
-                <div class="ats-trow" style="grid-template-columns:1fr auto auto;gap:1rem">
+                <div class="ats-trow ats-table--org">
                     <span class="ats-small">@d.Name</span>
                     <span class="ats-mono ats-xsmall ats-muted">@d.JobCount @(d.JobCount == 1 ? "job" : "jobs")</span>
                     <a class="ms ms-sm ats-faint" asp-controller="Departments" asp-action="Edit" asp-route-id="@d.Id" aria-label="Edit @d.Name">edit</a>
@@ -34,7 +34,7 @@
             </div>
             @foreach (var l in Model.Overview.Locations)
             {
-                <div class="ats-trow" style="grid-template-columns:1fr auto auto;gap:1rem">
+                <div class="ats-trow ats-table--org">
                     <span class="ats-cell-stack">
                         <span class="ats-small">@l.Name</span>
                         @if (!string.IsNullOrEmpty(l.City)) { <span class="ats-xsmall ats-muted">@l.City</span> }

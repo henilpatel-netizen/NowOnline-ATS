@@ -14,5 +14,6 @@ public class TenantSettingsConfiguration : IEntityTypeConfiguration<TenantSettin
         b.Property(s => s.CareerHeroHeadline).HasMaxLength(160);
         b.Property(s => s.CareerHeroHeadlineOutlined).HasMaxLength(160);
         b.Property(s => s.CareerHeroIntro).HasMaxLength(600);
+        b.Property(s => s.RowVersion).IsRowVersion();
     }
 }

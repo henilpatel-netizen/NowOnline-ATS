@@ -42,12 +42,14 @@ public sealed class JobListQuery : IJobListQuery
 
         var ids = jobs.Select(j => j.Id).ToList();
 
-        // Active applications for the visible jobs, joined to stage name + order.
-        var apps = await (
+        // Stage tallies are grouped in SQL, so only one row per (job, stage) comes back instead of
+        // one row per active application.
+        var stageRows = await (
             from a in _db.Applications
             where ids.Contains(a.JobId) && a.Status == ApplicationStatus.Active
             join st in _db.PipelineStages on a.CurrentStageId equals st.Id
-            select new { a.JobId, StageName = st.Name, st.Order })
+            group a by new { a.JobId, st.Name, st.Order } into g
+            select new { g.Key.JobId, g.Key.Name, g.Key.Order, Count = g.Count() })
             .ToListAsync(ct);
 
         var totalByJob = await _db.Applications
@@ -56,30 +58,38 @@ public sealed class JobListQuery : IJobListQuery
             .Select(g => new { JobId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.JobId, x => x.Count, ct);
 
-        // First three applicant names per visible job for the avatar stack.
-        var names = (await (
-            from a in _db.Applications
-            where ids.Contains(a.JobId)
-            join c in _db.Candidates on a.CandidateId equals c.Id
-            select new { a.JobId, a.Id, Name = c.FirstName + " " + c.LastName })
-            .ToListAsync(ct))
-            .GroupBy(x => x.JobId)
-            .ToDictionary(g => g.Key, g => g.OrderBy(x => x.Id).Select(x => x.Name).Take(3).ToList());
+        // Only the three avatar names per job are fetched (a correlated TOP 3), so the cost no longer
+        // grows with how many people applied to a job.
+        var nameRows = await _db.Jobs
+            .Where(j => ids.Contains(j.Id))
+            .Select(j => new
+            {
+                JobId = j.Id,
+                Names = _db.Applications
+                    .Where(a => a.JobId == j.Id)
+                    .OrderBy(a => a.Id)
+                    .Take(3)
+                    // CandidateId is a required FK (Restrict delete), so the row always exists and
+                    // this is translated to a SQL join, never dereferenced in memory.
+                    .Select(a => a.Candidate!.FirstName + " " + a.Candidate!.LastName)
+                    .ToList()
+            })
+            .ToListAsync(ct);
+        var names = nameRows.ToDictionary(x => x.JobId, x => x.Names);
 
-        var byJob = apps.GroupBy(a => a.JobId).ToDictionary(g => g.Key, g => g.ToList());
+        var stagesByJob = stageRows.GroupBy(r => r.JobId).ToDictionary(g => g.Key, g => g.ToList());
 
         var items = jobs.Select(j =>
         {
-            var jobApps = byJob.TryGetValue(j.Id, out var list) ? list : new();
-            var stageCounts = jobApps
-                .GroupBy(a => new { a.StageName, a.Order })
-                .OrderBy(g => g.Key.Order)
-                .Select(g => new JobStageCount(g.Key.StageName, g.Count()))
+            var rows = stagesByJob.TryGetValue(j.Id, out var list) ? list : new();
+            var stageCounts = rows
+                .OrderBy(r => r.Order)
+                .Select(r => new JobStageCount(r.Name, r.Count))
                 .ToList();
             return new JobListItem(
                 j.Id, j.Title, j.ExternalRef, j.Status, j.Department, j.Location, j.PublishedAt,
                 totalByJob.TryGetValue(j.Id, out var t) ? t : 0,
-                jobApps.Count,
+                rows.Sum(r => r.Count),
                 stageCounts,
                 names.TryGetValue(j.Id, out var n) ? n : new List<string>());
         }).ToList();

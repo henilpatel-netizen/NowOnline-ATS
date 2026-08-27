@@ -40,4 +40,19 @@ public sealed class PipelineTemplateRepository : IPipelineTemplateRepository
             .ToDictionaryAsync(x => x.TemplateId, x => x.Count, ct);
 
     public Task SaveChangesAsync(CancellationToken ct = default) => _db.SaveChangesAsync(ct);
+
+    public void SetExpectedRowVersion(PipelineTemplate template, byte[] rowVersion)
+    {
+        var entry = _db.Entry(template);
+        entry.Property(t => t.RowVersion).OriginalValue = rowVersion;
+        // Force an UPDATE on the template row even when only child stages changed, so the token is
+        // always checked and regenerated (a stage-only edit still detects a concurrent change).
+        entry.Property(t => t.Name).IsModified = true;
+    }
+
+    public async Task<bool> TrySaveChangesAsync(CancellationToken ct = default)
+    {
+        try { await _db.SaveChangesAsync(ct); return true; }
+        catch (DbUpdateConcurrencyException) { return false; }
+    }
 }

@@ -5,7 +5,6 @@
     ViewData["Title"] = "Candidates";
     ViewData["Eyebrow"] = $"{Model.Results.Total} people in your talent pool:";
     var now = DateTimeOffset.UtcNow;
-    const string cols = "grid-template-columns:2.2fr 1.8fr 1.4fr 1.6fr 1fr 44px;";
 }
 
 @section PageActions {
@@ -21,12 +20,12 @@
 </div>
 
 <div class="ats-card-flush">
-    <div class="ats-thead" style="@cols">
+    <div class="ats-thead ats-table--candidates">
         <span>Candidate</span><span>Contact</span><span>Source</span><span>Applications</span><span>Last activity</span><span></span>
     </div>
     @foreach (var c in Model.Results.Items)
     {
-        <div class="ats-trow ats-trow--link" style="@cols"
+        <div class="ats-trow ats-trow--link ats-table--candidates"
              onclick="location.href='@Url.Action("Edit", new { id = c.Id })'">
             <span class="d-flex align-items-center gap-2" style="min-width:0">
                 <partial name="Partials/_Avatar" model="new AvatarModel(c.FullName, 2.125)" />

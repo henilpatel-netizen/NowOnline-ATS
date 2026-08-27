@@ -24,7 +24,8 @@ public sealed record PipelineBarModel(IReadOnlyList<PipelineSegment> Segments, b
 
 public sealed record EmptyStateModel(string Icon, string Headline, string? Body = null);
 
-public sealed record TimelineItem(string Title, string? Subtitle, bool IsCurrent = false);
+// SubtitleUtc, when set, is rendered as a viewer-timezone timestamp instead of the literal Subtitle.
+public sealed record TimelineItem(string Title, string? Subtitle, bool IsCurrent = false, DateTimeOffset? SubtitleUtc = null);
 
 public sealed record TimelineModel(IReadOnlyList<TimelineItem> Items);
 

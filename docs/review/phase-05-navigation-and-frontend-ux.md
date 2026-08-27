@@ -5,9 +5,40 @@ and give every async interaction a loading/error state. Accessibility gets its o
 
 Raises: UI/UX, Frontend. Verified against `c7f4614`.
 
+> **Status (2026-08-27):** all six items done and live-verified.
+>
+> **NAV-1** uses the existing htmx dependency (no SPA framework). ReferralTool was checked as a
+> reference but does plain full-page loads, so its *conventions* were adopted rather than an
+> implementation: shared helpers on a namespace with a scope re-apply function (`Ats.*`, mirroring
+> `RT.*`), shared libraries loaded once, progressive enhancement. Measured: **1 request per
+> navigation, 0 CSS/font/script re-fetches** (previously every asset on every click).
+>
+> Three implementation traps, all found by live testing and all now guarded in the UI skill:
+> 1. `hx-target`/`hx-select` are **inherited**. On `<body>` they silently broke the global search and
+>    the candidate drawer (both filtered their own responses for `#ats-content`). The boost config is
+>    therefore scoped to the sidebar `<nav>` container, which contains nav links only.
+> 2. Page scripts must render **inside** the swapped region to re-run, but `<main>` parses before the
+>    end of `<body>` — so the board's init ran before SortableJS existed. Shared libraries moved to
+>    `<head>`; they are fingerprinted + immutable, so the blocking cost is first-load only.
+> 3. htmx replays cached DOM on Back/Forward with no HTTP response, so the document title went stale.
+>    The server now stamps `data-page-title` on `#ats-content`, covering swaps and history restores.
+>
+> Safety nets: any response that is not a back-office page (login redirect after sign-out or session
+> expiry, error/status page, file download) and any non-2xx or network failure falls back to a real
+> browser navigation, so a boosted click can never silently do nothing.
+>
+> **Not changed:** list rows still navigate via `onclick="location.href"`, so a row click is a full
+> page load. Converting rows to real anchors is `A11Y-1`'s restructure — doing it here would mean
+> editing the same markup twice.
+>
+> **UX-5:** colours are fully tokenised (verified: computed RGB values identical to the previous hex
+> literals, zero inline colour styles left in views). A `prefers-color-scheme` dark palette was
+> deliberately **not** built — the tokens now make it a swap-only change, but shipping a dark theme is
+> a product decision, not a refactor.
+
 ---
 
-### [ ] NAV-1 · Boosted SPA-style navigation (fix the full-page blink) — Priority: High · Effort: S–M
+### [x] NAV-1 · Boosted SPA-style navigation (fix the full-page blink) — Priority: High · Effort: S–M
 **Files:** `src/Ats.Web/Views/Shared/_Layout.cshtml` (nav links are plain `<a>`; htmx loaded at `:54`
 but no `hx-boost`); sidebar `Views/Shared/Components/SidebarNav/Default.cshtml`; topbar.
 **Problem (confirmed live via network trace):** Every nav click is a full-document GET that
@@ -30,7 +61,7 @@ blink; browser Back/Forward work.
 
 ---
 
-### [ ] UX-1 · Responsive data tables (remove inline grid templates) — Priority: High · Effort: M
+### [x] UX-1 · Responsive data tables (remove inline grid templates) — Priority: High · Effort: M
 **Files:** `Views/Jobs/Index.cshtml:21,45,51`, `Views/Candidates/Index.cshtml:8,24,29`,
 `Views/Integration/_DeliveryRows.cshtml:5,13,21`; base classes `ats-components.css:339-363`
 (no media query), shell breakpoint `ats-shell.css:315-342` (doesn't touch tables).
@@ -45,7 +76,7 @@ Never inject `grid-template-columns` inline.
 
 ---
 
-### [ ] UX-2 · Loading / pending states on all htmx interactions — Priority: Medium · Effort: M
+### [x] UX-2 · Loading / pending states on all htmx interactions — Priority: Medium · Effort: M
 **Files:** global search `Views/Shared/Components/TopBar/Default.cshtml:12-21`; board move
 `Views/Board/_Board.cshtml:29-32`; drawer open `Views/Board/Index.cshtml:99-100`; drawer host empty
 during GET `ats-shell.css:288`. No `hx-indicator` exists anywhere.
@@ -59,7 +90,7 @@ move request.
 
 ---
 
-### [ ] UX-3 · Board move failure feedback + revert — Priority: Medium · Effort: S
+### [x] UX-3 · Board move failure feedback + revert — Priority: Medium · Effort: S
 **Files:** `Views/Board/Index.cshtml:75-86` (SortableJS `onEnd` → `htmx.trigger`), `_Board.cshtml:31`
 (`hx-target=#board-container`). Concurrency conflicts are handled server-side (re-render with
 `Model.Error`, `_Board.cshtml:7-12`) — good — but a network/non-2xx error leaves the card in the
@@ -72,7 +103,7 @@ dropped column silently.
 
 ---
 
-### [ ] UX-4 · Empty states on every board column + consistent empties — Priority: Low · Effort: S
+### [x] UX-4 · Empty states on every board column + consistent empties — Priority: Low · Effort: S
 **Files:** `Views/Board/_Board.cshtml:65-68` (only the Hired column shows a drop hint).
 **Problem:** Empty non-terminal columns render blank — reads as broken/loading.
 **Fix:** Show a neutral "No candidates" placeholder in every empty column (reuse the `_EmptyState`
@@ -82,7 +113,7 @@ partial or a lighter inline variant).
 
 ---
 
-### [ ] UX-5 · Tokenise stray colours + add dark mode — Priority: Low · Effort: M
+### [x] UX-5 · Tokenise stray colours + add dark mode — Priority: Low · Effort: M
 **Files:** raw hex in `ats-components.css:405-406,438-475` (board), `:561` timeline, `:202` dots;
 inline hex in `Dashboard/Index.cshtml:92`, `Integration/Index.cshtml:24,33-35`. No
 `prefers-color-scheme` support; dark surfaces hardcode `#fff`.
@@ -97,8 +128,10 @@ is on the roadmap.
 ---
 
 ## Exit criteria
-- [ ] Navigation is boosted — no blink, shell/scroll persist, history works.
-- [ ] Tables are responsive down to 375px (no inline grid templates).
-- [ ] Every async interaction has loading + error feedback; board failures reconcile.
-- [ ] Empty columns show placeholders; colours flow through tokens.
-- [ ] `dotnet build` clean, `dotnet test` green.
+- [x] Navigation is boosted — 1 request/nav, 0 asset re-fetches, shell persists, history + titles work.
+- [x] Tables are responsive down to 375px; no inline grid templates anywhere (verified: no horizontal
+  overflow on Jobs/Candidates/Deliveries/Organisation/Dashboard at 375px; desktop layout unchanged).
+- [x] Search, drawer and board moves all show progress; a moved card is disabled in flight; a failed
+  move raises a toast and re-fetches the board (verified against a real htmx error path).
+- [x] Every empty board column shows a placeholder (0 visually blank); colours flow through tokens.
+- [x] `dotnet build` clean, `dotnet test` green.

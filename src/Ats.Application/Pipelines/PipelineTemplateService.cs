@@ -47,6 +47,15 @@ public sealed class PipelineTemplateService : IPipelineTemplateService
                 else
                     ApplyStage(existing, s);
             }
+
+            // Concurrency: reject if another admin saved this template since it was loaded.
+            if (input.RowVersion is { Length: > 0 })
+            {
+                _repo.SetExpectedRowVersion(template, input.RowVersion);
+                if (!await _repo.TrySaveChangesAsync(ct))
+                    return OperationResult.Fail("This pipeline was changed by someone else. Reload the page and try again.");
+                return OperationResult.Ok;
+            }
         }
         else
         {

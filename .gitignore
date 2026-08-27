@@ -361,3 +361,10 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+# Runtime artifacts written by the app under the content root (FND-1/FND-7).
+# App_Data/keys holds Data Protection master keys: they sign and encrypt auth cookies and must
+# never be in source control. Override the location per environment with DataProtection:KeyPath.
+# uploads holds candidate CVs (PII). logs are already covered by *.log above.
+**/App_Data/keys/
+**/App_Data/logs/
+**/App_Data/uploads/

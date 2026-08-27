@@ -2,7 +2,6 @@
 @using Ats.Web.Models.Shared
 @model IReadOnlyList<Ats.Application.Integration.DeliveryLogEntry>
 @{
-    const string cols = "grid-template-columns:.6fr 1.2fr 1fr 1fr .9fr 1.8fr;";
     (string Label, PillTone Tone) State(OutboxStatus s) => s switch
     {
         OutboxStatus.Delivered => ("Delivered", PillTone.Success),
@@ -10,7 +9,7 @@
         _ => ("Pending", PillTone.Warning)
     };
 }
-<div class="ats-thead" style="@cols">
+<div class="ats-thead ats-table--deliveries">
     <span>#</span><span>Candidate ref</span><span>Vacancy</span><span>Status sent</span><span>State</span><span>Last attempt</span>
 </div>
 @foreach (var e in Model)
@@ -18,7 +17,7 @@
     var last = e.Deliveries.LastOrDefault();
     var st = State(e.Message.Status);
     var pill = new StatusPillModel(st.Label, st.Tone);
-    <div class="ats-trow @(e.Message.Status == OutboxStatus.Failed ? "ats-trow--danger" : "")" style="@cols">
+    <div class="ats-trow ats-table--deliveries @(e.Message.Status == OutboxStatus.Failed ? "ats-trow--danger" : "")">
         <span class="ats-mono ats-xsmall ats-muted">@e.Message.Id</span>
         <code>@e.Message.ExternalCandidateId</code>
         <code>@e.Message.ExternalVacancyId</code>
@@ -27,7 +26,7 @@
         <span class="ats-cell-stack ats-xsmall ats-muted">
             @if (last is not null)
             {
-                <span>@last.Kind · HTTP @(last.HttpStatus?.ToString() ?? "-") · @last.AttemptedAt.ToLocalTime().ToString("dd/MM HH:mm") · @e.Message.Attempts attempt(s)</span>
+                <span>@last.Kind · HTTP @(last.HttpStatus?.ToString() ?? "-") · <local-time utc="@last.AttemptedAt" format="short"></local-time> · @e.Message.Attempts attempt(s)</span>
             }
             @if (!string.IsNullOrEmpty(e.Message.LastError))
             {

@@ -6,4 +6,5 @@ public record IntegrationSettingsInput(
     int? ReferralToolCustomerId,
     string CodeParameterName,
     string? ReferralToolAuthToken,   // null/blank = keep existing
-    string? ReferralToolApiKey);     // null/blank = keep existing
+    string? ReferralToolApiKey,      // null/blank = keep existing
+    byte[]? RowVersion = null);      // optimistic-concurrency token from page load

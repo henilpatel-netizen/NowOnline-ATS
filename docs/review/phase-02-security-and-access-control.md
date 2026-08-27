@@ -6,6 +6,9 @@ gaps: secrets at rest, account-abuse protection, a real role model, and defence-
 
 Raises: Security. `SEC-1` depends on `FND-1` (persisted Data Protection keys). Verified against `c7f4614`.
 
+> **Status (2026-07-31):** By product decision, only **SEC-7** is implemented in this pass ("one email
+> globally" model). SEC-1 to SEC-6, SEC-8, SEC-9 are deferred to a future pass.
+
 ---
 
 ### [ ] SEC-1 · Encrypt ReferralTool secrets at rest — Priority: Critical · Effort: M
@@ -97,7 +100,14 @@ ReferralTool domain. Validate on save.
 
 ---
 
-### [ ] SEC-7 · Cross-tenant email identity model — Priority: Medium · Effort: M
+### [x] SEC-7 · Cross-tenant email identity model — Priority: Medium · Effort: M
+**Done (2026-07-31), model chosen: globally-unique email + single membership.**
+- `AppUserConfiguration`: unique index changed from `(TenantId, Email)` to global `IX_Users_Email`.
+- Migration `MakeUserEmailGloballyUnique` (drops the composite, adds the single-column unique index) — apply manually.
+- `IdentityService.ValidateCredentialsAsync`: now `SingleOrDefaultAsync` on email (deterministic; at most one user).
+- `TenantOnboardingService.RegisterAsync`: rejects an already-registered email (new `IOnboardingStore.EmailExistsAsync`) before insert.
+- Tests: `TenantOnboardingServiceTests` (4). Pre-check confirmed no existing cross-tenant duplicate emails.
+
 **Files:** `src/Ats.Infrastructure/Identity/IdentityService.cs:43` (`IgnoreQueryFilters()
 .FirstOrDefaultAsync(u => u.Email == normalized)`); unique index is `(TenantId, Email)` only.
 **Problem:** The same email in two tenants authenticates against whichever row returns first →
