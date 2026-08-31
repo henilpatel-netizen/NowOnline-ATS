@@ -1,4 +1,4 @@
-@{
+﻿@{
     var title = ViewData["Title"] as string ?? "";
     var eyebrow = ViewData["Eyebrow"] as string;
     // EyebrowUtc renders "today" in the VIEWER's timezone rather than the server's.
@@ -47,7 +47,17 @@
             <vc:top-bar></vc:top-bar>
             @* data-page-title lets site.js keep document.title correct on boosted swaps AND on
                history restore (htmx replays cached content with no HTTP response to read). *@
-            <main id="ats-content" class="ats-content ats-scroll" data-page-title="@docTitle">
+            @* In-content navigation is boosted here (NAV-2). hx-target/hx-select ARE inherited by
+               descendants, so anything inside that drives its own htmx request must override them:
+               today that is only the board-move button (see Board/_Board.cshtml). The global search
+               and the top bar live outside this element and are unaffected. *@
+            <main id="ats-content" class="ats-content ats-scroll" data-page-title="@docTitle"
+                  hx-boost="true"
+                  hx-target="#ats-content"
+                  hx-select="#ats-content"
+                  hx-select-oob="#ats-sidebar"
+                  hx-swap="outerHTML"
+                  hx-indicator="#ats-nav-progress">
                 <partial name="_Alerts" />
                 @if (ViewData["HidePageHead"] is null && !string.IsNullOrEmpty(heading))
                 {

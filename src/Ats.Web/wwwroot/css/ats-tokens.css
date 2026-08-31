@@ -1,4 +1,4 @@
-/* NowOnline design system tokens for the ATS.
+﻿/* NowOnline design system tokens for the ATS.
    Values are ported from the design system's colors_and_type.css. Do not hand-tune them here:
    change the design system and re-port. Views must consume the --ats-* aliases, never --no-*. */
 
@@ -67,6 +67,9 @@
   --ats-accent: var(--no-sky-blue);
   --ats-accent-hover: var(--no-sky-blue-hover);
   --ats-accent-soft: var(--no-sky-blue-soft);
+  /* Accent as TEXT on a light surface. The raw accent (#0085CA) is only 4.03:1;
+     the Branding view component overrides this per tenant. */
+  --ats-accent-text: #0071AC;
   /* Derived from the accent by BrandColor (A11Y-3); the Branding component overrides both per
      tenant. Defaults here match the default accent so any page without branding still resolves. */
   --ats-on-accent: var(--no-white);
@@ -77,8 +80,10 @@
   --ats-surface-subtle: #FAFBFC;
   --ats-ink: var(--no-oxford-blue);
   --ats-ink-muted: var(--no-charcoal);
-  --ats-ink-subtle: var(--no-roman-silver);
-  --ats-ink-faint: #A6AEB8;
+  /* Both are AA against every app surface (#FFFFFF, #FAFBFC, #F5F6F7). The brand palette's
+     --no-roman-silver (#88909A) is only 2.98:1 on a subtle surface, so it is not used for text. */
+  --ats-ink-subtle: #667080;
+  --ats-ink-faint: #6B7280;
   --ats-border: var(--no-platinum);
   --ats-border-subtle: #F0F1F3;
   --ats-rule: #C9CDD3;
@@ -87,7 +92,8 @@
   --ats-sidebar-bg: var(--no-oxford-blue);
   --ats-sidebar-fg: var(--no-white);
   --ats-sidebar-muted: #98A2AF;
-  --ats-sidebar-label: #7A8493;
+  /* 5.15:1 on the #0C2340 sidebar; #7A8493 was 4.17:1 and failed WCAG AA for this 10.5px text. */
+  --ats-sidebar-label: #8A94A3;
   --ats-sidebar-border: rgba(255, 255, 255, .10);
   --ats-sidebar-hover: rgba(255, 255, 255, .07);
   --ats-sidebar-chip: rgba(255, 255, 255, .05);
@@ -121,7 +127,7 @@
   --bs-border-radius: var(--no-radius-md);
   --bs-border-radius-sm: var(--no-radius-sm);
   --bs-border-radius-lg: var(--no-radius-lg);
-  --bs-link-color: var(--ats-accent);
+  --bs-link-color: var(--ats-accent-text);
   --bs-link-hover-color: var(--ats-accent-hover);
   --bs-primary: var(--ats-accent);
   --bs-emphasis-color: var(--ats-ink);

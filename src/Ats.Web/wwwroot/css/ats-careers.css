@@ -1,4 +1,4 @@
-/* Public career site — hero, blobs, role cards, footer. Depends on ats-tokens.css + ats-base.css. */
+﻿/* Public career site — hero, blobs, role cards, footer. Depends on ats-tokens.css + ats-base.css. */
 
 .careers-nav {
   background: var(--ats-surface);
@@ -51,7 +51,7 @@
 .careers-role-title { font-family: var(--no-font-display); font-weight: 800; font-size: 1.25rem; letter-spacing: -.01em; }
 .careers-role-cta {
   display: inline-flex; align-items: center; gap: .375rem;
-  font-family: var(--no-font-display); font-weight: 600; font-size: .84375rem; color: var(--ats-accent);
+  font-family: var(--no-font-display); font-weight: 600; font-size: .84375rem; color: var(--ats-accent-text);
 }
 
 /* Standalone filter pills for the public site (the back-office .ats-filter-group is a segmented

@@ -140,4 +140,35 @@ public class BrandColorTests
         // It must still keep white text: dark ink on sky blue is worse (3.92:1).
         Assert.Equal(BrandColor.OnAccentLight, BrandColor.OnAccent(BrandColor.DefaultAccent));
     }
+
+    [Theory]
+    [InlineData("#0085CA")]   // the default accent: 4.03:1 as text, must be darkened
+    [InlineData("#A57AE6")]   // a pale tenant purple
+    [InlineData("#FFE300")]   // near-worst case: bright yellow
+    [InlineData("#00699E")]   // already dark enough, should pass through unchanged in ratio terms
+    public void Accent_text_always_reaches_AA_on_the_subtle_surface(string accent)
+    {
+        var text = BrandColor.AccentText(accent);
+        var ratio = BrandColor.ContrastRatio(text, "#F5F6F7");
+        Assert.True(ratio >= 4.5, $"{accent} -> {text} = {ratio}");
+    }
+
+    [Fact]
+    public void Accent_text_keeps_the_tenant_hue_rather_than_falling_back_to_navy()
+    {
+        // A flat dark fallback would turn every link navy. Darkening must preserve the hue, so a
+        // purple accent stays recognisably purple: blue channel above red, red above green.
+        var text = BrandColor.AccentText("#A57AE6");
+        Assert.NotEqual(BrandColor.OnAccentDark, text);
+        var r = Convert.ToInt32(text.Substring(1, 2), 16);
+        var g = Convert.ToInt32(text.Substring(3, 2), 16);
+        var b = Convert.ToInt32(text.Substring(5, 2), 16);
+        Assert.True(b > r && r > g, $"{text} no longer reads as purple");
+    }
+
+    [Fact]
+    public void An_accent_that_already_passes_is_left_alone()
+    {
+        Assert.Equal("#00699E", BrandColor.AccentText("#00699E"));
+    }
 }

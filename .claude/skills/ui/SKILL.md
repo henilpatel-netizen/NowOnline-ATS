@@ -154,23 +154,34 @@ fingerprinted-URL substitution and the asset falls back to a revalidated `no-cac
 endpoint group needs `.WithStaticAssets()` (both `MapControllerRoute` and `MapControllers` have it) or
 its views will emit unfingerprinted URLs.
 
-## Boosted navigation (Phase 5, NAV-1) — read before touching the layout or adding htmx
+## Boosted navigation (Phase 5 NAV-1, extended NAV-2) — read before touching the layout or adding htmx
 Back-office navigation is AJAX: only `#ats-content` is swapped, so the shell, CSS, fonts and the
-shared libraries are never re-fetched or re-executed (measured: 1 request per navigation, 0 asset
-re-fetches).
+shared libraries are never re-fetched or re-executed.
 
-**Three rules that are easy to break:**
-1. **Never put `hx-target` / `hx-select` on `<body>` or another broad ancestor.** htmx *inherits*
-   them, so every other htmx element (global search, candidate drawer, board move form) would filter
-   its own response for `#ats-content` and swap nothing. The boost config lives on the sidebar
-   `<nav class="ats-nav">` only — a container holding nav links exclusively. New htmx features are
-   unaffected as long as they stay outside that container.
+Two containers carry the boost config, with identical attributes:
+- `<nav class="ats-nav">` in `Components/SidebarNav` — the sidebar links.
+- `<main id="ats-content">` in `_Layout` — every in-content link, pager, filter tab and form POST.
+
+Measured with `tests/e2e/nav-cost.spec.ts`: an in-content navigation went from **1 document +
+17 assets + 862ms** to **1 xhr + 0 assets + 42ms**. Keep that spec passing.
+
+**Four rules that are easy to break:**
+1. **`hx-target` / `hx-select` are inherited by every descendant.** Because they now sit on
+   `#ats-content`, anything *inside* it that drives its own htmx request must override them or it
+   will filter its own response for `#ats-content` and swap nothing. Today that is exactly one
+   element — the board move button, which sets `hx-select="unset" hx-select-oob="unset"` on top of
+   its own `hx-target`. The global search and top bar live *outside* `#ats-content` and are
+   unaffected. **Any new htmx element inside the content area must do the same.**
+   `<body>` still carries no boost config: putting it there would catch the top bar too.
 2. **Shared libraries load in `<head>`; page scripts render inside `<main>`.** `@section Scripts` is
    rendered inside `#ats-content` so page JS re-runs after a swap — and `<main>` parses *before* the
    end of `<body>`, so anything a page's inline init needs (htmx, jQuery, Sortable, validation) must
    already be defined. Add a new shared library to `<head>`, never per-page.
 3. **Document title comes from `data-page-title` on `#ats-content`,** not from parsing the response:
    htmx replays cached DOM on Back/Forward with no HTTP response.
+4. **Confirmation uses `hx-confirm`, never `onsubmit="return confirm(...)"`.** A boosted submit is
+   driven by htmx, which does not consult the native `onsubmit` return value, so a native confirm
+   silently stops gating the action. All five destructive forms use `hx-confirm`.
 
 Opt out with `hx-boost="false"` for anything whose response is not a back-office page (file
 downloads; the sign-out form, whose response is the login page on `_AuthLayout`). `site.js` also
@@ -200,11 +211,25 @@ No one-off hex in views. Text on dark surfaces uses `--ats-on-dark`, `--ats-on-d
 `.ats-on-dark-*`). The only file that may contain raw hex is the Branding view component, which
 *defines* the per-tenant token values. A dark theme is now a token swap; it has not been built.
 
-## Accessibility (Phase 6) — the rules that are easy to undo
-Target is WCAG 2.1 AA.
+## Accessibility (Phase 6, verified by axe in Phase 9) — the rules that are easy to undo
+Target is WCAG 2.1 AA, enforced by `tests/e2e/a11y.spec.ts` (axe-core over 11 back-office screens
+plus the public career site). Phase 6 shipped believing it was clean; the first axe run failed
+**11 of 11 screens**. Do not trust a manual colour check.
 
-- **Never navigate a row with `onclick="location.href"`.** (Row links are real links but are not
-  htmx-boosted: the boost config is scoped to the sidebar nav, so a row click is a full page load.)
+**Text colour tokens are contrast-derived. Never use a raw brand colour for text:**
+- `--ats-ink-subtle` / `--ats-ink-faint` are AA against every app surface (`#FFFFFF`, `#FAFBFC`,
+  `#F5F6F7`). The brand palette's `--no-roman-silver` (`#88909A`) is only 2.98:1 on a subtle
+  surface, so it is **not** a text colour.
+- `--ats-accent-text` is the accent as *text* (links, `.btn-link`, the career-site CTA). The raw
+  accent is a fill colour: the default `#0085CA` is only 4.03:1. `BrandColor.AccentText` darkens the
+  tenant accent until it reaches 4.5:1, preserving hue rather than falling back to navy.
+- Per-tenant sidebar tokens are emitted by `Components/Branding`; the light-theme sidebar label was
+  3.23:1 until Phase 9.
+- Every form control needs a real label. A `<th>` column header is **not** one — the pipeline stage
+  grid needs an explicit `aria-label` per input.
+
+- **Never navigate a row with `onclick="location.href"`.** (Row links are real links and, since
+  NAV-2, are boosted along with everything else inside `#ats-content`.)
   A row's primary cell is a real `<a>` with
   `.ats-row-link`; its `::after` overlay stretches the hit area across the row, so the mouse behaves as
   before while the keyboard gets a genuine link. Anything else interactive in the row needs

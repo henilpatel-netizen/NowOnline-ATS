@@ -1,4 +1,4 @@
-@using Ats.Domain.Enums
+﻿@using Ats.Domain.Enums
 @model Ats.Application.Branding.TenantBranding
 @{
     ViewData["Title"] = "Career site";
@@ -14,7 +14,7 @@
     {
         <a class="btn btn-outline-secondary" asp-action="Branding"><span class="ms ms-sm">palette</span> Branding</a>
     }
-    <a class="btn btn-primary" href="@url" target="_blank" rel="noopener"><span class="ms ms-sm">open_in_new</span> Open live site</a>
+    <a class="btn btn-primary" href="@url" target="_blank" rel="noopener" hx-boost="false"><span class="ms ms-sm">open_in_new</span> Open live site</a>
 }
 
 <div class="ats-browser-frame">

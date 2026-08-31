@@ -1,4 +1,4 @@
-@model Ats.Web.Models.JobsIndexViewModel
+﻿@model Ats.Web.Models.JobsIndexViewModel
 @using Ats.Domain.Enums
 @using Ats.Web.Models.Shared
 @{
@@ -85,7 +85,7 @@
                         {
                             <li>
                                 <form asp-action="Publish" asp-route-id="@j.Id" method="post"
-                                      onsubmit="return confirm('Publish this job? It becomes visible on the public career site.');">
+                                      hx-confirm="Publish this job? It becomes visible on the public career site.">
                                     <button class="dropdown-item" type="submit">Publish</button>
                                 </form>
                             </li>
@@ -94,7 +94,7 @@
                         {
                             <li>
                                 <form asp-action="Close" asp-route-id="@j.Id" method="post"
-                                      onsubmit="return confirm('Close this job? It is removed from the public career site.');">
+                                      hx-confirm="Close this job? It is removed from the public career site.">
                                     <button class="dropdown-item" type="submit">Close</button>
                                 </form>
                             </li>
@@ -102,7 +102,7 @@
                         <li><hr class="dropdown-divider"></li>
                         <li>
                             <form asp-action="Delete" asp-route-id="@j.Id" method="post"
-                                  onsubmit="return confirm('Delete this job?');">
+                                  hx-confirm="Delete this job?">
                                 <button class="dropdown-item text-danger" type="submit">Delete</button>
                             </form>
                         </li>

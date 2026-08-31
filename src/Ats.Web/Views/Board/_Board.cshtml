@@ -1,4 +1,4 @@
-@model Ats.Web.Models.BoardViewModel
+﻿@model Ats.Web.Models.BoardViewModel
 @using Ats.Web.Models.Shared
 @{
     var ramp = new[] { "var(--no-stage-1)", "var(--no-stage-2)", "var(--no-stage-3)", "var(--no-stage-4)", "var(--no-stage-5)" };
@@ -29,6 +29,7 @@
                         <form class="ats-board-card @(card.Rejected ? "ats-board-card--rejected" : "")"
                               asp-controller="Board" asp-action="Move" method="post"
                               hx-post="@Url.Action("Move", "Board")" hx-target="#board-container" hx-swap="outerHTML"
+                              hx-select="unset" hx-select-oob="unset"
                               hx-indicator="this" hx-disabled-elt="find select"
                               hx-get-card="@Url.Action("Card", "Applications", new { id = card.ApplicationId })">
                             <input type="hidden" name="jobId" value="@Model.Job.Id" />

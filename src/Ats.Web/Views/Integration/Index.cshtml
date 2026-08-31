@@ -1,4 +1,4 @@
-@model Ats.Web.Models.IntegrationSettingsViewModel
+﻿@model Ats.Web.Models.IntegrationSettingsViewModel
 @using Ats.Application.Common
 @{
     ViewData["Title"] = "Integrations";
@@ -78,7 +78,7 @@
                 <span class="ats-small">Published jobs exposed</span><strong class="ats-stat-mini">@Model.PublishedJobCount</strong>
             </div>
             <form asp-action="GenerateFeedKey" method="post"
-                  onsubmit="return confirm('Generate a new feed key? The old key stops working immediately.');">
+                  hx-confirm="Generate a new feed key? The old key stops working immediately.">
                 <button type="submit" class="btn btn-outline-secondary btn-sm">@(Model.HasFeedKey ? "Regenerate" : "Generate") feed key</button>
             </form>
         </div>

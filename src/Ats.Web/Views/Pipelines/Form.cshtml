@@ -1,4 +1,4 @@
-@model Ats.Web.Models.PipelineEditViewModel
+﻿@model Ats.Web.Models.PipelineEditViewModel
 @using Ats.Domain.Entities
 @{
     ViewData["Title"] = Model.Id is null ? "New pipeline" : "Edit pipeline";
@@ -26,14 +26,18 @@
                 <td>
                     <input type="hidden" asp-for="Stages[i].Id" />
                     <input type="hidden" asp-for="Stages[i].Delete" class="delete-flag" />
-                    <input asp-for="Stages[i].Order" class="form-control form-control-sm" type="number" />
+                    <input asp-for="Stages[i].Order" class="form-control form-control-sm" type="number"
+                           aria-label="Stage order" />
                 </td>
-                <td><input asp-for="Stages[i].Name" class="form-control form-control-sm" /></td>
-                <td class="text-center"><input asp-for="Stages[i].IsTerminal" class="form-check-input" type="checkbox" /></td>
+                <td><input asp-for="Stages[i].Name" class="form-control form-control-sm" aria-label="Stage name" /></td>
+                <td class="text-center"><input asp-for="Stages[i].IsTerminal" class="form-check-input" type="checkbox"
+                                                 aria-label="Stage is terminal" /></td>
                 <td>
-                    <select asp-for="Stages[i].TerminalOutcome" asp-items="Html.GetEnumSelectList<StageOutcome>()" class="form-select form-select-sm"></select>
+                    <select asp-for="Stages[i].TerminalOutcome" asp-items="Html.GetEnumSelectList<StageOutcome>()"
+                            class="form-select form-select-sm" aria-label="Terminal outcome"></select>
                 </td>
-                <td><input asp-for="Stages[i].ReferralStatusOverride" class="form-control form-control-sm" placeholder="(defaults to name)" /></td>
+                <td><input asp-for="Stages[i].ReferralStatusOverride" class="form-control form-control-sm"
+                           placeholder="(defaults to name)" aria-label="ReferralTool status override" /></td>
                 <td><button type="button" class="btn btn-sm btn-outline-danger remove-row">Remove</button></td>
             </tr>
         }

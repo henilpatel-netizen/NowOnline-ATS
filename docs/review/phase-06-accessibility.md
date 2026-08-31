@@ -126,3 +126,15 @@ summary is announced (`role="alert"`).
 - [ ] Tenant accent can't break contrast; decorative icons are silent to AT.
 - [ ] Skip link present; search semantics honest; no lang mismatch.
 - [ ] axe scan clean on key screens; `dotnet build` clean, `dotnet test` green.
+
+---
+
+## Superseded by Phase 9
+
+This phase was signed off without ever running a scanner. The first axe run (Phase 9) failed
+**11 of 11 back-office screens** — contrast on the sidebar labels, breadcrumbs, eyebrows, table
+heads, `.ats-kbd` and every link, plus a critical unlabelled-input violation on the pipeline stage
+grid. All are fixed and now enforced by `tests/e2e/a11y.spec.ts`.
+
+See `docs/review/phase-09-e2e-verification.md`. The lesson worth keeping: manual contrast checks
+covered only the tokens that were edited, and missed every token that was not.

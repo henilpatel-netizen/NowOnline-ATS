@@ -1,4 +1,4 @@
-@model List<Ats.Domain.Entities.PipelineTemplate>
+﻿@model List<Ats.Domain.Entities.PipelineTemplate>
 @using Ats.Domain.Entities
 @{
     ViewData["Title"] = "Pipelines";
@@ -31,7 +31,7 @@ else
                             <span class="ats-mono ats-xsmall ats-muted">used by @used @(used == 1 ? "job" : "jobs")</span>
                             <a class="ms ms-sm ats-faint" asp-action="Edit" asp-route-id="@t.Id" aria-label="Edit @t.Name">edit</a>
                             <form asp-action="Delete" asp-route-id="@t.Id" method="post" class="d-inline"
-                                  onsubmit="return confirm('Delete this pipeline?');">
+                                  hx-confirm="Delete this pipeline?">
                                 <button type="submit" class="ms ms-sm border-0 bg-transparent p-0" style="color:var(--no-danger-ink)" aria-label="Delete @t.Name">delete</button>
                             </form>
                         </span>

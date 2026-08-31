@@ -99,6 +99,40 @@ public static partial class BrandColor
         return (ContrastRatio(hex, SurfaceLight) ?? 0) >= 3.0 ? hex : OnAccentDark;
     }
 
+    // The subtle surface links are most often drawn on (cards, table heads). Using the lightest
+    // surface would let a colour pass here and still fail on a card.
+    private const string SurfaceSubtle = "#F5F6F7";
+
+    // Link/`.btn-link` text colour. The raw accent is text on a light surface, so a pale accent
+    // fails AA — the default #0085CA is only 4.03:1. Darkening preserves the tenant's hue where a
+    // flat dark fallback would turn every link navy; the fallback is only reached by an accent so
+    // pale that no darkening helps.
+    public static string AccentText(string? accent)
+    {
+        var hex = Normalize(accent) ?? DefaultAccent;
+        for (var step = 0; step <= 20; step++)
+        {
+            var candidate = step == 0 ? hex : Darken(hex, step * 0.05);
+            if ((ContrastRatio(candidate, SurfaceSubtle) ?? 0) >= 4.5) return candidate;
+        }
+        return OnAccentDark;
+    }
+
+    private static string Darken(string hex, double amount)
+    {
+        var t = Math.Clamp(amount, 0d, 1d);
+        var r = DarkChannel(hex, 1, t);
+        var g = DarkChannel(hex, 3, t);
+        var b = DarkChannel(hex, 5, t);
+        return $"#{r:X2}{g:X2}{b:X2}";
+    }
+
+    private static int DarkChannel(string hex, int offset, double t)
+    {
+        var c = int.Parse(hex.AsSpan(offset, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+        return Math.Clamp((int)Math.Round(c * (1 - t)), 0, 255);
+    }
+
     private static double Linear(string hex, int offset)
     {
         var c = int.Parse(hex.AsSpan(offset, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture) / 255d;

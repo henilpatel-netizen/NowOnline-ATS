@@ -1,4 +1,4 @@
-/* Fonts, typography and base elements. Depends on ats-tokens.css. */
+﻿/* Fonts, typography and base elements. Depends on ats-tokens.css. */
 
 /* Material Symbols Outlined, subset to the icons the app uses and flattened to the fixed axes the
    .ms class renders at (FILL 0, wght 400, GRAD 0, opsz 24). Regenerate with
@@ -76,7 +76,7 @@ h4, h5, h6 { font-weight: 700; }
 code, kbd, samp, pre { font-family: var(--no-font-mono); font-size: .75rem; }
 code { color: var(--no-slate-ink); }
 
-a { color: var(--ats-accent); text-decoration: none; }
+a { color: var(--ats-accent-text); text-decoration: none; }
 a:hover { color: var(--no-oxford-blue); }
 
 strong, .fw-semibold, .fw-bold { font-weight: 500; }

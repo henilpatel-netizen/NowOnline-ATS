@@ -28,16 +28,29 @@ dotnet test
 dotnet run --project src/Ats.Web
 ```
 
+End-to-end tests (Playwright, `tests/e2e/`) drive a real browser and start the app themselves:
+```
+npx playwright test
+npx playwright test --ui
+```
+Set the sign-in credentials in `tests/e2e/auth.setup.ts` (or `ATS_TEST_EMAIL` / `ATS_TEST_PASSWORD`).
+The suite is the source of truth for navigation cost and accessibility — both were verified by
+guesswork before it existed, and both were wrong.
+
 ## Front-end
 Server-rendered MVC + Bootstrap 5, reskinned with the NowOnline design system (Urbanist / Lexend /
 Sometype Mono, Material Symbols icons, four layered `ats-*.css` files). Client libraries are managed
 by LibMan (`libman.json`); run `libman restore` to populate `src/Ats.Web/wwwroot/lib`. UI
 conventions: `.claude/skills/ui/SKILL.md`.
 
-Back-office navigation is **htmx-boosted**: only `#ats-content` is swapped. Three rules you must not
-break (details + rationale in the UI skill): never put `hx-target`/`hx-select` on a broad ancestor
-(htmx inherits them and it silently breaks search/drawer/board); shared libraries go in `<head>` while
-page `@section Scripts` renders inside `<main>`; the document title comes from `data-page-title`.
+Back-office navigation is **htmx-boosted**: only `#ats-content` is swapped. Both the sidebar nav and
+`<main id="ats-content">` carry the boost config, so in-content links, pagers, filters and form POSTs
+are boosted too (measured: 862ms -> 42ms, 17 asset re-fetches -> 0). Three rules you must not break
+(details + rationale in the UI skill): `hx-target`/`hx-select` are **inherited**, so anything inside
+`#ats-content` that drives its own htmx request must override them (`hx-select="unset"`); shared
+libraries go in `<head>` while page `@section Scripts` renders inside `<main>`; the document title
+comes from `data-page-title`. Use `hx-confirm`, never `onsubmit="return confirm(...)"` — a boosted
+submit bypasses the native handler.
 Never set `grid-template-columns` inline, and never put a raw hex colour in a view.
 
 ## Architecture (strict layering)

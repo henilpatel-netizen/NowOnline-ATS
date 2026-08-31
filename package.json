@@ -1,0 +1,33 @@
+{
+  "name": "ats",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "e2e": "playwright test",
+    "e2e:smoke": "playwright test smoke",
+    "e2e:security": "playwright test security",
+    "e2e:nav": "playwright test nav-cost",
+    "e2e:a11y": "playwright test a11y",
+    "e2e:responsive": "playwright test responsive",
+    "e2e:journeys": "playwright test journeys",
+    "e2e:ui": "playwright test --ui",
+    "e2e:report": "playwright show-report artifacts/playwright-report"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/henilpatel-netizen/NowOnline-ATS.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/henilpatel-netizen/NowOnline-ATS/issues"
+  },
+  "homepage": "https://github.com/henilpatel-netizen/NowOnline-ATS#readme",
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.62.1"
+  }
+}

@@ -368,3 +368,9 @@ FodyWeavers.xsd
 **/App_Data/keys/
 **/App_Data/logs/
 **/App_Data/uploads/
+
+# Playwright e2e
+tests/e2e/.auth/
+artifacts/
+test-results/
+playwright-report/
