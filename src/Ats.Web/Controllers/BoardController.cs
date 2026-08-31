@@ -1,9 +1,9 @@
 using Ats.Application.Applications;
-using Ats.Application.Candidates;
+using Ats.Application.Common;
 using Ats.Web.Models;
+using Ats.Web.ViewServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Ats.Web.Controllers;
 
@@ -11,18 +11,18 @@ namespace Ats.Web.Controllers;
 public class BoardController : Controller
 {
     private readonly IApplicationService _service;
-    private readonly ICandidateService _candidates;
+    private readonly IBoardViewService _board;
 
-    public BoardController(IApplicationService service, ICandidateService candidates)
+    public BoardController(IApplicationService service, IBoardViewService board)
     {
         _service = service;
-        _candidates = candidates;
+        _board = board;
     }
 
     [HttpGet]
     public async Task<IActionResult> Index(int jobId)
     {
-        var model = await BuildBoardAsync(jobId, null);
+        var model = await _board.BuildAsync(jobId, null);
         if (model is null) return NotFound();
         return View(model);
     }
@@ -35,7 +35,7 @@ public class BoardController : Controller
         catch (FormatException) { rv = Array.Empty<byte>(); }
 
         var result = await _service.MoveStageAsync(applicationId, toStageId, rv);
-        var model = await BuildBoardAsync(jobId, result.Succeeded ? null : result.Error);
+        var model = await _board.BuildAsync(jobId, result.Succeeded ? null : result.Error);
         if (model is null) return NotFound();
 
         if (Request.Headers.ContainsKey("HX-Request"))
@@ -48,7 +48,7 @@ public class BoardController : Controller
     [HttpPost]
     public async Task<IActionResult> AddCandidate(AddCandidateViewModel vm)
     {
-        Ats.Application.Departments.OperationResult result;
+        OperationResult result;
         if (vm.CandidateId is int candidateId)
         {
             result = await _service.AddExistingCandidateToJobAsync(vm.JobId, candidateId);
@@ -63,53 +63,7 @@ public class BoardController : Controller
             result = await _service.AddCandidateToJobAsync(
                 new AddCandidateToJobInput(vm.JobId, vm.FirstName!, vm.LastName!, vm.Email!, vm.Phone));
         }
-        TempData[result.Succeeded ? "Success" : "Error"] = result.Succeeded ? "Candidate added to job." : result.Error;
+        this.SetResultMessage(result, "Candidate added to job.");
         return RedirectToAction(nameof(Index), new { jobId = vm.JobId });
-    }
-
-    private async Task<BoardViewModel?> BuildBoardAsync(int jobId, string? error)
-    {
-        var job = await _service.GetJobAsync(jobId);
-        if (job is null) return null;
-        var stages = (await _service.GetStagesForJobAsync(jobId)).OrderBy(s => s.Order).ToList();
-        var apps = await _service.ListForJobAsync(jobId);
-
-        var lastEvents = await _service.LatestEventTimesForJobAsync(jobId);
-        var now = DateTimeOffset.UtcNow;
-        DateTimeOffset LastActivity(Ats.Domain.Entities.JobApplication a) =>
-            lastEvents.TryGetValue(a.Id, out var t) ? t : a.AppliedAt;
-        int Days(Ats.Domain.Entities.JobApplication a) =>
-            Ats.Application.Common.RelativeTime.WholeDays(LastActivity(a), now);
-
-        var columns = stages.Select((s, idx) => new BoardColumn(s, idx, stages.Count,
-            apps.Where(a => a.CurrentStageId == s.Id)
-                .Select(a => new Ats.Web.Models.Board.BoardCardModel(
-                    a.Id,
-                    a.Candidate?.FullName ?? "(unknown)",
-                    a.Candidate?.Email ?? "",
-                    Convert.ToBase64String(a.RowVersion),
-                    a.Origin,
-                    Days(a),
-                    idx,
-                    stages.Count,
-                    s.IsTerminal && s.TerminalOutcome == Ats.Domain.Entities.StageOutcome.Rejected))
-                .ToList())).ToList();
-
-        var active = apps.Where(a => a.Status == Ats.Domain.Enums.ApplicationStatus.Active).ToList();
-        var candidateOptions = (await _candidates.ListAsync())
-            .Select(c => new SelectListItem($"{c.FullName} <{c.Email}>", c.Id.ToString())).ToList();
-
-        return new BoardViewModel
-        {
-            Job = job,
-            Columns = columns,
-            Error = error,
-            CandidateOptions = candidateOptions,
-            InProcess = active.Count,
-            AvgDaysInStage = Ats.Application.Common.DashboardMath.MeanDays(
-                active.Select(a => now - LastActivity(a)).ToList()),
-            FromReferral = apps.Count(a => a.Origin == Ats.Domain.Enums.ApplicationOrigin.Referral),
-            OldestDays = apps.Count == 0 ? 0 : apps.Max(a => Ats.Application.Common.RelativeTime.WholeDays(a.AppliedAt, now))
-        };
     }
 }

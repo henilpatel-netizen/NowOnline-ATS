@@ -1,4 +1,4 @@
-using Ats.Application.Departments; // OperationResult
+using Ats.Application.Common;
 using Ats.Domain.Entities;
 
 namespace Ats.Application.Pipelines;

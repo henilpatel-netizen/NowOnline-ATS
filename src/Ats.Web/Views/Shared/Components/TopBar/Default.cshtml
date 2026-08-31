@@ -21,7 +21,11 @@
             <span id="ats-search-spinner" class="ats-spinner ats-spinner--inline" role="status" aria-hidden="true"></span>
             <span class="ats-kbd">Ctrl K</span>
         </label>
-        <div id="ats-search-results" class="ats-topbar-results" role="listbox"></div>
+        @* No role="listbox": the panel holds plain links with no option semantics or arrow-key
+       navigation, and claiming the role misleads assistive tech. aria-live announces results as they
+       arrive; a full combobox pattern would be a feature in its own right. *@
+        <div id="ats-search-results" class="ats-topbar-results" role="region"
+             aria-label="Search results" aria-live="polite"></div>
     </div>
 
     <button type="button" class="ats-icon-btn" id="ats-bell"

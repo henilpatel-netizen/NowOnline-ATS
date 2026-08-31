@@ -1,5 +1,6 @@
 using Ats.Application.Integration;
 using Ats.Domain.Entities;
+using Ats.Domain.Enums;
 using Ats.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,7 +9,15 @@ namespace Ats.Infrastructure.Integration;
 public sealed class IntegrationSettingsService : IIntegrationSettingsService
 {
     private readonly AtsDbContext _db;
-    public IntegrationSettingsService(AtsDbContext db) => _db = db;
+    private readonly IVacancyFeedRepository _feed;
+    private readonly IReferralToolClient _client;
+
+    public IntegrationSettingsService(AtsDbContext db, IVacancyFeedRepository feed, IReferralToolClient client)
+    {
+        _db = db;
+        _feed = feed;
+        _client = client;
+    }
 
     public async Task<TenantSettings> GetAsync(CancellationToken ct = default)
     {
@@ -57,5 +66,43 @@ public sealed class IntegrationSettingsService : IIntegrationSettingsService
         settings.FeedApiKeyHash = FeedApiKey.Hash(key);
         await _db.SaveChangesAsync(ct);
         return key;
+    }
+
+    public async Task<OutboxCounts> GetOutboxCountsAsync(CancellationToken ct = default)
+    {
+        // One grouped query, where the banner previously issued four separate COUNTs (QUAL-3).
+        var byStatus = await _db.OutboxMessages.AsNoTracking()
+            .GroupBy(m => m.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Status, x => x.Count, ct);
+        int Count(OutboxStatus s) => byStatus.TryGetValue(s, out var n) ? n : 0;
+
+        // Processing = claimed by a worker and in flight; still pending from the user's point of view.
+        return new OutboxCounts(
+            Count(OutboxStatus.Delivered),
+            Count(OutboxStatus.Failed),
+            Count(OutboxStatus.Pending) + Count(OutboxStatus.Processing));
+    }
+
+    public async Task<ConnectionTestResult> TestConnectionAsync(CancellationToken ct = default)
+    {
+        var s = await _db.TenantSettings.FirstAsync(ct);
+        if (s.ReferralToolCustomerId is null || string.IsNullOrWhiteSpace(s.ReferralToolBaseUrl)
+            || string.IsNullOrWhiteSpace(s.ReferralToolApiKey) || string.IsNullOrWhiteSpace(s.ReferralToolAuthToken))
+        {
+            return new ConnectionTestResult(false, "Fill base URL, customer id, X-Api-Key, and X-Auth-Token first.");
+        }
+
+        var (page, _) = await _feed.GetPageAsync(1, 1, ct);
+        var sampleRef = page.FirstOrDefault()?.ExternalRef;
+        if (sampleRef is null)
+            return new ConnectionTestResult(false, "Publish a job first so there is a vacancy to test with.");
+
+        var settings = new ReferralToolSettings(
+            s.ReferralToolBaseUrl!, s.ReferralToolApiKey!, s.ReferralToolAuthToken!, s.ReferralToolCustomerId.Value);
+        var (result, exists) = await _client.CheckVacancyExistsAsync(settings, sampleRef, ct);
+        var ok = result.Reached && result.HttpStatus is >= 200 and < 300;
+        return new ConnectionTestResult(ok,
+            $"Test for {sampleRef}: reached={result.Reached}, HTTP {result.HttpStatus}, vacancy exists={exists}.");
     }
 }

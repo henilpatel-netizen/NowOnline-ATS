@@ -1,6 +1,6 @@
 using Ats.Application.Applications;
 using Ats.Application.Candidates;
-using Ats.Application.Departments; // OperationResult
+using Ats.Application.Common;
 using Ats.Application.Integration;
 using Ats.Domain.Entities;
 using Ats.Domain.Enums;

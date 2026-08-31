@@ -1,4 +1,5 @@
 using Ats.Api.OpenApi;
+using Ats.Application.Abstractions;
 using Ats.Infrastructure;
 using Ats.Infrastructure.Persistence;
 using Scalar.AspNetCore;
@@ -14,6 +15,12 @@ builder.Host.UseSerilog((ctx, cfg) => cfg
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<AtsDbContext>("database", tags: new[] { "ready" });
 builder.Services.AddAtsInfrastructure(builder.Configuration);
+
+// The feed resolves its tenant from the hashed API key, not from claims (QUAL-6).
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ITenantContext, Ats.Api.Tenancy.FeedTenantContext>();
+// A feed request is authenticated by a tenant key, not a person.
+builder.Services.AddScoped<ICurrentUser, AnonymousCurrentUser>();
 builder.Services.AddControllers();
 builder.Services.AddScoped<Ats.Api.Authentication.FeedApiKeyFilter>();
 

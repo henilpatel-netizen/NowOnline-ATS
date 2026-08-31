@@ -15,7 +15,9 @@
     <div class="d-flex align-items-start gap-3">
         <partial name="Partials/_Avatar" model="new AvatarModel(Model.CandidateName, 3.25)" />
         <span class="ats-cell-stack flex-grow-1">
-            <span style="font-family:var(--no-font-display);font-weight:800;font-size:1.375rem;letter-spacing:-.01em">@Model.CandidateName</span>
+            @* id is referenced by aria-labelledby on the dialog wrapper (A11Y-2), so the drawer
+               announces the candidate's name instead of being an unnamed dialog. *@
+            <span id="ats-drawer-title" style="font-family:var(--no-font-display);font-weight:800;font-size:1.375rem;letter-spacing:-.01em">@Model.CandidateName</span>
             <span class="ats-small ats-muted">@Model.Email@(string.IsNullOrEmpty(Model.Phone) ? "" : " · " + Model.Phone)</span>
         </span>
         <button type="button" class="ats-icon-btn border-0" data-drawer-close aria-label="Close"><span class="ms ms-sm">close</span></button>

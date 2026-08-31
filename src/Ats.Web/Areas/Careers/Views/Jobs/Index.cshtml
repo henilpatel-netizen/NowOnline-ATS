@@ -54,7 +54,10 @@
                         @if (j.Location is not null) { <span class="ats-chip ats-chip--neutral">@(j.Location.City ?? j.Location.Name)</span> }
                         @if (j.Department is not null) { <span class="ats-chip ats-chip--neutral">@j.Department.Name</span> }
                     </span>
-                    <span class="careers-role-cta">Bekijk vacature <span class="ms ms-sm">arrow_forward</span></span>
+                    @* lang="nl" so a screen reader pronounces this Dutch label correctly on a page that declares
+                       lang="en" (WCAG 3.1.2). The wording is left as-is: changing public-facing copy is a
+                       product decision, and real bilingual support is FEAT-5. *@
+                    <span class="careers-role-cta" lang="nl">Bekijk vacature <span class="ms ms-sm">arrow_forward</span></span>
                 </a>
             }
         </div>

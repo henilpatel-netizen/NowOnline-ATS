@@ -805,3 +805,60 @@
   .ats-skeleton { animation: none; }
   .ats-toast { transition: none; }
 }
+
+/* ---------- Keyboard-operable rows (A11Y-1) ----------
+   The row's title is a real anchor; its ::after overlay stretches the hit area across the whole row,
+   so a mouse click anywhere still works while the keyboard gets a genuine focusable link. */
+.ats-trow--link { position: relative; }
+
+.ats-row-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.ats-row-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.ats-row-link:hover { text-decoration: underline; }
+
+/* Anything else interactive in the row must sit above the overlay to stay clickable. */
+.ats-trow--link .ats-row-actions,
+.ats-trow--link .dropdown,
+.ats-trow--link a:not(.ats-row-link),
+.ats-trow--link button {
+  position: relative;
+  z-index: 2;
+}
+
+/* The focusable element is the title link, so show the ring on the whole row for a clear target. */
+.ats-trow--link:focus-within {
+  outline: 2px solid var(--ats-focus-ring);
+  outline-offset: -2px;
+  background: var(--ats-surface-subtle);
+}
+
+/* The ring above is the row-level affordance; a second ring around the text would double up. */
+.ats-row-link:focus-visible { outline: none; }
+
+/* Board card name is a real button (A11Y-2) but must look exactly like the text it replaced. */
+.ats-board-card-name.ats-card-open {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ats-board-card-name.ats-card-open:focus-visible {
+  outline: 2px solid var(--ats-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--no-radius-sm);
+}

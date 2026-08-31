@@ -20,12 +20,12 @@ public class ApplicationsController : Controller
     [HttpGet]
     public async Task<IActionResult> Details(int id)
     {
-        var app = await _service.GetAsync(id);
+        // One targeted query with the candidate attached, instead of listing every application on
+        // the job to find this one and then mutating the entity here (QUAL-7).
+        var app = await _service.GetWithCandidateAsync(id);
         if (app is null) return NotFound();
         var stages = await _service.GetStagesForJobAsync(app.JobId);
         var events = await _service.ListEventsAsync(id);
-        var withCandidate = (await _service.ListForJobAsync(app.JobId)).FirstOrDefault(a => a.Id == id);
-        app.Candidate = withCandidate?.Candidate;
         var name = app.Candidate?.FullName ?? "(unknown)";
         var card = await _card.GetAsync(id);
         return View(new ApplicationDetailsViewModel

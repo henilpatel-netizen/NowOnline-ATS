@@ -1,4 +1,4 @@
-using Ats.Application.Departments; // for OperationResult
+using Ats.Application.Common;
 using Ats.Domain.Entities;
 
 namespace Ats.Application.Locations;

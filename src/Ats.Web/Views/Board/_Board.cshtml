@@ -38,7 +38,10 @@
                             <div class="d-flex align-items-center gap-2">
                                 <partial name="Partials/_Avatar" model="new AvatarModel(card.CandidateName, 2)" />
                                 <span class="ats-cell-stack">
-                                    <span class="ats-board-card-name">@card.CandidateName</span>
+                                    @* A11Y-2: a real button, so the drawer can be opened by keyboard.
+                                       type=button keeps it out of the move form's submit path. *@
+                                    <button type="button" class="ats-board-card-name ats-card-open"
+                                            aria-haspopup="dialog">@card.CandidateName</button>
                                     <span class="ats-board-card-sub">@card.Email</span>
                                 </span>
                             </div>

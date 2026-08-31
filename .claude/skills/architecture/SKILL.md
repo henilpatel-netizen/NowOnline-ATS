@@ -54,3 +54,35 @@ Infrastructure wiring is centralised in `Ats.Infrastructure/DependencyInjection.
 - No server-side data cache exists by design (freshness requirement) — see the phase-04 status note
   before introducing one; anything cached must be invalidated for the user's own writes, and
   `OutboxMessage` state is also written by `Ats.Worker`, i.e. out of process.
+
+## Structure rules (Phase 8)
+- **`OperationResult` lives in `Ats.Application.Common`** (beside `PagedResult`), not in a feature
+  namespace. Never re-import it from `Departments`.
+- **One search path per screen.** The `*ListQuery` read models are it. The old
+  `IJobService.SearchAsync` / `ICandidateService.SearchAsync` were unused *and* filtered differently
+  from the queries actually rendering the screens; they are deleted. Do not reintroduce a second one.
+- **`ITenantContext` and `ICurrentUser` are registered by each HOST, never by Infrastructure.**
+  Web = `HttpTenantContext` (tenant_id claim, or slug via `HttpContext.Items`) + `CurrentUser`;
+  Api = `FeedTenantContext` (Items only — feed requests carry no claims) + `AnonymousCurrentUser`;
+  Worker = `WorkerTenantContext` + `AnonymousCurrentUser`. A new host must register both or the
+  container cannot build `IApplicationService`/`IAuditLogger` — it fails at startup, deliberately,
+  rather than silently attributing writes to nobody.
+- **Infrastructure has no ASP.NET dependency.** It references `Microsoft.Extensions.Hosting.Abstractions`
+  (`IHostEnvironment` in `LocalFileStore`) and `Microsoft.Extensions.Http` (typed `ReferralToolClient`),
+  not `FrameworkReference Microsoft.AspNetCore.App`. Keep it that way: anything HTTP-shaped belongs in
+  a host.
+- **Controllers stay thin, including the complex screens.** Board aggregation lives in
+  `Ats.Web.ViewServices.BoardViewService`; the Integrations health banner is a typed
+  `IntegrationHealthViewModel`, not `ViewData` string keys; `TestConnection` orchestration is in
+  `IIntegrationSettingsService`. Do not put aggregation or HTTP interpretation back in an action.
+- **New name-lookup type?** Derive from `NamedLookupRepository<T>` (supply the `DbSet`, the name
+  selector and the Job foreign key) rather than copying Department/Location.
+- **Outcome messages** use `this.SetResultMessage(result, "Thing done.")`. Audit calls stay explicit
+  per action on purpose: their strings vary, some are success-conditional, and the audit log is a
+  compliance artifact.
+
+## Testing conventions (Phase 8, QUAL-1)
+Application services depend only on interfaces, so they are tested with hand-rolled fakes in
+`tests/Ats.Tests/Fakes` — no database, no mocking framework. When adding a rule to a service, add its
+test alongside. Worth knowing: a new suite that passes first time should be **mutation-checked** (break
+the rule deliberately, confirm exactly one test fails, restore) before it is trusted.

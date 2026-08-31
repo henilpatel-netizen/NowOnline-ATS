@@ -14,12 +14,11 @@ public class IntegrationController : Controller
     private readonly IDeliveryLogService _log;
     private readonly IAuditLogger _audit;
     private readonly IVacancyFeedRepository _feed;
-    private readonly IReferralToolClient _client;
 
-    public IntegrationController(IIntegrationSettingsService settings, IDeliveryLogService log, IAuditLogger audit,
-        IVacancyFeedRepository feed, IReferralToolClient client)
+    public IntegrationController(IIntegrationSettingsService settings, IDeliveryLogService log,
+        IAuditLogger audit, IVacancyFeedRepository feed)
     {
-        _settings = settings; _log = log; _audit = audit; _feed = feed; _client = client;
+        _settings = settings; _log = log; _audit = audit; _feed = feed;
     }
 
     [HttpGet]
@@ -28,12 +27,17 @@ public class IntegrationController : Controller
         var s = await _settings.GetAsync();
         var (_, total) = await _feed.GetPageAsync(1, 1);
 
-        // Health banner + inline delivery preview (redesign).
-        ViewData["FeedLastPulledAt"] = s.FeedLastPulledAt;
-        ViewData["Delivered"] = (await _log.SearchAsync(OutboxStatus.Delivered, 1, 1)).Total;
-        ViewData["Failed"] = (await _log.SearchAsync(OutboxStatus.Failed, 1, 1)).Total;
-        ViewData["Pending"] = (await _log.SearchAsync(OutboxStatus.Pending, 1, 1)).Total;
-        ViewData["RecentDeliveries"] = (await _log.SearchAsync(null, 1, 8)).Items;
+        // Typed health model instead of ViewData string keys, and one grouped count query instead of
+        // four (QUAL-3).
+        var counts = await _settings.GetOutboxCountsAsync();
+        ViewData["Health"] = new IntegrationHealthViewModel
+        {
+            FeedLastPulledAt = s.FeedLastPulledAt,
+            Delivered = counts.Delivered,
+            Failed = counts.Failed,
+            Pending = counts.Pending,
+            RecentDeliveries = (await _log.SearchAsync(null, 1, 8)).Items
+        };
 
         return View(new IntegrationSettingsViewModel
         {
@@ -79,26 +83,9 @@ public class IntegrationController : Controller
     [HttpPost]
     public async Task<IActionResult> TestConnection()
     {
-        var s = await _settings.GetAsync();
-        if (s.ReferralToolCustomerId is null || string.IsNullOrWhiteSpace(s.ReferralToolBaseUrl)
-            || string.IsNullOrWhiteSpace(s.ReferralToolApiKey) || string.IsNullOrWhiteSpace(s.ReferralToolAuthToken))
-        {
-            TempData["Error"] = "Fill base URL, customer id, X-Api-Key, and X-Auth-Token first.";
-            return RedirectToAction(nameof(Index));
-        }
-
-        var (page, _) = await _feed.GetPageAsync(1, 1);
-        var sampleRef = page.FirstOrDefault()?.ExternalRef;
-        if (sampleRef is null)
-        {
-            TempData["Error"] = "Publish a job first so there is a vacancy to test with.";
-            return RedirectToAction(nameof(Index));
-        }
-
-        var settings = new ReferralToolSettings(s.ReferralToolBaseUrl!, s.ReferralToolApiKey!, s.ReferralToolAuthToken!, s.ReferralToolCustomerId.Value);
-        var (result, exists) = await _client.CheckVacancyExistsAsync(settings, sampleRef);
-        TempData[result.Reached && result.HttpStatus is >= 200 and < 300 ? "Success" : "Error"] =
-            $"Test for {sampleRef}: reached={result.Reached}, HTTP {result.HttpStatus}, vacancy exists={exists}.";
+        // Validation, sample-vacancy selection and HTTP interpretation live in the service (QUAL-3).
+        var test = await _settings.TestConnectionAsync();
+        TempData[test.Succeeded ? "Success" : "Error"] = test.Message;
         return RedirectToAction(nameof(Index));
     }
 

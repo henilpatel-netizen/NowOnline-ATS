@@ -40,6 +40,70 @@ public static partial class BrandColor
         var c = int.Parse(hex.AsSpan(offset, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
         return Math.Clamp((int)Math.Round(c + (255 - c) * t), 0, 255);
     }
+
+    // ---- Contrast (A11Y-3) --------------------------------------------------------------------
+    // Buttons and chips used to force white text on the tenant's accent. A pale accent (yellow,
+    // lime) then produced white-on-pale, which no one can read, and the focus ring vanished. The
+    // readable text colour is therefore derived from the accent rather than assumed.
+
+    // Text placed on the accent. Dark ink where the accent is light, white where it is dark.
+    public const string OnAccentLight = "#FFFFFF";
+    public const string OnAccentDark = "#0C2340";   // NowOnline Oxford Blue
+
+    // WCAG 2.1 relative luminance. Null for an invalid colour.
+    public static double? RelativeLuminance(string? value)
+    {
+        var hex = Normalize(value);
+        if (hex is null) return null;
+        return 0.2126 * Linear(hex, 1) + 0.7152 * Linear(hex, 3) + 0.0722 * Linear(hex, 5);
+    }
+
+    // WCAG 2.1 contrast ratio, 1.0 (identical) to 21.0 (black on white). Null if either is invalid.
+    public static double? ContrastRatio(string? a, string? b)
+    {
+        if (RelativeLuminance(a) is not double la || RelativeLuminance(b) is not double lb) return null;
+        var (hi, lo) = la >= lb ? (la, lb) : (lb, la);
+        return (hi + 0.05) / (lo + 0.05);
+    }
+
+    // The readable text colour for this accent: whichever of dark ink / white contrasts better.
+    // Falls back to the default accent's pairing when the input is invalid.
+    public static string OnAccent(string? accent)
+    {
+        var hex = Normalize(accent) ?? DefaultAccent;
+        var onDark = ContrastRatio(hex, OnAccentDark) ?? 0;
+        var onLight = ContrastRatio(hex, OnAccentLight) ?? 0;
+        return onDark >= onLight ? OnAccentDark : OnAccentLight;
+    }
+
+    // Best achievable text contrast on this accent, for warning in the branding editor. WCAG AA
+    // requires 4.5:1 for normal text and 3:1 for large text and UI component boundaries.
+    public static double BestTextContrast(string? accent)
+    {
+        var hex = Normalize(accent) ?? DefaultAccent;
+        return Math.Max(ContrastRatio(hex, OnAccentDark) ?? 0, ContrastRatio(hex, OnAccentLight) ?? 0);
+    }
+
+    // True when the accent can carry normal-size text at AA (4.5:1) with its paired text colour.
+    public static bool MeetsAaText(string? accent) => BestTextContrast(accent) >= 4.5;
+
+    // The app's lightest surface. The focus ring is drawn against this, so a pale accent ring
+    // would be invisible on it.
+    private const string SurfaceLight = "#FFFFFF";
+
+    // Focus-ring colour. WCAG 2.1 (1.4.11) wants a non-text indicator at 3:1 against what is
+    // behind it, so a too-light accent falls back to dark ink and the ring stays visible.
+    public static string FocusRing(string? accent)
+    {
+        var hex = Normalize(accent) ?? DefaultAccent;
+        return (ContrastRatio(hex, SurfaceLight) ?? 0) >= 3.0 ? hex : OnAccentDark;
+    }
+
+    private static double Linear(string hex, int offset)
+    {
+        var c = int.Parse(hex.AsSpan(offset, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture) / 255d;
+        return c <= 0.03928 ? c / 12.92 : Math.Pow((c + 0.055) / 1.055, 2.4);
+    }
 }
 
 public sealed record TenantBranding(

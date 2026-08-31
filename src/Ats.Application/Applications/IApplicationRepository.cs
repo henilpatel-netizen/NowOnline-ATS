@@ -9,6 +9,10 @@ public interface IApplicationRepository
     Task<List<PipelineStage>> GetStagesForJobAsync(int jobId, CancellationToken ct = default);
     Task<List<JobApplication>> ListForJobAsync(int jobId, CancellationToken ct = default);
     Task<JobApplication?> GetAsync(int id, CancellationToken ct = default);
+
+    // One row with its Candidate loaded. Details previously listed the whole job's applications and
+    // picked one out, which grew with the job (QUAL-7).
+    Task<JobApplication?> GetWithCandidateAsync(int id, CancellationToken ct = default);
     Task<JobApplication?> FindByCandidateJobAsync(int candidateId, int jobId, CancellationToken ct = default);
     Task AddApplicationAsync(JobApplication application, CancellationToken ct = default);
     Task AddEventAsync(ApplicationEvent ev, CancellationToken ct = default);

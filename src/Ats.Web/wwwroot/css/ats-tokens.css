@@ -67,6 +67,10 @@
   --ats-accent: var(--no-sky-blue);
   --ats-accent-hover: var(--no-sky-blue-hover);
   --ats-accent-soft: var(--no-sky-blue-soft);
+  /* Derived from the accent by BrandColor (A11Y-3); the Branding component overrides both per
+     tenant. Defaults here match the default accent so any page without branding still resolves. */
+  --ats-on-accent: var(--no-white);
+  --ats-focus-ring: var(--no-sky-blue);
 
   --ats-bg: var(--no-cultured);
   --ats-surface: var(--no-white);
@@ -148,13 +152,14 @@
 
 .btn-primary {
   --bs-btn-font-weight: 700;
-  --bs-btn-color: #fff;
+  /* Was hard-coded #fff, which made a pale tenant accent unreadable (A11Y-3). */
+  --bs-btn-color: var(--ats-on-accent);
   --bs-btn-bg: var(--ats-accent);
   --bs-btn-border-color: var(--ats-accent);
-  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-color: var(--ats-on-accent);
   --bs-btn-hover-bg: var(--ats-accent-hover);
   --bs-btn-hover-border-color: var(--ats-accent-hover);
-  --bs-btn-active-color: #fff;
+  --bs-btn-active-color: var(--ats-on-accent);
   --bs-btn-active-bg: var(--ats-accent-hover);
   --bs-btn-active-border-color: var(--ats-accent-hover);
   --bs-btn-disabled-bg: var(--ats-accent);
@@ -287,8 +292,9 @@
 .nav-link { color: var(--ats-ink-muted); }
 .nav-link:hover { color: var(--ats-ink); }
 
-/* Focus: 2px accent ring at 2px offset, never the browser default. */
+/* Focus: 2px ring at 2px offset, never the browser default. Uses --ats-focus-ring rather than the
+   raw accent: a pale tenant accent would be invisible against a white surface (WCAG 1.4.11). */
 :focus-visible {
-  outline: 2px solid var(--ats-accent);
+  outline: 2px solid var(--ats-focus-ring);
   outline-offset: 2px;
 }

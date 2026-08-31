@@ -39,6 +39,9 @@ public sealed class ApplicationRepository : IApplicationRepository
     public Task<JobApplication?> GetAsync(int id, CancellationToken ct = default) =>
         _db.Applications.FirstOrDefaultAsync(a => a.Id == id, ct);
 
+    public Task<JobApplication?> GetWithCandidateAsync(int id, CancellationToken ct = default) =>
+        _db.Applications.Include(a => a.Candidate).FirstOrDefaultAsync(a => a.Id == id, ct);
+
     public Task<JobApplication?> FindByCandidateJobAsync(int candidateId, int jobId, CancellationToken ct = default) =>
         _db.Applications.FirstOrDefaultAsync(a => a.CandidateId == candidateId && a.JobId == jobId, ct);
 

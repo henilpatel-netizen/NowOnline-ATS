@@ -46,7 +46,7 @@
         <div class="row g-2 align-items-end">
             <div class="col-md-5">
                 <label class="form-label mb-1">Existing candidate</label>
-                <select name="CandidateId" id="candidate-picker" class="form-select form-select-sm">
+                <select name="CandidateId" id="candidate-picker" class="form-select form-select-sm" aria-label="Existing candidate">
                     <option value="">-- New candidate --</option>
                     @foreach (var opt in Model.CandidateOptions)
                     {
@@ -57,10 +57,10 @@
             <div class="col-md-2"><button type="submit" class="btn btn-primary btn-sm w-100">Add to job</button></div>
         </div>
         <div class="row g-2 mt-1" id="new-candidate-fields">
-            <div class="col-md-3"><input name="FirstName" class="form-control form-control-sm new-required" placeholder="First name" required /></div>
-            <div class="col-md-3"><input name="LastName" class="form-control form-control-sm new-required" placeholder="Last name" required /></div>
-            <div class="col-md-3"><input name="Email" type="email" class="form-control form-control-sm new-required" placeholder="Email" required /></div>
-            <div class="col-md-3"><input name="Phone" class="form-control form-control-sm" placeholder="Phone (optional)" /></div>
+            <div class="col-md-3"><input name="FirstName" class="form-control form-control-sm new-required" placeholder="First name" aria-label="First name" required /></div>
+            <div class="col-md-3"><input name="LastName" class="form-control form-control-sm new-required" placeholder="Last name" aria-label="Last name" required /></div>
+            <div class="col-md-3"><input name="Email" type="email" class="form-control form-control-sm new-required" placeholder="Email" aria-label="Email" required /></div>
+            <div class="col-md-3"><input name="Phone" class="form-control form-control-sm" placeholder="Phone (optional)" aria-label="Phone (optional)" /></div>
         </div>
     </form>
 </div>
@@ -93,15 +93,22 @@
                     htmx.trigger(form, 'submit');
                 });
             });
-            // Card click (not on the dropdown) opens the candidate drawer.
+            // Opens the candidate drawer. Clicking anywhere on the card works as before; the name
+            // is also a real button, so keyboard users can open it (A11Y-2).
+            function openDrawer(card, trigger) {
+                const url = card.getAttribute('hx-get-card');
+                if (!url) return;
+                // Remember the trigger so focus can be restored when the drawer closes.
+                if (window.Ats && Ats.rememberDrawerTrigger) Ats.rememberDrawerTrigger(trigger);
+                // Paint a skeleton first: the drawer used to stay blank for the whole round-trip.
+                if (window.Ats && Ats.showDrawerSkeleton) Ats.showDrawerSkeleton();
+                htmx.ajax('GET', url, { target: '#ats-drawer-host', swap: 'innerHTML' });
+            }
             document.querySelectorAll('.ats-board-card').forEach(function (card) {
                 card.addEventListener('click', function (e) {
                     if (e.target.closest('.move-select') || e.target.closest('option')) return;
-                    const url = card.getAttribute('hx-get-card');
-                    if (!url) return;
-                    // Paint a skeleton first: the drawer used to stay blank for the whole round-trip.
-                    if (window.Ats && Ats.showDrawerSkeleton) Ats.showDrawerSkeleton();
-                    htmx.ajax('GET', url, { target: '#ats-drawer-host', swap: 'innerHTML' });
+                    const btn = e.target.closest('.ats-card-open');
+                    openDrawer(card, btn || card.querySelector('.ats-card-open'));
                 });
             });
         }

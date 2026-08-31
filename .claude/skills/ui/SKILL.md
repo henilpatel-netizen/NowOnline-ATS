@@ -199,3 +199,30 @@ No one-off hex in views. Text on dark surfaces uses `--ats-on-dark`, `--ats-on-d
 `--ats-on-dark-subtle`, `--ats-on-dark-label`, `--ats-on-dark-danger` (helper classes
 `.ats-on-dark-*`). The only file that may contain raw hex is the Branding view component, which
 *defines* the per-tenant token values. A dark theme is now a token swap; it has not been built.
+
+## Accessibility (Phase 6) — the rules that are easy to undo
+Target is WCAG 2.1 AA.
+
+- **Never navigate a row with `onclick="location.href"`.** (Row links are real links but are not
+  htmx-boosted: the boost config is scoped to the sidebar nav, so a row click is a full page load.)
+  A row's primary cell is a real `<a>` with
+  `.ats-row-link`; its `::after` overlay stretches the hit area across the row, so the mouse behaves as
+  before while the keyboard gets a genuine link. Anything else interactive in the row needs
+  `position: relative; z-index: 2` (that is what `.ats-row-actions` is for). The focus ring is drawn on
+  the row via `:focus-within`.
+- **Colour on the accent is derived, never assumed.** `--ats-on-accent` (button/chip text) and
+  `--ats-focus-ring` come from `BrandColor.OnAccent` / `BrandColor.FocusRing` via the Branding
+  component. Do not hard-code `#fff` on anything sitting on `--ats-accent`: a pale tenant accent then
+  becomes unreadable. `#fff` on a *fixed* dark surface (Oxford Blue panels) is fine.
+- **Decorative icons are hidden automatically.** `MaterialIconTagHelper` adds `aria-hidden="true"` to
+  every `span.ms`, because Material Symbols render as a text ligature and a screen reader would read
+  the icon's name ("Submit application arrow_forward"). An icon that carries standalone meaning opts
+  out by setting `role` or `aria-label`.
+- **The drawer is a real modal.** `site.js` moves focus in on open, traps Tab, restores focus to the
+  trigger on close, and labels itself via `aria-labelledby="ats-drawer-title"`. A new way of opening it
+  must call `Ats.rememberDrawerTrigger(el)` first so focus can be returned. Openers must be focusable
+  elements (a `<button>`), not a click handler on a div.
+- Every input needs a label or `aria-label` — a `placeholder` is not an accessible name and disappears
+  on input. Validation summaries carry `role="alert"` so errors are announced.
+- Do not re-add `role="listbox"` to the search results panel: it holds plain links with no option
+  semantics or arrow-key navigation. It is a labelled `role="region"` with `aria-live="polite"`.

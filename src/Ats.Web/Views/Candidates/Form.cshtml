@@ -1,7 +1,7 @@
 @model Ats.Web.Models.CandidateViewModel
 @{ ViewData["Title"] = Model.Id == 0 ? "New candidate" : "Edit candidate"; }
 <form asp-action="@(Model.Id == 0 ? "Create" : "Edit")" method="post" class="col-md-6">
-    <div asp-validation-summary="All" class="text-danger small mb-2"></div>
+    <div asp-validation-summary="All" role="alert" class="text-danger small mb-2"></div>
     <input type="hidden" asp-for="Id" />
     <div class="mb-3"><label asp-for="FirstName" class="form-label">First name</label>
         <input asp-for="FirstName" class="form-control" /><span asp-validation-for="FirstName" class="text-danger small"></span></div>

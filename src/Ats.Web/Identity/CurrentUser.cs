@@ -1,9 +1,10 @@
 using System.Security.Claims;
 using Ats.Application.Abstractions;
-using Microsoft.AspNetCore.Http;
 
-namespace Ats.Infrastructure.Identity;
+namespace Ats.Web.Identity;
 
+// Moved out of shared Infrastructure with HttpTenantContext (QUAL-6): a claims-based current user is
+// a web concern. Neither the API nor the Worker has a signed-in user.
 public sealed class CurrentUser : ICurrentUser
 {
     private readonly IHttpContextAccessor _accessor;

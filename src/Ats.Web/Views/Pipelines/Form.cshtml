@@ -5,7 +5,7 @@
     ViewData["Eyebrow"] = "Editing:";
 }
 <form asp-action="Save" method="post" class="ats-card" style="max-width:960px">
-    <div asp-validation-summary="All" class="text-danger small mb-2"></div>
+    <div asp-validation-summary="All" role="alert" class="text-danger small mb-2"></div>
     <input type="hidden" asp-for="Id" />
     @if (Model.RowVersion is { Length: > 0 })
     {

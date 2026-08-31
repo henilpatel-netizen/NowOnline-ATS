@@ -3,9 +3,11 @@
 @{
     ViewData["Title"] = "Integrations";
     ViewData["Eyebrow"] = "Outbound plumbing:";
-    var lastPull = ViewData["FeedLastPulledAt"] as DateTimeOffset?;
-    var recent = ViewData["RecentDeliveries"] as IReadOnlyList<Ats.Application.Integration.DeliveryLogEntry>
-                 ?? new List<Ats.Application.Integration.DeliveryLogEntry>();
+    // Typed health model, so a renamed field is a compile error rather than a silently empty
+    // banner (QUAL-3).
+    var health = ViewData["Health"] as IntegrationHealthViewModel ?? new IntegrationHealthViewModel();
+    var lastPull = health.FeedLastPulledAt;
+    var recent = health.RecentDeliveries;
 }
 
 @if (TempData["FeedKey"] is string newKey)
@@ -30,9 +32,9 @@
         </span>
     </div>
     <div class="ats-stat-strip">
-        <span><span class="ats-eyebrow ats-on-dark-label">Delivered</span><span class="ats-stat-mini ats-on-dark-strong">@ViewData["Delivered"]</span></span>
-        <span><span class="ats-eyebrow ats-on-dark-label">Failed</span><span class="ats-stat-mini ats-on-dark-danger">@ViewData["Failed"]</span></span>
-        <span><span class="ats-eyebrow ats-on-dark-label">Pending</span><span class="ats-stat-mini ats-on-dark-strong">@ViewData["Pending"]</span></span>
+        <span><span class="ats-eyebrow ats-on-dark-label">Delivered</span><span class="ats-stat-mini ats-on-dark-strong">@health.Delivered</span></span>
+        <span><span class="ats-eyebrow ats-on-dark-label">Failed</span><span class="ats-stat-mini ats-on-dark-danger">@health.Failed</span></span>
+        <span><span class="ats-eyebrow ats-on-dark-label">Pending</span><span class="ats-stat-mini ats-on-dark-strong">@health.Pending</span></span>
     </div>
     <form asp-action="TestConnection" method="post" class="m-0">
         <button type="submit" class="btn btn-outline-light btn-sm"><span class="ms ms-sm">bolt</span> Test connection</button>

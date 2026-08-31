@@ -18,7 +18,7 @@
             <span class="ms ms-sm ats-muted">search</span>
             <input name="q" value="@Model.Q" placeholder="User, entity or summary" aria-label="Search audit log" />
         </label>
-        <select name="act" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+        <select name="act" class="form-select form-select-sm" style="width:auto" aria-label="Filter by action" onchange="this.form.submit()">
             <option value="">All actions</option>
             @foreach (var a in Model.Actions)
             {

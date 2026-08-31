@@ -75,7 +75,7 @@ public class PipelinesController : Controller
     {
         var result = await _service.DeleteAsync(id);
         if (result.Succeeded) await _audit.LogAsync("PipelineDeleted", "PipelineTemplate", id.ToString(), $"Deleted pipeline {id}");
-        TempData[result.Succeeded ? "Success" : "Error"] = result.Succeeded ? "Pipeline deleted." : result.Error;
+        this.SetResultMessage(result, "Pipeline deleted.");
         return RedirectToAction(nameof(Index));
     }
 }

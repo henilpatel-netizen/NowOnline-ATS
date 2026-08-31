@@ -22,3 +22,15 @@ public class IntegrationSettingsViewModel
     // Optimistic-concurrency token, round-tripped as base64 through a hidden field.
     public byte[]? RowVersion { get; set; }
 }
+
+// Typed replacement for the ViewData["Delivered"]/["Failed"]/["Pending"]/... magic strings the
+// Integrations health banner used to rely on: a renamed key failed silently (QUAL-3).
+public sealed class IntegrationHealthViewModel
+{
+    public DateTimeOffset? FeedLastPulledAt { get; init; }
+    public int Delivered { get; init; }
+    public int Failed { get; init; }
+    public int Pending { get; init; }
+    public IReadOnlyList<Ats.Application.Integration.DeliveryLogEntry> RecentDeliveries { get; init; }
+        = Array.Empty<Ats.Application.Integration.DeliveryLogEntry>();
+}

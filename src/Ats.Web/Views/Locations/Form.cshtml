@@ -5,7 +5,7 @@
 }
 <div class="ats-card" style="max-width:520px">
     <form asp-action="@(Model.Id == 0 ? "Create" : "Edit")" method="post" class="d-flex flex-column gap-3">
-        <div asp-validation-summary="All" class="text-danger small"></div>
+        <div asp-validation-summary="All" role="alert" class="text-danger small"></div>
         <input type="hidden" asp-for="Id" />
         <label class="d-flex flex-column gap-1">
             <span class="form-label mb-0">Name</span>

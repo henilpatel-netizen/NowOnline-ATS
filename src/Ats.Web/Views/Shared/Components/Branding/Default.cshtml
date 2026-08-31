@@ -11,8 +11,16 @@
 
     var sb = new StringBuilder();
     sb.Append(":root{");
+    // Derived, never tenant-supplied (A11Y-3): the readable text colour for this accent and a
+    // focus ring that stays visible on a light surface. Both come from WCAG contrast maths, so a
+    // pale tenant accent can no longer produce white-on-pale text or an invisible ring.
+    var onAccent = BrandColor.OnAccent(accent);
+    var focusRing = BrandColor.FocusRing(accent);
+
     sb.Append("--ats-accent:").Append(accent).Append(';');
     sb.Append("--ats-accent-hover:").Append(accentHover).Append(';');
+    sb.Append("--ats-on-accent:").Append(onAccent).Append(';');
+    sb.Append("--ats-focus-ring:").Append(focusRing).Append(';');
     if (Model.SidebarTheme == SidebarTheme.Light)
     {
         sb.Append("--ats-sidebar-bg:#FFFFFF;");

@@ -1,5 +1,6 @@
 @model Ats.Web.Models.BrandingEditViewModel
 @using Ats.Domain.Enums
+@using Ats.Application.Branding
 @{
     ViewData["Title"] = "Branding";
     ViewData["Eyebrow"] = "Career site:";
@@ -8,12 +9,31 @@
     <a class="btn btn-outline-secondary" asp-action="Index"><span class="ms ms-sm">arrow_back</span> Career site</a>
 }
 <form asp-action="Branding" method="post" class="ats-card d-flex flex-column gap-3" style="max-width:640px">
-    <div asp-validation-summary="All" class="text-danger small"></div>
+    <div asp-validation-summary="All" role="alert" class="text-danger small"></div>
     <label class="d-flex flex-column gap-1" style="max-width:12rem">
         <span class="form-label mb-0">Accent colour</span>
         <input asp-for="AccentColor" type="color" class="form-control form-control-color" style="width:4rem;height:2.4rem" />
         <span asp-validation-for="AccentColor" class="text-danger small"></span>
     </label>
+    @{
+        // A11Y-3: button and chip text is paired automatically with the accent, so it can never be
+        // unreadable. We still surface the ratio, because an accent in the mid range cannot reach
+        // 4.5:1 with any text colour and the choice is the tenant's to make.
+        var accentRatio = BrandColor.BestTextContrast(Model.AccentColor);
+        var accentOk = BrandColor.MeetsAaText(Model.AccentColor);
+    }
+    <div class="ats-small @(accentOk ? "ats-muted" : "")" style="max-width:34rem@(accentOk ? "" : ";color:var(--no-warning-ink)")" role="note">
+        <span class="ms ms-sm" aria-hidden="true">@(accentOk ? "check_circle" : "warning")</span>
+        Text on this accent is contrast-matched automatically (currently
+        <strong>@accentRatio.ToString("0.0"):1</strong>).
+        @if (!accentOk)
+        {
+            <text>
+                That is below the 4.5:1 WCAG AA needs for normal-size text, so button labels may be
+                hard to read. A darker or lighter shade will clear it.
+            </text>
+        }
+    </div>
     <label class="d-flex flex-column gap-1" style="max-width:16rem">
         <span class="form-label mb-0">Sidebar theme</span>
         <select asp-for="SidebarTheme" asp-items="Html.GetEnumSelectList<SidebarTheme>()" class="form-select"></select>

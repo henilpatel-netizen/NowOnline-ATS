@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <ItemGroup>
@@ -10,6 +9,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- LocalFileStore needs IHostEnvironment only. This replaces a FrameworkReference on the whole
+         of Microsoft.AspNetCore.App, which Infrastructure no longer needs now that the HTTP tenant
+         context and current-user live in their hosts (QUAL-6). -->
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0" />
+    <!-- ReferralToolClient is a typed HttpClient. -->
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.9" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

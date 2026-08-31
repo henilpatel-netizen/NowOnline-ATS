@@ -5,9 +5,55 @@ gap (QUAL-1) is the most important — do it alongside the earlier phases so the
 
 Raises: Maintainability, Architecture. Verified against `c7f4614`.
 
+> **Status (2026-08-27):** all seven items done, in the order QUAL-1 -> 2/4/6/7 -> 3/5 so the
+> refactors landed with a test net under them.
+>
+> **QUAL-1:** 87 -> **138 tests**. The previously-uncovered rules now have suites:
+> `ApplicationServiceTests` (terminal-outcome mapping, no-op move, cross-pipeline stage rejection,
+> RowVersion conflict, duplicate-apply dedup, empty-pipeline guard, atomic create),
+> `PipelineTemplateServiceTests` (the add/rename/reorder/remove diff, terminal-flag clearing, blank
+> referral override, template concurrency, delete guard), `JobServiceTests` (draft-on-create, job
+> numbering, publish/close transitions, PublishedAt stickiness, soft delete). Hand-rolled fakes, no
+> database, no mocking framework.
+>
+> **The suites were mutation-tested rather than assumed:** swapping Hired/Rejected in the status
+> mapping, removing the duplicate-apply guard, and dropping the create transaction each turned exactly
+> one test red, and the file was restored green afterwards.
+>
+> **QUAL-6 went further than written.** `CurrentUser` was HTTP-specific too, so both it and
+> `HttpTenantContext` moved to the hosts; the API got a `FeedTenantContext` (its feed requests carry no
+> claims, only the key-resolved tenant) and both non-web hosts got an explicit `AnonymousCurrentUser`.
+> Infrastructure's `FrameworkReference Microsoft.AspNetCore.App` is **gone**, replaced by two targeted
+> packages (`Hosting.Abstractions` for `IHostEnvironment`, `Extensions.Http` for the typed client), and
+> the worker's `RemoveAll<ITenantContext>()` hack is removed.
+>
+> Removing the shared registrations broke API startup (`IApplicationService`/`IAuditLogger` could no
+> longer resolve `ICurrentUser`) — a clean build did not catch it, only running the host did. Hence the
+> explicit null object rather than a silent default.
+>
+> **QUAL-3** used the `BoardViewService` option rather than a new Infrastructure query, so the board's
+> data access is untouched: the rendered board pages are **byte-identical** to the pre-refactor
+> baseline (66034 / 65925 bytes). `BoardController` went 125 -> 69 lines. The Integrations banner is now
+> a typed `IntegrationHealthViewModel` instead of four `ViewData` string keys, fed by one grouped count
+> query, and `TestConnection`'s orchestration moved into the settings service.
+>
+> **QUAL-5** added `NamedLookupRepository<T>` (Department/Location are now ~12 lines each) and a
+> `SetResultMessage` extension applied at all 7 duplicated sites. **The audit calls were deliberately
+> not funnelled** into the helper: their action/entity/summary strings vary and some are
+> success-conditional, and the audit log is a compliance artifact, so the DRY win did not justify
+> changing when entries are written.
+>
+> All three hosts were started and verified: web (claims + slug paths, and a write stamping the correct
+> `MovedByUserId` and `TenantId`), API (401 fail-closed with no/bad key, 200 tenant-scoped feed with a
+> valid one, key hash restored exactly afterwards), worker (starts without the DI hack, atomic claim
+> runs). Full lookup CRUD and the delete guard were exercised through the new base repository.
+>
+> **Not done, by decision:** `TreatWarningsAsErrors` stays `false` (the exit criterion suggests
+> enabling it; you chose otherwise in FND-5). The build is warning-clean regardless.
+
 ---
 
-### [ ] QUAL-1 · Unit-test the business logic — Priority: High · Effort: M
+### [x] QUAL-1 · Unit-test the business logic — Priority: High · Effort: M
 **Files:** `tests/Ats.Tests` covers only pure helpers (`DashboardMath`, `RelativeTime`,
 `AvatarPalette`, brand colour, `FeedPullThrottle`). Untested, high-risk logic:
 `ApplicationService.MoveStageAsync` terminal-outcome mapping + duplicate-apply guard
@@ -24,7 +70,7 @@ Add tests for each earlier-phase change as it lands.
 
 ---
 
-### [ ] QUAL-2 · Delete dead, divergent search code — Priority: High · Effort: S
+### [x] QUAL-2 · Delete dead, divergent search code — Priority: High · Effort: S
 **Files:** `IJobService.SearchAsync`/`JobRepository.SearchAsync` (`JobService.cs:27`,
 `JobRepository.cs:16`) and the candidate equivalents (`CandidateService.cs:23`,
 `ICandidateRepository.cs:8`) — **unused** (screens call `JobListQuery`/`CandidateListQuery`) and they
@@ -37,7 +83,7 @@ already filter **differently** (`Contains` vs `EF.Functions.Like`).
 
 ---
 
-### [ ] QUAL-3 · Consistent read-model pattern (thin controllers) — Priority: Medium · Effort: M
+### [x] QUAL-3 · Consistent read-model pattern (thin controllers) — Priority: Medium · Effort: M
 **Files:** `BoardController.BuildBoardAsync` (`BoardController.cs:70-114`) does aggregation inline;
 `IntegrationController.Index` (`:26-49`) builds a health banner via `ViewData` magic strings + 4
 separate count round-trips; `TestConnection` (`:66-89`) holds orchestration + HTTP interpretation.
@@ -50,7 +96,7 @@ screens; `ViewData` string keys break silently on change.
 
 ---
 
-### [ ] QUAL-4 · Relocate `OperationResult` to Common — Priority: Medium · Effort: S
+### [x] QUAL-4 · Relocate `OperationResult` to Common — Priority: Medium · Effort: S
 **Files:** defined in `src/Ats.Application/Departments/DepartmentService.cs:5`, imported everywhere with
 `using Ats.Application.Departments; // OperationResult` (`JobService.cs:2`, `CandidateService.cs:2`,
 `ApplicationService.cs:3`, `PipelineTemplateService.cs:1`, `LocationService.cs:1`;
@@ -64,7 +110,7 @@ namespaces; delete the explanatory comments. Mechanical.
 
 ---
 
-### [ ] QUAL-5 · De-duplicate CRUD + controller result/audit boilerplate — Priority: Low · Effort: M
+### [x] QUAL-5 · De-duplicate CRUD + controller result/audit boilerplate — Priority: Low · Effort: M
 **Files:** `DepartmentService`/`LocationService` + their repositories are structurally identical (Location
 adds only `City`); the `TempData[result.Succeeded ? "Success":"Error"] = …` + paired
 `_audit.LogAsync(...)` idiom is copy-pasted across JobsController, PipelinesController,
@@ -80,7 +126,7 @@ boilerplate.
 
 ---
 
-### [ ] QUAL-6 · Move `HttpTenantContext` out of shared Infrastructure — Priority: Low · Effort: S
+### [x] QUAL-6 · Move `HttpTenantContext` out of shared Infrastructure — Priority: Low · Effort: S
 **Files:** `src/Ats.Infrastructure/Tenancy/HttpTenantContext.cs` (needs `IHttpContextAccessor`);
 `Ats.Infrastructure.csproj` carries `FrameworkReference Microsoft.AspNetCore.App` partly for this; the
 Worker does `RemoveAll<ITenantContext>()` to undo it.
@@ -94,7 +140,7 @@ own; the Worker's `RemoveAll` hack is removed.
 
 ---
 
-### [ ] QUAL-7 · `ApplicationsController.Details` single-row fetch — Priority: Low · Effort: S
+### [x] QUAL-7 · `ApplicationsController.Details` single-row fetch — Priority: Low · Effort: S
 **Files:** `src/Ats.Web/Controllers/ApplicationsController.cs:21-27`
 (`(await _service.ListForJobAsync(app.JobId)).FirstOrDefault(a => a.Id == id)` — loads the whole job's
 applications to attach one candidate, then mutates `app.Candidate`).
@@ -107,7 +153,9 @@ size.
 ---
 
 ## Exit criteria
-- [ ] Core business logic is unit-tested; earlier-phase changes are covered.
-- [ ] Dead search removed; read-model pattern consistent; `OperationResult` in `Common`.
-- [ ] CRUD/audit duplication reduced; `HttpTenantContext` relocated; Details uses a targeted query.
-- [ ] `dotnet build` clean (ideally `TreatWarningsAsErrors=true` from FND-5), `dotnet test` green.
+- [x] Core business logic is unit-tested (138 tests, mutation-checked); earlier-phase changes covered.
+- [x] Dead search removed; read-model pattern consistent; `OperationResult` in `Common`.
+- [x] CRUD/audit duplication reduced (audit intentionally excluded); `HttpTenantContext` and
+  `CurrentUser` relocated to their hosts; Details uses a targeted query.
+- [x] `dotnet build` clean (0 warnings), `dotnet test` green. `TreatWarningsAsErrors` stays `false` by
+  product decision.

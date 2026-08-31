@@ -1,6 +1,6 @@
 using Ats.Application.Abstractions;
 using Ats.Application.Candidates;
-using Ats.Application.Departments; // OperationResult
+using Ats.Application.Common;
 using Ats.Application.Integration;
 using Ats.Domain.Entities;
 using Ats.Domain.Enums;
@@ -14,6 +14,7 @@ public interface IApplicationService
     Task<List<PipelineStage>> GetStagesForJobAsync(int jobId, CancellationToken ct = default);
     Task<List<JobApplication>> ListForJobAsync(int jobId, CancellationToken ct = default);
     Task<JobApplication?> GetAsync(int id, CancellationToken ct = default);
+    Task<JobApplication?> GetWithCandidateAsync(int id, CancellationToken ct = default);
     Task<List<ApplicationEvent>> ListEventsAsync(int applicationId, CancellationToken ct = default);
     Task<OperationResult> AddCandidateToJobAsync(AddCandidateToJobInput input, CancellationToken ct = default);
     Task<OperationResult> AddExistingCandidateToJobAsync(int jobId, int candidateId, CancellationToken ct = default);
@@ -37,6 +38,7 @@ public sealed class ApplicationService : IApplicationService
     public Task<List<PipelineStage>> GetStagesForJobAsync(int jobId, CancellationToken ct = default) => _repo.GetStagesForJobAsync(jobId, ct);
     public Task<List<JobApplication>> ListForJobAsync(int jobId, CancellationToken ct = default) => _repo.ListForJobAsync(jobId, ct);
     public Task<JobApplication?> GetAsync(int id, CancellationToken ct = default) => _repo.GetAsync(id, ct);
+    public Task<JobApplication?> GetWithCandidateAsync(int id, CancellationToken ct = default) => _repo.GetWithCandidateAsync(id, ct);
     public Task<List<ApplicationEvent>> ListEventsAsync(int applicationId, CancellationToken ct = default) => _repo.ListEventsAsync(applicationId, ct);
 
     public async Task<OperationResult> AddCandidateToJobAsync(AddCandidateToJobInput input, CancellationToken ct = default)

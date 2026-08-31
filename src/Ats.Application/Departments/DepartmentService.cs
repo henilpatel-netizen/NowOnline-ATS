@@ -1,12 +1,7 @@
+using Ats.Application.Common;
 using Ats.Domain.Entities;
 
 namespace Ats.Application.Departments;
-
-public record OperationResult(bool Succeeded, string? Error)
-{
-    public static readonly OperationResult Ok = new(true, null);
-    public static OperationResult Fail(string error) => new(false, error);
-}
 
 public interface IDepartmentService
 {

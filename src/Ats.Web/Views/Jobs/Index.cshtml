@@ -47,10 +47,13 @@
     @foreach (var j in Model.Results.Items)
     {
         var segments = j.StageCounts.Select(s => new PipelineSegment(s.Stage, s.Count)).ToList();
-        <div class="ats-trow ats-trow--link ats-table--jobs"
-             onclick="location.href='@Url.Action("Index", "Board", new { jobId = j.Id })'">
+        @* A11Y-1: the title is a real anchor stretched across the row, so the row is Tab-focusable,
+           Enter-activatable and announced as a link. The div onclick it replaces was mouse-only
+           (WCAG 2.1.1). Being a real link, it is also boosted by htmx like any other navigation. *@
+        <div class="ats-trow ats-trow--link ats-table--jobs">
             <span class="ats-cell-stack">
-                <span class="ats-cell-title">@j.Title</span>
+                <a class="ats-cell-title ats-row-link"
+                   asp-controller="Board" asp-action="Index" asp-route-jobId="@j.Id">@j.Title</a>
                 <span class="ats-cell-sub"><code>@j.ExternalRef</code>
                     @if (j.Department is not null) { <text>· @j.Department</text> }
                     @if (j.Location is not null) { <text>· @j.Location</text> }
@@ -70,7 +73,7 @@
                 @if (j.TotalApplications == 0) { <span class="ats-faint ats-small">—</span> }
             </span>
             <span class="ats-small ats-muted"><local-time utc="@j.PublishedAt" format="monthday" empty="—"></local-time></span>
-            <span class="d-flex justify-content-end" onclick="event.stopPropagation()">
+            <span class="d-flex justify-content-end ats-row-actions">
                 <div class="dropdown">
                     <button type="button" class="btn btn-sm btn-outline-secondary border-0 px-2" data-bs-toggle="dropdown" aria-label="Actions">
                         <span class="ms ms-sm">more_horiz</span>

@@ -25,12 +25,12 @@
     </div>
     @foreach (var c in Model.Results.Items)
     {
-        <div class="ats-trow ats-trow--link ats-table--candidates"
-             onclick="location.href='@Url.Action("Edit", new { id = c.Id })'">
+        @* A11Y-1: see Jobs/Index — the name below is the row's real link. *@
+        <div class="ats-trow ats-trow--link ats-table--candidates">
             <span class="d-flex align-items-center gap-2" style="min-width:0">
                 <partial name="Partials/_Avatar" model="new AvatarModel(c.FullName, 2.125)" />
                 <span class="ats-cell-stack">
-                    <span class="ats-cell-title">@c.FullName</span>
+                    <a class="ats-cell-title ats-row-link" asp-action="Edit" asp-route-id="@c.Id">@c.FullName</a>
                     @if (c.LatestJobTitle is not null) { <span class="ats-cell-sub">@c.LatestJobTitle</span> }
                 </span>
             </span>
@@ -48,7 +48,7 @@
                 else { <span class="ats-faint ats-small">No applications</span> }
             </span>
             <span class="ats-small ats-muted">@(c.LastActivity is null ? "—" : RelativeTime.Long(c.LastActivity, now))</span>
-            <span class="d-flex justify-content-end" onclick="event.stopPropagation()">
+            <span class="d-flex justify-content-end ats-row-actions">
                 @if (Model.PublishedJobs.Count > 0)
                 {
                     <div class="dropdown">
@@ -58,7 +58,7 @@
                         <div class="dropdown-menu dropdown-menu-end p-2" style="min-width:16rem">
                             <form asp-action="AddToJob" method="post" class="d-flex gap-1">
                                 <input type="hidden" name="candidateId" value="@c.Id" />
-                                <select name="jobId" class="form-select form-select-sm" asp-items="Model.PublishedJobs">
+                                <select name="jobId" class="form-select form-select-sm" aria-label="Add to job" asp-items="Model.PublishedJobs">
                                     <option value="">Add to job…</option>
                                 </select>
                                 <button class="btn btn-sm btn-primary" type="submit">Add</button>

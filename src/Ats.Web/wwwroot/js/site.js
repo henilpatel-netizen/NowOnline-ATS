@@ -81,26 +81,82 @@ document.addEventListener('submit', function (e) {
     window.atsLocaliseTimes = localise;   // back-compat alias
 })();
 
-// Candidate drawer: htmx swaps the drawer BODY into #ats-drawer-host; wrap it in the overlay,
-// and close on backdrop click, the close button, Escape, or the ats:drawer-close event.
+// Candidate drawer: htmx swaps the drawer BODY into #ats-drawer-host; this wraps it in the overlay
+// and gives it real modal behaviour (A11Y-2). Previously it claimed role="dialog" aria-modal="true"
+// while focus never entered it, Tab escaped to the page behind, focus was never returned on close,
+// and it had no accessible name.
 (function () {
     var host = document.getElementById('ats-drawer-host');
     if (!host) return;
 
-    function close() { host.innerHTML = ''; }
+    var FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]),' +
+                    ' textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    var lastFocused = null;
+
+    function panel() { return host.querySelector('.ats-drawer'); }
+
+    function focusables() {
+        var p = panel();
+        if (!p) return [];
+        return Array.prototype.filter.call(p.querySelectorAll(FOCUSABLE), function (el) {
+            return el.offsetParent !== null || el === document.activeElement;
+        });
+    }
+
+    function close() {
+        if (!host.innerHTML) return;
+        host.innerHTML = '';
+        // Return focus where the user left it, so the keyboard position is not lost.
+        if (lastFocused && document.contains(lastFocused)) {
+            try { lastFocused.focus(); } catch (e) { /* element may have been swapped away */ }
+        }
+        lastFocused = null;
+    }
+    Ats.closeDrawer = close;
+
+    // Remember the trigger before the request starts, while it is still focused.
+    Ats.rememberDrawerTrigger = function (el) {
+        lastFocused = el || document.activeElement;
+    };
 
     document.body.addEventListener('htmx:afterSwap', function (e) {
         if (e.target.id !== 'ats-drawer-host') return;
         var body = host.innerHTML;
         host.innerHTML =
             '<div class="ats-drawer-backdrop" data-drawer-backdrop>' +
-            '<div class="ats-drawer ats-drawer-in ats-scroll" role="dialog" aria-modal="true">' + body + '</div></div>';
+            '<div class="ats-drawer ats-drawer-in ats-scroll" role="dialog" aria-modal="true"' +
+            ' aria-labelledby="ats-drawer-title" tabindex="-1">' + body + '</div></div>';
+
+        // Move focus into the dialog: the close button if present, otherwise the panel itself.
+        var p = panel();
+        if (!p) return;
+        var closeBtn = p.querySelector('[data-drawer-close]');
+        (closeBtn || p).focus();
     });
 
     document.addEventListener('click', function (e) {
         if (e.target.closest('[data-drawer-close]') || e.target.hasAttribute('data-drawer-backdrop')) close();
     });
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+
+    document.addEventListener('keydown', function (e) {
+        if (!host.innerHTML) return;
+
+        if (e.key === 'Escape') { close(); return; }
+
+        // Trap Tab inside the dialog, which is what aria-modal="true" promises.
+        if (e.key !== 'Tab') return;
+        var items = focusables();
+        if (items.length === 0) { e.preventDefault(); return; }
+        var first = items[0];
+        var last = items[items.length - 1];
+        var p = panel();
+        var inside = p && p.contains(document.activeElement);
+
+        if (!inside) { e.preventDefault(); first.focus(); return; }
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
+
     document.addEventListener('ats:drawer-close', close);
 })();
 

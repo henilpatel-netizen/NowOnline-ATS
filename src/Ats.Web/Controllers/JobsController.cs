@@ -89,7 +89,7 @@ public class JobsController : Controller
     {
         var result = await _jobs.PublishAsync(id);
         if (result.Succeeded) await _audit.LogAsync("JobPublished", "Job", id.ToString(), $"Published job {id}");
-        TempData[result.Succeeded ? "Success" : "Error"] = result.Succeeded ? "Job published." : result.Error;
+        this.SetResultMessage(result, "Job published.");
         return RedirectToAction(nameof(Index));
     }
 
@@ -98,7 +98,7 @@ public class JobsController : Controller
     {
         var result = await _jobs.CloseAsync(id);
         if (result.Succeeded) await _audit.LogAsync("JobClosed", "Job", id.ToString(), $"Closed job {id}");
-        TempData[result.Succeeded ? "Success" : "Error"] = result.Succeeded ? "Job closed." : result.Error;
+        this.SetResultMessage(result, "Job closed.");
         return RedirectToAction(nameof(Index));
     }
 
@@ -107,7 +107,7 @@ public class JobsController : Controller
     {
         var result = await _jobs.DeleteAsync(id);
         if (result.Succeeded) await _audit.LogAsync("JobDeleted", "Job", id.ToString(), $"Deleted job {id}");
-        TempData[result.Succeeded ? "Success" : "Error"] = result.Succeeded ? "Job deleted." : result.Error;
+        this.SetResultMessage(result, "Job deleted.");
         return RedirectToAction(nameof(Index));
     }
 

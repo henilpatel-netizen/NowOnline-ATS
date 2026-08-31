@@ -134,3 +134,27 @@ strong, .fw-semibold, .fw-bold { font-weight: 500; }
   border-radius: var(--no-radius-pill);
   border: 3px solid var(--ats-bg);
 }
+
+/* Skip link (A11Y-5). Off-screen until focused, then pinned top-left above everything. Uses the
+   focus-ring token so it stays visible whatever accent a tenant picks. */
+.ats-skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 2200;
+  padding: .625rem 1rem;
+  background: var(--ats-surface);
+  color: var(--ats-ink);
+  border-radius: 0 0 var(--no-radius-md) 0;
+  box-shadow: var(--no-shadow-lg);
+  font-size: .875rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.ats-skip-link:focus,
+.ats-skip-link:focus-visible {
+  left: 0;
+  outline: 2px solid var(--ats-focus-ring);
+  outline-offset: 2px;
+}

@@ -37,6 +37,9 @@
    search, the candidate drawer and the board-move form filter their own responses for #ats-content
    and swap nothing. See Components/SidebarNav/Default.cshtml. *@
 <body>
+    @* Skip link: the sidebar is long, so keyboard users need a way past it on every page
+       (WCAG 2.4.1). Visually hidden until focused. *@
+    <a class="ats-skip-link" href="#ats-content">Skip to content</a>
     <div id="ats-nav-progress" class="ats-nav-progress" aria-hidden="true"><span></span></div>
     <div class="ats-shell">
         <vc:sidebar-nav></vc:sidebar-nav>

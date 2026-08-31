@@ -58,4 +58,86 @@ public class BrandColorTests
     {
         Assert.Null(BrandColor.Lighten("nonsense", 0.08));
     }
+
+    // ---- Contrast (A11Y-3) --------------------------------------------------------------------
+
+    [Fact]
+    public void Luminance_matches_the_WCAG_reference_points()
+    {
+        Assert.Equal(0d, BrandColor.RelativeLuminance("#000000")!.Value, 4);
+        Assert.Equal(1d, BrandColor.RelativeLuminance("#FFFFFF")!.Value, 4);
+    }
+
+    [Fact]
+    public void Contrast_of_black_on_white_is_21_to_1()
+    {
+        Assert.Equal(21d, BrandColor.ContrastRatio("#000000", "#FFFFFF")!.Value, 2);
+    }
+
+    [Fact]
+    public void Contrast_of_a_colour_with_itself_is_1_to_1()
+    {
+        Assert.Equal(1d, BrandColor.ContrastRatio("#0085CA", "#0085CA")!.Value, 4);
+    }
+
+    [Fact]
+    public void A_pale_accent_gets_dark_text()
+    {
+        // The failure this exists to prevent: white text on pale yellow.
+        Assert.Equal(BrandColor.OnAccentDark, BrandColor.OnAccent("#F5E663"));
+    }
+
+    [Fact]
+    public void A_dark_accent_gets_white_text()
+    {
+        Assert.Equal(BrandColor.OnAccentLight, BrandColor.OnAccent("#0C2340"));
+    }
+
+    [Fact]
+    public void The_default_accent_keeps_white_text()
+    {
+        // Guards the existing look: the NowOnline sky blue must not flip to dark ink.
+        Assert.Equal(BrandColor.OnAccentLight, BrandColor.OnAccent(BrandColor.DefaultAccent));
+    }
+
+    [Fact]
+    public void An_invalid_accent_falls_back_to_the_default_pairing()
+    {
+        Assert.Equal(BrandColor.OnAccent(BrandColor.DefaultAccent), BrandColor.OnAccent("not-a-colour"));
+    }
+
+    [Theory]
+    [InlineData("#FFFFFF")]   // white accent
+    [InlineData("#F5E663")]   // pale yellow
+    [InlineData("#0C2340")]   // near-black
+    public void The_paired_text_colour_always_reaches_AA(string accent)
+    {
+        var on = BrandColor.OnAccent(accent);
+        Assert.True(BrandColor.ContrastRatio(accent, on) >= 4.5,
+            $"{accent} on {on} = {BrandColor.ContrastRatio(accent, on)}");
+    }
+
+    [Fact]
+    public void Mid_tone_accents_are_reported_as_failing_AA()
+    {
+        // Mid greys cannot reach 4.5:1 against either black or white; the editor should warn.
+        Assert.False(BrandColor.MeetsAaText("#808080"));
+        // A clearly darker blue does pass, so the check is not simply always-false.
+        Assert.True(BrandColor.MeetsAaText("#00699E"));
+    }
+
+    [Fact]
+    public void The_default_accent_does_not_reach_AA_for_normal_text()
+    {
+        // Documents a real, pre-existing brand gap rather than hiding it: NowOnline Sky Blue with
+        // white text is 4.03:1. That satisfies AA for large/bold text and UI components (3:1) but
+        // NOT the 4.5:1 needed for normal text, and button labels are 14px. Darkening the accent
+        // by ~7% (#007CBC) would clear it, but changing the brand colour is a product decision, so
+        // the code reports the shortfall instead of silently altering the palette.
+        var ratio = BrandColor.BestTextContrast(BrandColor.DefaultAccent);
+        Assert.InRange(ratio, 4.0, 4.1);
+        Assert.False(BrandColor.MeetsAaText(BrandColor.DefaultAccent));
+        // It must still keep white text: dark ink on sky blue is worse (3.92:1).
+        Assert.Equal(BrandColor.OnAccentLight, BrandColor.OnAccent(BrandColor.DefaultAccent));
+    }
 }

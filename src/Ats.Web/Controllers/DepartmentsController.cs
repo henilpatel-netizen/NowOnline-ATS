@@ -57,7 +57,7 @@ public class DepartmentsController : Controller
     {
         var result = await _service.DeleteAsync(id);
         if (result.Succeeded) await _audit.LogAsync("DepartmentDeleted", "Department", id.ToString(), $"Deleted department {id}");
-        TempData[result.Succeeded ? "Success" : "Error"] = result.Succeeded ? "Department deleted." : result.Error;
+        this.SetResultMessage(result, "Department deleted.");
         return RedirectToAction(nameof(Index));
     }
 }

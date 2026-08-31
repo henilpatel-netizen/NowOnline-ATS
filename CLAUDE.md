@@ -81,6 +81,11 @@ four phases (`docs/plans/2026-07-30-ats-redesign-phase-{1..4}-*.md`).
   the scoped tenant context in the interceptor). Details: architecture skill.
 - **No server-side data cache by design** (freshness requirement). Read the phase-04 status note before
   adding one.
+- **`OperationResult` is in `Ats.Application.Common`**; one search path per screen (the `*ListQuery`
+  read models). `ITenantContext`/`ICurrentUser` are registered per host, never by Infrastructure, which
+  has no ASP.NET dependency. Details: architecture skill.
+- **Business rules need tests.** `tests/Ats.Tests` uses hand-rolled fakes (no database). Mutation-check
+  a new suite that passes first time.
 
 ## Documentation maintenance (MANDATORY, after each phase)
 1. Refresh the skill-index table below and any changed conventions.

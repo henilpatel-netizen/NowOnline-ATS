@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Ats.Application.Abstractions;
 using Ats.Infrastructure;
 using Ats.Infrastructure.Persistence;
 using Microsoft.AspNetCore.DataProtection;
@@ -28,6 +29,14 @@ builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(keyPath));
 
 builder.Services.AddAtsInfrastructure(builder.Configuration);
+
+// Host-owned tenant/user resolution (QUAL-6).
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ITenantContext, Ats.Web.Tenancy.HttpTenantContext>();
+builder.Services.AddScoped<ICurrentUser, Ats.Web.Identity.CurrentUser>();
+
+// Presentation read services, so controllers stay thin (QUAL-3).
+builder.Services.AddScoped<Ats.Web.ViewServices.IBoardViewService, Ats.Web.ViewServices.BoardViewService>();
 
 builder.Services.AddAuthentication("AtsCookie")
     .AddCookie("AtsCookie", o =>

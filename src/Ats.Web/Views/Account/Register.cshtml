@@ -2,7 +2,7 @@
 @{ ViewData["Title"] = "Create account"; }
 <h1 class="h4 mb-3 text-center">Create your company account</h1>
 <form asp-action="Register" method="post">
-    <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
+    <div asp-validation-summary="ModelOnly" role="alert" class="text-danger small mb-2"></div>
     <div class="mb-3">
         <label asp-for="CompanyName" class="form-label">Company name</label>
         <input asp-for="CompanyName" class="form-control" />
