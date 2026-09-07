@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const baseURL = process.env.ATS_BASE_URL ?? 'http://localhost:5092';
+// The app redirects http -> https, and the dev certificate is self-signed, so the suite talks
+// to the https origin directly and tolerates that certificate.
+const baseURL = process.env.ATS_BASE_URL ?? 'https://localhost:7044';
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -10,6 +12,7 @@ export default defineConfig({
   outputDir: 'artifacts/playwright-results',
   use: {
     baseURL,
+    ignoreHTTPSErrors: true,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -24,8 +27,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'dotnet run --project src/Ats.Web --launch-profile http',
+    command: 'dotnet run --project src/Ats.Web --launch-profile https',
     url: baseURL,
+    // The readiness probe needs this too, or it never sees the running app and tries to start a
+    // second one on a port that is already taken.
+    ignoreHTTPSErrors: true,
     reuseExistingServer: true,
     timeout: 180_000,
     stdout: 'pipe',

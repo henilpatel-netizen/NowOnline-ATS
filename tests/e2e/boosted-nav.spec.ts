@@ -106,3 +106,33 @@ test('keyboard: the skip link reaches the content area', async ({ page }) => {
   const focused = await page.evaluate(() => document.activeElement?.className ?? '');
   expect(focused, 'first tab stop should be the skip link').toContain('ats-skip-link');
 });
+
+test('the breadcrumb updates on a boosted navigation', async ({ page }) => {
+  // The top bar sits outside #ats-content, so it only stays correct because it is swapped
+  // out-of-band. Without that it silently keeps showing the page you came from.
+  await page.goto('/Jobs');
+  await page.waitForLoadState('networkidle');
+  await expect(page.locator('.ats-crumbs')).toContainText('Jobs');
+
+  await page.locator('#ats-sidebar a[href="/Audit"]').click();
+  await page.waitForURL(/\/Audit/);
+  await expect(page.locator('.ats-crumbs')).toContainText('Audit log');
+  await expect(page.locator('.ats-crumbs')).not.toContainText('Hiring');
+});
+
+test('a sub-page offers a breadcrumb link back to its section', async ({ page }) => {
+  await page.goto('/Jobs/Create');
+  await page.waitForLoadState('networkidle');
+
+  const back = page.locator('.ats-crumbs a').first();
+  await expect(back, 'a sub-page needs a way back that is not the browser button').toBeVisible();
+  await back.click();
+  await page.waitForURL(/\/Jobs$/);
+  await expect(page.locator('.ats-crumbs')).toContainText('Jobs');
+});
+
+test('a section index has no redundant breadcrumb link to itself', async ({ page }) => {
+  await page.goto('/Jobs');
+  await page.waitForLoadState('networkidle');
+  await expect(page.locator('.ats-crumbs a')).toHaveCount(0);
+});

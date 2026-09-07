@@ -179,6 +179,10 @@ Measured with `tests/e2e/nav-cost.spec.ts`: an in-content navigation went from *
    already be defined. Add a new shared library to `<head>`, never per-page.
 3. **Document title comes from `data-page-title` on `#ats-content`,** not from parsing the response:
    htmx replays cached DOM on Back/Forward with no HTTP response.
+   **Anything outside `#ats-content` that varies per page must be listed in `hx-select-oob`.**
+   Both boosted containers carry `hx-select-oob="#ats-sidebar,#ats-topbar"`. The top bar was missing
+   from that list, so the breadcrumb silently kept showing the page you came from on every boosted
+   navigation. If you add another per-page region outside the content area, add its id there too.
 4. **Confirmation uses `hx-confirm`, never `onsubmit="return confirm(...)"`.** A boosted submit is
    driven by htmx, which does not consult the native `onsubmit` return value, so a native confirm
    silently stops gating the action. All five destructive forms use `hx-confirm`.
@@ -187,6 +191,30 @@ Opt out with `hx-boost="false"` for anything whose response is not a back-office
 downloads; the sign-out form, whose response is the login page on `_AuthLayout`). `site.js` also
 falls back to a real navigation for any non-HTML response, any page lacking `#ats-content`, and any
 non-2xx or network error — so a boosted click can never silently do nothing.
+
+## Layout invariants (Phase 9) — enforced by `tests/e2e/layout-audit.spec.ts`
+- **The content area has no width cap.** It shares the top bar's `1.75rem` horizontal padding, so
+  a page's left edge lines up with the breadcrumb and the right gutter matches the left at any
+  width. Two earlier attempts were wrong and are worth not repeating: a bare `max-width: 1400px`
+  left-aligned everything (240px of dead space on the right at 1920px), and centring that cap then
+  pushed the content 106px out of line with the breadcrumb. Locked by four assertions in
+  `responsive.spec.ts` at 1280/1440/1920/2560px.
+- **A card inside a grid column fills that column** (`height: 100%`). Without it, a card whose
+  content wraps to an extra line ends lower than the card beside it and the pair reads as broken.
+  Do not add `align-items-start` to a `.row` of parallel cards; it defeats this.
+- **Any flex item holding wrapping text needs `min-width: 0`.** A flex item defaults to
+  `min-width: auto` and refuses to shrink below its longest word. This is what made the audit log
+  wrap one or two characters per line at 375px.
+- **Tenant-authored strings are rendered verbatim.** Stage names are user-editable, so they are
+  never lower-cased or humanised in a view; if a name reads badly, that is data for the tenant to
+  fix on the Pipelines page. Truncate with ellipsis and a `title`, never by letting text run under
+  a neighbour.
+- **A grid that cannot collapse scrolls in its own container** (`.table-responsive`), never the page.
+
+## Breadcrumbs (Phase 9)
+`TopBarViewComponent` maps controller -> (group, page). On any action other than `Index` it also
+emits a **link back to that section**, so a sub-page has a way out that is not the browser Back
+button. A section index emits no link to itself.
 
 ## Tables (Phase 5, UX-1)
 Column templates are CSS classes (`.ats-table--jobs`, `--candidates`, `--deliveries`, `--org`) applied

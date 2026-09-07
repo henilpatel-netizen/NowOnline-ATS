@@ -109,6 +109,10 @@
   --ats-on-dark-label: #8FA0B4;
   --ats-on-dark-danger: #FF7A96;
   --ats-topbar-height: 60px;
+  /* One horizontal gutter for the top bar AND the content area. They must stay equal or the page
+     heading falls out of line with the breadcrumb, so they share this token rather than each
+     carrying their own value. Narrow screens override it in ats-shell.css. */
+  --ats-gutter: 4.5rem;
 }
 
 /* ---- Bootstrap 5 variable overrides ----
@@ -241,6 +245,25 @@
 .form-select {
   --bs-border-radius: var(--no-radius-sm);
   font-weight: 300;
+  border-color: var(--ats-border);
+  min-height: 2.625rem;
+}
+
+/* The chevron is the only part of a <select> a page controls: the open option list is drawn by the
+   operating system and cannot be styled. Bootstrap ships a grey caret; this is the same shape in
+   brand ink. The colour is inlined because a data: URI cannot read a CSS custom property — keep it
+   in step with --ats-ink (#0C2340). */
+.form-select {
+  --bs-form-select-bg-img: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%230C2340' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+  background-size: 14px 11px;
+  padding-right: 2.5rem;
+}
+
+/* Renders the native option list in light mode regardless of the OS setting, so it does not appear
+   as a dark panel over a light page. */
+.form-select,
+.form-control {
+  color-scheme: light;
 }
 
 .form-control:focus,

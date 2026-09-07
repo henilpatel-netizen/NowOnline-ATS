@@ -89,3 +89,46 @@ text — `--ats-accent-text` darkens it to `#0071AC` (4.9:1).
 - Tenant 1 has 26 pipeline stages with `IsTerminal = 0`, so applications never reach Hired/Rejected
   and hire metrics never register. Configuration, not code.
 - Phase 2 remainder (SEC-2..9), Phase 7 (FEAT-1..7), PERF-4.
+
+---
+
+# Phase 9b — Layout and UX audit
+
+A diagnostic sweep (`tests/e2e/layout-audit.spec.ts`) measured clipped text, elements escaping
+their parent, uneven sibling cards, underfilled content, undersized tap targets and off-scale
+spacing across 15 routes at three viewports, backed by a screenshot sweep for what only eyes catch.
+
+## Fixed
+
+| # | Defect | Cause | Fix |
+|---|---|---|---|
+| 1 | ~240px dead space on the right of every page | `.ats-content > *` capped at 1400px but left-aligned | cap removed entirely; the content area shares the top bar's padding, so it fills the width, lines up with the breadcrumb and has matching gutters. Centring the cap was tried first and left the content 106px out of line with the breadcrumb at 1920px. Locked at 1280/1440/1920/2560px |
+| 2 | Dashboard KPI tiles 108/138/108/108px | card did not fill its grid column | `height: 100%` for cards in `.row > [col]` |
+| 3 | Organisation cards 120 vs 142px | as above, plus `align-items-start` | same rule; removed `align-items-start` |
+| 4 | Integration cards 513 vs 284px | as above | same |
+| 5 | Jobs list rendered `invitedforfirstinterview` | `.ToLowerInvariant()` on a tenant-authored stage name | removed; names render verbatim |
+| 6 | Dashboard bar labels ran under the bar (57-61px) | fixed 5.75rem label column | 7.5rem + ellipsis + `title` |
+| 8 | Audit log unusable at 375px (4763px tall, ~1 char per line) | inline fixed-width flex columns, no `min-width: 0` on the body | extracted to `.ats-audit-*` classes with a mobile stack; now 3505px and readable |
+| 9 | Pipelines/Create overflowed the viewport by 81px | raw six-column `<table>` | wrapped in `.table-responsive` |
+| — | **Breadcrumb never updated on a boosted navigation** | the top bar is outside `#ats-content` and was not in `hx-select-oob` | added `#ats-topbar` to the OOB list on both boosted containers |
+| — | **No way back from a sub-page** | breadcrumbs were plain `<span>`s, controller-level only | sub-pages now emit a link back to their section; index pages emit none |
+| — | breadcrumb link was a 30x20 target | bare text | `min-height: 24px` + padded hit area |
+
+Findings went from 1130 to 284. Of the remainder, 810 were a false positive in the audit itself
+(Material Symbols glyphs overflow their line box by 2px by design) and the heuristic now ignores
+them; `uneven-cards` went 6 -> 1 and `escapes-parent` 27 -> 6.
+
+## Deliberately not fixed
+
+- **Jobs/Create "escapes parent by 12px"** — that is Bootstrap's intended negative row gutter,
+  absorbed by the card's 22px padding. Not visible; "fixing" it would fight the grid.
+- **Stage names like `InvitedForFirstInterview`** — `PipelineStage.Name` is tenant-authored data.
+  Humanising it in a view would mangle legitimately-named stages. The tenant should rename these on
+  the Pipelines page; the same applies to the 26 stages with `IsTerminal = 0`.
+- **Off-scale spacing (180 occurrences of 22px/6px/9px)** and the remaining 23px row-link targets —
+  real but cosmetic, and a wide CSS sweep for little visible gain.
+
+## Still open
+
+Unchanged from Phase 9: **SEC-1 (Critical)**, the terminal-stage configuration gap, Phase 2
+remainder, Phase 7, PERF-4.

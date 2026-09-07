@@ -3,7 +3,11 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Ats.Web.ViewComponents;
 
-public record TopBarModel(string CrumbRoot, string CrumbLeaf, ShellSummary Summary);
+// ParentController is set only on a sub-page (anything that is not the section's Index), so the
+// breadcrumb offers a real way back instead of three unclickable words.
+public record TopBarModel(
+    string CrumbRoot, string CrumbLeaf, ShellSummary Summary,
+    string? ParentLabel = null, string? ParentController = null);
 
 public class TopBarViewComponent : ViewComponent
 {
@@ -30,12 +34,19 @@ public class TopBarViewComponent : ViewComponent
     public async Task<IViewComponentResult> InvokeAsync()
     {
         var controller = RouteData.Values["controller"]?.ToString() ?? "Dashboard";
-        var crumb = Crumbs.TryGetValue(controller, out var c) ? c : (Root: "Overview", Leaf: controller);
+        var action = RouteData.Values["action"]?.ToString() ?? "Index";
+        var known = Crumbs.TryGetValue(controller, out var c);
+        var crumb = known ? c : (Root: "Overview", Leaf: controller);
 
         // ViewData["Title"] is the most specific label available, so prefer it for the leaf.
         var title = ViewData["Title"] as string;
         var leaf = string.IsNullOrWhiteSpace(title) ? crumb.Leaf : title;
 
-        return View(new TopBarModel(crumb.Root, leaf, await _summary.GetAsync()));
+        // On a sub-page, name the section it belongs to and link back to it.
+        var onSubPage = known && !string.Equals(action, "Index", StringComparison.OrdinalIgnoreCase);
+        return View(new TopBarModel(
+            crumb.Root, leaf, await _summary.GetAsync(),
+            onSubPage ? crumb.Leaf : null,
+            onSubPage ? controller : null));
     }
 }

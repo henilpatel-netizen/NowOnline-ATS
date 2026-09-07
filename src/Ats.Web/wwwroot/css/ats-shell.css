@@ -1,4 +1,4 @@
-/* Back-office shell: sidebar, topbar, content, drawer host. Depends on ats-tokens.css.
+﻿/* Back-office shell: sidebar, topbar, content, drawer host. Depends on ats-tokens.css.
    The shell is a fixed-height flex row; only <main> scrolls. */
 
 .ats-shell {
@@ -200,7 +200,7 @@
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 0 1.75rem;
+  padding: 0 var(--ats-gutter);
 }
 
 .ats-crumbs {
@@ -267,9 +267,12 @@
   border: 1.5px solid var(--ats-surface);
 }
 
-.ats-content { flex: 1; overflow: auto; padding: 1.75rem 1.75rem 3.5rem; }
+.ats-content { flex: 1; overflow: auto; padding: 1.75rem var(--ats-gutter) 3.5rem; }
 
-.ats-content > * { max-width: 1400px; }
+/* No width cap. The content area shares the top bar's --ats-gutter, so a page's
+   left edge lines up with the breadcrumb and the right gutter matches the left at any width.
+   A 1400px cap was tried first: it left-aligned everything (240px of dead space on the right at
+   1920px), and centring it then pushed the content 106px out of line with the breadcrumb. */
 
 .ats-pagehead {
   display: flex;
@@ -334,10 +337,13 @@
   .ats-tenant-chip { width: auto; flex: 1 1 12rem; }
   .ats-sidebar-user { border-top: 0; padding-top: 0; }
 
-  .ats-topbar { height: auto; flex: none; flex-wrap: wrap; padding: .75rem 1rem; }
+  /* Overriding the token keeps the top bar and the content in step at narrow widths too. */
+  :root { --ats-gutter: 1rem; }
+
+  .ats-topbar { height: auto; flex: none; flex-wrap: wrap; padding: .75rem var(--ats-gutter); }
   .ats-topbar-search { width: 100%; order: 3; margin-left: 0; }
 
-  .ats-content { padding: 1rem 1rem 3rem; }
+  .ats-content { padding: 1rem var(--ats-gutter) 3rem; }
   .ats-drawer { width: 100%; }
 }
 
@@ -382,3 +388,16 @@
 @media (prefers-reduced-motion: reduce) {
   .ats-nav-progress.htmx-request > span { animation: none; width: 90%; }
 }
+
+/* The breadcrumb parent is the way back out of a sub-page, so it needs a target big enough to hit
+   (WCAG 2.2 minimum is 24x24); as bare text it was 30x20. */
+.ats-crumbs a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding-inline: .25rem;
+  margin-inline: -.25rem;
+  border-radius: var(--no-radius-sm, 4px);
+}
+
+.ats-crumbs a:hover { background: var(--ats-bg); }

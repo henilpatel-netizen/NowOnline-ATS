@@ -1,4 +1,4 @@
-@model Ats.Web.Models.JobEditViewModel
+﻿@model Ats.Web.Models.JobEditViewModel
 @using Ats.Domain.Enums
 @{ ViewData["Title"] = Model.Id is null ? "New job" : "Edit job"; }
 <form asp-action="@(Model.Id is null ? "Create" : "Edit")" method="post" class="col-lg-8">
@@ -34,6 +34,8 @@
             <span asp-validation-for="PipelineTemplateId" class="text-danger small"></span>
         </div>
     </div>
-    <button type="submit" class="btn btn-primary">Save</button>
-    <a class="btn btn-link" asp-action="Index">Cancel</a>
+    <div class="d-flex align-items-center gap-2 border-top pt-3">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a>
+    </div>
 </form>

@@ -1,4 +1,4 @@
-@model Ats.Application.Dashboard.DashboardSummary
+﻿@model Ats.Application.Dashboard.DashboardSummary
 @using Ats.Web.Models.Shared
 @using Ats.Domain.Enums
 @{
@@ -38,7 +38,7 @@
                     {
                         var s = Model.ByStage[i];
                         <div class="ats-pipebar-row">
-                            <span class="ats-pipebar-row-label">@s.Stage</span>
+                            <span class="ats-pipebar-row-label" title="@s.Stage">@s.Stage</span>
                             <span class="ats-pipebar-row-track"><span class="ats-pipebar-row-fill" style="width:@(s.Count * 100 / maxStage)%;background:@ramp[i % ramp.Length]"></span></span>
                             <span class="ats-pipebar-row-count">@s.Count</span>
                         </div>

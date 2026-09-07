@@ -48,3 +48,33 @@ test('the sidebar stacks above the content on mobile instead of overlapping it',
     sidebar!.y + sidebar!.height - 1
   );
 });
+
+// The content area and the top bar share one horizontal padding, so a page's left edge must line
+// up with the breadcrumb and its right gutter must match its left at any width. A width cap broke
+// both: left-aligned it wasted the right-hand side, centred it fell out of line with the crumb.
+for (const width of [1280, 1440, 1920, 2560]) {
+  test(`@${width}px: content aligns with the breadcrumb and both gutters match`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+
+    const crumb = await page.locator('.ats-crumbs').boundingBox();
+    const head = await page.locator('.ats-pagehead').boundingBox();
+    const main = await page.locator('#ats-content').boundingBox();
+    expect(crumb).not.toBeNull();
+    expect(head).not.toBeNull();
+    expect(main).not.toBeNull();
+
+    expect(
+      Math.abs(head!.x - crumb!.x),
+      `page heading starts ${Math.round(head!.x - crumb!.x)}px from the breadcrumb`
+    ).toBeLessThanOrEqual(2);
+
+    const leftGutter = head!.x - main!.x;
+    const rightGutter = main!.x + main!.width - (head!.x + head!.width);
+    expect(
+      Math.abs(leftGutter - rightGutter),
+      `gutters differ: ${Math.round(leftGutter)}px left vs ${Math.round(rightGutter)}px right`
+    ).toBeLessThanOrEqual(2);
+  });
+}

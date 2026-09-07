@@ -1,4 +1,4 @@
-/* Reusable component classes. Depends on ats-tokens.css and ats-base.css.
+﻿/* Reusable component classes. Depends on ats-tokens.css and ats-base.css.
    Every class here is consumed by a partial in Views/Shared/Partials or a screen view.
    Sizes and colours are ported from the redesign prototype. */
 
@@ -11,6 +11,12 @@
   padding: 1.375rem;
   box-shadow: var(--no-shadow-xs);
 }
+
+/* A card is as tall as its column. Without this, a card whose content happens to wrap ends lower
+   than the card beside it and the pair reads as misaligned rather than as different content. */
+.row > [class*="col-"] > .ats-card,
+.row > [class*="col-"] > .ats-card-flush,
+.row > [class*="col-"] > .ats-card-dark { height: 100%; }
 
 .ats-card-flush {
   background: var(--ats-surface);
@@ -173,8 +179,12 @@
 .ats-pipebar-row { display: flex; align-items: center; gap: .875rem; }
 
 .ats-pipebar-row-label {
-  width: 5.75rem;
-  flex: 0 0 5.75rem;
+  width: 7.5rem;
+  flex: 0 0 7.5rem;
+  /* Stage names are tenant-authored and can be long; without this they ran under the bar. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: .8125rem;
   font-weight: 300;
   color: var(--ats-ink-muted);
@@ -861,4 +871,40 @@
   outline: 2px solid var(--ats-focus-ring);
   outline-offset: 2px;
   border-radius: var(--no-radius-sm);
+}
+
+/* Audit log rows. Previously inline styles with fixed-width columns and no min-width:0 on the
+   body, so at 375px the summary wrapped one or two characters per line. */
+.ats-audit-row {
+  display: flex;
+  gap: .75rem;
+  padding: .75rem 0;
+  border-bottom: 1px solid var(--ats-border-subtle);
+}
+
+.ats-audit-time { width: 6.25rem; flex: 0 0 6.25rem; padding-top: .2rem; }
+
+.ats-audit-icon {
+  width: 2.125rem;
+  height: 2.125rem;
+  flex: 0 0 2.125rem;
+  padding: 0;
+  justify-content: center;
+  border-radius: var(--no-radius-pill);
+}
+
+/* min-width:0 is the fix: a flex item defaults to min-width:auto and refuses to shrink below its
+   longest word, which is what forced the per-character wrapping. */
+.ats-audit-body { flex: 1 1 auto; min-width: 0; }
+.ats-audit-body strong { font-weight: 500; }
+
+.ats-audit-action { height: fit-content; white-space: nowrap; }
+
+@media (max-width: 767.98px) {
+  /* Stack: timestamp and action on the first line, the entry itself on the next. */
+  .ats-audit-row { flex-wrap: wrap; row-gap: .375rem; }
+  .ats-audit-time { order: 1; width: auto; flex: 0 0 auto; padding-top: 0; }
+  .ats-audit-action { order: 2; margin-left: auto; }
+  .ats-audit-icon { order: 3; }
+  .ats-audit-body { order: 4; flex: 1 1 60%; }
 }

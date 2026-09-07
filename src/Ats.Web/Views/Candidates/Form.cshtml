@@ -1,4 +1,4 @@
-@model Ats.Web.Models.CandidateViewModel
+﻿@model Ats.Web.Models.CandidateViewModel
 @{ ViewData["Title"] = Model.Id == 0 ? "New candidate" : "Edit candidate"; }
 <form asp-action="@(Model.Id == 0 ? "Create" : "Edit")" method="post" class="col-md-6">
     <div asp-validation-summary="All" role="alert" class="text-danger small mb-2"></div>
@@ -11,6 +11,8 @@
         <input asp-for="Email" class="form-control" /><span asp-validation-for="Email" class="text-danger small"></span></div>
     <div class="mb-3"><label asp-for="Phone" class="form-label">Phone</label>
         <input asp-for="Phone" class="form-control" /><span asp-validation-for="Phone" class="text-danger small"></span></div>
-    <button type="submit" class="btn btn-primary">Save</button>
-    <a class="btn btn-link" asp-action="Index">Cancel</a>
+    <div class="d-flex align-items-center gap-2 border-top pt-3">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a>
+    </div>
 </form>

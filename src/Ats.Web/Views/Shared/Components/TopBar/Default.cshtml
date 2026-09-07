@@ -1,8 +1,13 @@
-@model Ats.Web.ViewComponents.TopBarModel
-<header class="ats-topbar">
+﻿@model Ats.Web.ViewComponents.TopBarModel
+<header id="ats-topbar" class="ats-topbar">
     <div class="ats-crumbs">
         <span>@Model.CrumbRoot</span>
         <span class="ats-crumbs-sep">·</span>
+        @if (Model.ParentController is not null)
+        {
+            <a asp-controller="@Model.ParentController" asp-action="Index">@Model.ParentLabel</a>
+            <span class="ats-crumbs-sep">·</span>
+        }
         <span class="ats-crumbs-leaf">@Model.CrumbLeaf</span>
     </div>
 
