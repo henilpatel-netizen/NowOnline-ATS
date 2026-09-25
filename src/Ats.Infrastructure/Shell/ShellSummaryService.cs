@@ -1,4 +1,5 @@
 using Ats.Application.Abstractions;
+using Ats.Application.Integration;
 using Ats.Application.Shell;
 using Ats.Domain.Enums;
 using Ats.Infrastructure.Persistence;
@@ -48,6 +49,19 @@ public sealed class ShellSummaryService : IShellSummaryService
         var staleDrafts = await _db.Jobs
             .CountAsync(j => j.Status == JobStatus.Draft && j.CreatedAt < draftBefore, ct);
 
-        return _cached = new ShellSummary(openJobs, candidates, failed, idle, staleDrafts);
+        var settings = await _db.TenantSettings.AsNoTracking().FirstOrDefaultAsync(ct);
+        var blocked = settings is { IntegrationEnabled: true }
+            && ReferralToolRules.BlockedReason(settings, await LatestDeliveryStatusAsync(_db, ct)) is not null;
+
+        return _cached = new ShellSummary(openJobs, candidates, failed, idle, staleDrafts, blocked);
     }
+
+    // Served by IX_WebhookDeliveries_TenantId_Id: one index seek however long the delivery log grows.
+    // Null rows are skipped: an in-flight (or crashed) pre-send intent row would otherwise hide a 401.
+    internal static Task<int?> LatestDeliveryStatusAsync(AtsDbContext db, CancellationToken ct) =>
+        db.WebhookDeliveries
+            .Where(d => d.HttpStatus != null)
+            .OrderByDescending(d => d.Id)
+            .Select(d => d.HttpStatus)
+            .FirstOrDefaultAsync(ct);
 }

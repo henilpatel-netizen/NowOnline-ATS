@@ -88,7 +88,15 @@ mirror on any password-set path (ties to FEAT-1 reset).
 
 ---
 
-### [ ] SEC-6 · Validate ReferralTool base URL — Priority: Medium · Effort: S
+### [x] SEC-6 · Validate ReferralTool base URL — Priority: Medium · Effort: S
+**Done (2026-09-25, first `/ats-ship` pilot; awaiting developer review).**
+- `ReferralToolBaseUrl.Validate` (Application, pure): blank = not configured; otherwise absolute `https://`
+  only, and literal localhost / private / loopback / link-local / unique-local hosts (incl. IPv4-mapped) rejected.
+- `IIntegrationSettingsService.UpdateAsync` returns `OperationResult`; validates before loading. Controller
+  uses `SetResultMessage`; audit entry written only on success. Optional domain allowlist skipped.
+- Tests: `ReferralToolBaseUrlTests` (38). Known ceilings, not fixed: no DNS resolution (a public name that
+  resolves to a private IP passes; fix with a `ConnectCallback` IP check on the typed client), and URLs saved
+  before this change are not re-validated by `ReferralToolClient`.
 **Files:** `src/Ats.Infrastructure/Integration/IntegrationSettingsService.cs:23`,
 `.../Integration/ReferralToolClient.cs` (uses the URL verbatim).
 **Problem:** An `http://` value sends the API key/token in cleartext; an internal/loopback URL is a

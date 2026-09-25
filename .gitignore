@@ -374,3 +374,8 @@ tests/e2e/.auth/
 artifacts/
 test-results/
 playwright-report/
+
+# Claude Code (subagent worktrees, agent memory, personal settings)
+.claude/worktrees/
+.claude/agent-memory/
+.claude/settings.local.json

@@ -7,11 +7,12 @@ public sealed record ShellSummary(
     int Candidates,
     int FailedDeliveries,
     int IdleApplications,
-    int StaleDrafts)
+    int StaleDrafts,
+    bool IntegrationBlocked)
 {
-    public int AttentionCount => FailedDeliveries + IdleApplications + StaleDrafts;
+    public int AttentionCount => FailedDeliveries + IdleApplications + StaleDrafts + (IntegrationBlocked ? 1 : 0);
     public bool HasAttention => AttentionCount > 0;
-    public bool IntegrationUnhealthy => FailedDeliveries > 0;
+    public bool IntegrationUnhealthy => FailedDeliveries > 0 || IntegrationBlocked;
 
-    public static ShellSummary Empty { get; } = new(0, 0, 0, 0, 0);
+    public static ShellSummary Empty { get; } = new(0, 0, 0, 0, 0, false);
 }

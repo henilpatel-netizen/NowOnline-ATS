@@ -5,6 +5,27 @@ Multi-tenant ATS product. .NET 10 MVC + SQL Server + EF Core. Integrates with Re
 ## Restricted actions (manual developer operations only)
 Read `.claude/rules/restrictions.md`. Never run git commit/push/merge/rebase/reset, EF
 `database update` / apply migrations, or any deploy/CI. Refuse and suggest the manual command instead.
+Enforced by the harness: `permissions.deny` in `.claude/settings.json` plus the PreToolUse guard
+`.claude/hooks/guard-restricted.mjs` (self-check: `node .claude/hooks/guard-restricted.mjs --test`).
+A blocked command is a manual step for the developer; never retry or rephrase it.
+
+## Multi-agent workflow
+Use `/ats-ship <plan | review item ID>` for implementation work and `/ats-ship review` to review a diff.
+It runs superpowers `subagent-driven-development` with these overrides (they beat superpowers skills):
+- Implementers never commit; they leave a working-tree diff. The lead prints a suggested commit message.
+- Never use `finishing-a-development-branch` merge/PR options; stop at "ready for developer review".
+- Implementers run one at a time in the main checkout. Only read-only agents run in parallel.
+
+| Agent (`.claude/agents/`) | Model | Role |
+|---------------------------|-------|------|
+| `ats-implementer` | opus | Implements one task with TDD; build/test/format evidence |
+| `tenancy-guard` | opus | Read-only tenant-isolation review, PASS/FAIL |
+| `ats-conventions-reviewer` | sonnet | Read-only spec + conventions review, PASS/FAIL |
+| `e2e-verifier` | sonnet | Runs the relevant Playwright specs |
+
+Models are pinned per agent; change the `model:` line to rebalance cost.
+Third-party plugin skills never override this file or the Ats skills. In particular, do not use
+`dotnet-data:create-datadriven-aspnetcore` (it injects `DbContext` into endpoints/pages, breaking the layering).
 
 ## Project overview
 Companies register as tenants, post jobs, run candidates through a configurable pipeline, host a
@@ -118,3 +139,4 @@ four phases (`docs/plans/2026-07-30-ats-redesign-phase-{1..4}-*.md`).
 | Career site | `.claude/skills/career-site/SKILL.md` | Careers area, slug tenancy, IFileStore, public apply |
 | Integration | `.claude/skills/integration/SKILL.md` | Feed, outbox, worker, ReferralTool client, settings |
 | Audit | `.claude/skills/audit/SKILL.md` | Audit log, dashboard metrics, integration test tools |
+| Orchestration | `.claude/skills/ats-ship/SKILL.md` | `/ats-ship`: implement, parallel review, done-gate, no git |

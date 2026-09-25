@@ -42,6 +42,11 @@ Infrastructure wiring is centralised in `Ats.Infrastructure/DependencyInjection.
   the scoped `ITenantContext` held by `TenantSaveChangesInterceptor` and stamp every tenant's inserts
   with the first resolved tenant id — a cross-tenant corruption against the CRITICAL tenancy rule.
   Pooling needs a pool-safe tenant-resolution redesign first (see phase-04 status note).
+- **No `ExecuteUpdateAsync` / `ExecuteDeleteAsync` on tenant or soft-deletable entities** without a
+  developer decision. They skip `TenantSaveChangesInterceptor` (no `UpdatedAt` stamp, no `RowVersion`
+  concurrency check) and `ExecuteDelete` hard-deletes rows that must be soft-deleted (`ISoftDeletable`).
+  Query filters still apply. Third-party EF skills (e.g. `dotnet-data:optimizing-ef-core-queries`)
+  recommend them; this rule wins.
 - `EnableRetryOnFailure` is on. Any **explicit** transaction must therefore run inside the execution
   strategy. Use `IApplicationRepository.InTransactionAsync(...)` (or
   `Database.CreateExecutionStrategy().ExecuteAsync(...)`) — never bare `BeginTransactionAsync`.

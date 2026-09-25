@@ -27,25 +27,40 @@ public sealed class OutboxDrainer : BackgroundService
                     claims = await store.ClaimDueAsync(_opts.BatchSize, DateTimeOffset.UtcNow, stoppingToken);
                 }
 
-                // Per-application ordering: process each application's messages oldest-first and stop
-                // the chain on the first non-delivered outcome so message N+1 never precedes N.
-                foreach (var group in claims.GroupBy(c => (c.TenantId, c.ApplicationId)))
-                {
-                    foreach (var claim in group.OrderBy(c => c.Id))
+                await OutboxBatch.RunAsync(claims,
+                    async claim =>
                     {
                         using var ms = _services.CreateScope();
-                        var processor = ms.ServiceProvider.GetRequiredService<IOutboxProcessor>();
-                        var outcome = await processor.ProcessAsync(claim, stoppingToken);
-                        if (outcome != OutboxOutcome.Delivered) break;
-                    }
-                }
+                        return await ms.ServiceProvider.GetRequiredService<IOutboxProcessor>().ProcessAsync(claim, stoppingToken);
+                    },
+                    (claim, ex) => RecordFailureAsync(claim, ex, stoppingToken),
+                    () => DateTimeOffset.UtcNow,
+                    stoppingToken);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (!(ex is OperationCanceledException && stoppingToken.IsCancellationRequested))
             {
                 _logger.LogError(ex, "Outbox drain cycle failed");
             }
 
             await Task.Delay(TimeSpan.FromSeconds(_opts.PollSeconds), stoppingToken);
+        }
+    }
+
+    private async Task RecordFailureAsync(OutboxClaim claim, Exception ex, CancellationToken stoppingToken)
+    {
+        _logger.LogError(ex, "Outbox message {MessageId} for tenant {TenantId} failed", claim.Id, claim.TenantId);
+        try
+        {
+            using var scope = _services.CreateScope();
+            // The exception text stays in the log: LastError is shown to the tenant's owner.
+            await scope.ServiceProvider.GetRequiredService<IOutboxProcessor>().RecordFailureAsync(
+                claim, $"Processing failed ({ex.GetType().Name}); see the worker log.", stoppingToken);
+        }
+        catch (Exception recordEx) when (!(recordEx is OperationCanceledException && stoppingToken.IsCancellationRequested))
+        {
+            _logger.LogError(recordEx,
+                "Could not record the failure of outbox message {MessageId} for tenant {TenantId}; the claim lease will return it",
+                claim.Id, claim.TenantId);
         }
     }
 }

@@ -22,68 +22,101 @@ public sealed class OutboxProcessor : IOutboxProcessor
 
     public async Task<OutboxOutcome> ProcessAsync(OutboxClaim claim, CancellationToken ct = default)
     {
-        _tenant.CurrentTenantId = claim.TenantId; // scope everything below to this tenant
-
-        var msg = await _db.OutboxMessages.FirstOrDefaultAsync(m => m.Id == claim.Id, ct);
-        // Processing = claimed by this worker (atomic claim). Pending is tolerated for safety.
-        if (msg is null || (msg.Status != OutboxStatus.Processing && msg.Status != OutboxStatus.Pending))
+        var msg = await LoadClaimedAsync(claim, ct);
+        if (msg is null)
             return OutboxOutcome.Skip;
 
         var s = await _db.TenantSettings.FirstOrDefaultAsync(ct);
-        if (s is null || !s.IntegrationEnabled || s.ReferralToolCustomerId is null
-            || string.IsNullOrWhiteSpace(s.ReferralToolBaseUrl)
-            || string.IsNullOrWhiteSpace(s.ReferralToolApiKey)
-            || string.IsNullOrWhiteSpace(s.ReferralToolAuthToken))
-        {
-            return await DeferAsync(msg, "Integration settings incomplete or disabled.", ct);
-        }
+        if (ReferralToolRules.SettingsProblem(s) is { } problem)
+            return await PostponeAsync(msg, problem, ct);
 
         var settings = new ReferralToolSettings(
-            s.ReferralToolBaseUrl!, s.ReferralToolApiKey!, s.ReferralToolAuthToken!, s.ReferralToolCustomerId.Value);
+            s!.ReferralToolBaseUrl!, s.ReferralToolApiKey!, s.ReferralToolAuthToken!, s.ReferralToolCustomerId!.Value);
 
         // Pre-flight: only send once ReferralTool has imported the vacancy.
         var (check, exists) = await _client.CheckVacancyExistsAsync(settings, msg.ExternalVacancyId, ct);
-        Log(msg.Id, DeliveryKind.CheckVacancy, check, exists);
+        Record(Log(msg.Id, DeliveryKind.CheckVacancy), check, exists == true);
+        if (check.Reached && ReferralToolRules.IsCredentialRejection(check.HttpStatus))
+            return await PostponeAsync(msg, CredentialsRejected(check.HttpStatus), ct);
         if (!check.Reached || check.HttpStatus is < 200 or >= 300)
             return await DeferAsync(msg, $"Vacancy check failed ({check.HttpStatus}).", ct);
-        if (!exists)
+        if (exists is null)
+            return await DeferAsync(msg, "Vacancy check returned an unreadable response.", ct);
+        if (exists == false)
             return await DeferAsync(msg, "Vacancy not imported yet.", ct);
 
-        // Did we already POST this exact event on an earlier attempt? If so, this message must have
-        // been transient before (a 2xx would have marked it Delivered; a first-time 4xx, Failed —
-        // neither re-processes). The payload is a frozen snapshot, so any validation-type 4xx is
-        // deterministic and would have shown on the first attempt. Therefore a 4xx that appears only
-        // now is ReferralTool's duplicate guard rejecting our re-send of an event it already recorded.
-        var hadPriorStatusAttempt = await _db.WebhookDeliveries
-            .AnyAsync(d => d.OutboxMessageId == msg.Id && d.Kind == DeliveryKind.StatusUpdate, ct);
+        // Read before this attempt's row exists, so it only sees earlier sends of this message.
+        var hadPossiblyProcessedAttempt = await _db.WebhookDeliveries
+            .Where(d => d.OutboxMessageId == msg.Id && d.Kind == DeliveryKind.StatusUpdate)
+            .AnyAsync(ReferralToolRules.MayHaveBeenProcessed, ct);
+
+        // Record the attempt before sending and fill in the reply after, both before the message is
+        // touched (it is unmodified here, so these saves write only attempt rows). If the worker dies
+        // or a later save fails after ReferralTool accepted the update, the row is on file and the
+        // re-send is recognised as a duplicate, not a failure. Not cancellable once the send is
+        // committed to: a stopping worker must not leave a call unrecorded.
+        var attempt = Log(msg.Id, DeliveryKind.StatusUpdate);
+        attempt.ResponseBody = "Sending; no reply recorded.";
+        await _db.SaveChangesAsync(CancellationToken.None);
 
         var send = await _client.SendStatusUpdateAsync(settings,
             new StatusUpdateRequest(settings.CustomerId, msg.Code, msg.ExternalVacancyId, msg.ExternalCandidateId, msg.CandidateStatus), ct);
 
-        var is2xx = send.HttpStatus is >= 200 and < 300;
-        var is4xx = send.Reached && send.HttpStatus is >= 400 and < 500;
-        // Idempotent re-delivery: the contract forbids an idempotency-key field (frozen payload), so we
-        // dedupe on our side. A duplicate-guard 4xx after a prior attempt means ReferralTool has it.
-        var idempotentDuplicate = is4xx && hadPriorStatusAttempt;
-        Log(msg.Id, DeliveryKind.StatusUpdate, send, is2xx || idempotentDuplicate);
+        var outcome = ReferralToolRules.ClassifyStatusUpdate(send.Reached, send.HttpStatus, hadPossiblyProcessedAttempt);
+        Record(attempt, send, outcome == OutboxOutcome.Delivered);
+        await _db.SaveChangesAsync(CancellationToken.None);
 
-        if (!send.Reached || send.HttpStatus >= 500)
+        if (outcome == OutboxOutcome.Postpone)
+            return await PostponeAsync(msg, CredentialsRejected(send.HttpStatus), CancellationToken.None);
+
+        if (outcome == OutboxOutcome.Transient)
             return await DeferAsync(msg, $"Transient send failure ({send.HttpStatus}).", ct);
 
-        if (is2xx || idempotentDuplicate)
+        if (outcome == OutboxOutcome.Delivered)
         {
             msg.Status = OutboxStatus.Delivered;
             msg.LastError = null;
-            await _db.SaveChangesAsync(ct);
+            await _db.SaveChangesAsync(CancellationToken.None);
             return OutboxOutcome.Delivered;
         }
 
-        // First-time 4xx: terminal (unmapped status, bad code, validation).
+        // 4xx with no earlier attempt ReferralTool may have recorded: terminal (unmapped status, bad
+        // code, validation).
         msg.Status = OutboxStatus.Failed;
         msg.LastError = Trunc($"{send.HttpStatus}: {send.Body}", 1000);
-        await _db.SaveChangesAsync(ct);
+        await _db.SaveChangesAsync(CancellationToken.None);
         return OutboxOutcome.Failed;
     }
+
+    public async Task RecordFailureAsync(OutboxClaim claim, string error, CancellationToken ct = default)
+    {
+        var msg = await LoadClaimedAsync(claim, ct);
+        if (msg is not null)
+            await DeferAsync(msg, error, ct);
+    }
+
+    private async Task<OutboxMessage?> LoadClaimedAsync(OutboxClaim claim, CancellationToken ct)
+    {
+        _tenant.CurrentTenantId = claim.TenantId; // scope everything below to this tenant
+
+        var msg = await _db.OutboxMessages.FirstOrDefaultAsync(m => m.Id == claim.Id, ct);
+        // Only a row still carrying our lease is ours; anything else was released or reclaimed.
+        return msg is not null && claim.IsOwnedBy(msg.Status, msg.NextAttemptAt) ? msg : null;
+    }
+
+    // Settings the owner can fix (paused, incomplete, invalid URL, rejected credentials): wait without
+    // spending an attempt, so queued messages survive and go out once the settings are usable again.
+    private async Task<OutboxOutcome> PostponeAsync(OutboxMessage msg, string reason, CancellationToken ct)
+    {
+        msg.LastError = Trunc(reason, 1000);
+        msg.Status = OutboxStatus.Pending;
+        msg.NextAttemptAt = DateTimeOffset.UtcNow.AddSeconds(_opts.MaxBackoffSeconds);
+        await _db.SaveChangesAsync(ct);
+        return OutboxOutcome.Postpone;
+    }
+
+    private static string CredentialsRejected(int httpStatus) =>
+        $"ReferralTool rejected the credentials (HTTP {httpStatus}); check the X-Api-Key and X-Auth-Token.";
 
     private async Task<OutboxOutcome> DeferAsync(OutboxMessage msg, string error, CancellationToken ct)
     {
@@ -103,19 +136,21 @@ public sealed class OutboxProcessor : IOutboxProcessor
         return OutboxOutcome.Transient;
     }
 
-    // Stages the attempt row only. Every exit path below ends in exactly one SaveChanges, so a
-    // message costs one database round-trip instead of one per attempt log plus one per status change.
-    private void Log(int outboxMessageId, DeliveryKind kind, ReferralCallResult result, bool success)
+    // Stages the attempt row only; the caller's next SaveChanges writes it. A message that reaches the
+    // status update costs three round-trips (attempt before send, reply after, then status); earlier
+    // exits cost one.
+    private WebhookDelivery Log(int outboxMessageId, DeliveryKind kind)
     {
-        _db.WebhookDeliveries.Add(new WebhookDelivery
-        {
-            OutboxMessageId = outboxMessageId,
-            Kind = kind,
-            AttemptedAt = DateTimeOffset.UtcNow,
-            HttpStatus = result.Reached ? result.HttpStatus : null,
-            ResponseBody = Trunc(result.Body, 2000),
-            Success = success
-        });
+        var row = new WebhookDelivery { OutboxMessageId = outboxMessageId, Kind = kind, AttemptedAt = DateTimeOffset.UtcNow };
+        _db.WebhookDeliveries.Add(row);
+        return row;
+    }
+
+    private static void Record(WebhookDelivery row, ReferralCallResult result, bool success)
+    {
+        row.HttpStatus = ReferralToolRules.RecordedStatus(result);
+        row.ResponseBody = Trunc(result.Body, 2000);
+        row.Success = success;
     }
 
     private static string? Trunc(string? value, int max) =>

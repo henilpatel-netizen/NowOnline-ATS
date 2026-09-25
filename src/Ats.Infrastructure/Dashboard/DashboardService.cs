@@ -1,8 +1,10 @@
 using Ats.Application.Common;
 using Ats.Application.Dashboard;
+using Ats.Application.Integration;
 using Ats.Domain.Entities;
 using Ats.Domain.Enums;
 using Ats.Infrastructure.Persistence;
+using Ats.Infrastructure.Shell;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ats.Infrastructure.Dashboard;
@@ -94,6 +96,11 @@ public sealed class DashboardService : IDashboardService
 
         // Integration health.
         var settings = await _db.TenantSettings.FirstOrDefaultAsync(ct);
+        var blockedReason = settings is { IntegrationEnabled: true }
+            ? ReferralToolRules.BlockedReason(settings, await ShellSummaryService.LatestDeliveryStatusAsync(_db, ct))
+            : null;
+        if (blockedReason is not null)
+            attention.Insert(0, new AttentionItem("sync_disabled", "danger", "ReferralTool integration is blocked", blockedReason, "/Integration"));
         var delivered = OutboxCount(OutboxStatus.Delivered);
         // Processing = claimed by a worker and in flight; still "pending" from the user's point of view.
         var pending = OutboxCount(OutboxStatus.Pending) + OutboxCount(OutboxStatus.Processing);

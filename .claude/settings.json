@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "deny": [
+      "Bash(git commit *)", "Bash(git push *)", "Bash(git pull *)", "Bash(git fetch *)",
+      "Bash(git merge *)", "Bash(git rebase *)", "Bash(git reset *)", "Bash(git revert *)",
+      "Bash(git stash *)", "Bash(git tag *)", "Bash(git cherry-pick *)",
+      "Bash(git restore *)", "Bash(git clean *)", "Bash(git checkout -- *)", "Bash(git checkout .)",
+      "Bash(git branch -d *)", "Bash(git branch -D *)", "Bash(git checkout -b *)", "Bash(git switch -c *)",
+      "Bash(dotnet ef database *)", "Bash(dotnet ef migrations remove *)", "Bash(dotnet publish *)",
+      "Bash(az *)", "Bash(azd *)", "Bash(docker *)", "Bash(kubectl *)", "Bash(helm *)", "Bash(sqlcmd *)",
+      "Bash(gh workflow run *)", "Bash(gh run rerun *)", "Bash(gh pr merge *)",
+      "PowerShell(git commit *)", "PowerShell(git push *)", "PowerShell(git pull *)", "PowerShell(git fetch *)",
+      "PowerShell(git merge *)", "PowerShell(git rebase *)", "PowerShell(git reset *)", "PowerShell(git revert *)",
+      "PowerShell(git stash *)", "PowerShell(git tag *)", "PowerShell(git cherry-pick *)",
+      "PowerShell(git restore *)", "PowerShell(git clean *)", "PowerShell(git checkout -- *)", "PowerShell(git checkout .)",
+      "PowerShell(git branch -d *)", "PowerShell(git branch -D *)", "PowerShell(git checkout -b *)", "PowerShell(git switch -c *)",
+      "PowerShell(dotnet ef database *)", "PowerShell(dotnet ef migrations remove *)", "PowerShell(dotnet publish *)",
+      "PowerShell(az *)", "PowerShell(azd *)", "PowerShell(docker *)", "PowerShell(kubectl *)", "PowerShell(helm *)",
+      "PowerShell(sqlcmd *)", "PowerShell(Invoke-Sqlcmd *)",
+      "PowerShell(gh workflow run *)", "PowerShell(gh run rerun *)", "PowerShell(gh pr merge *)"
+    ],
+    "allow": [
+      "Bash(dotnet build *)", "Bash(dotnet test *)", "Bash(dotnet format *)", "Bash(dotnet ef migrations add *)",
+      "Bash(npx playwright test *)", "Bash(node .claude/hooks/guard-restricted.mjs --test)",
+      "PowerShell(dotnet build *)", "PowerShell(dotnet test *)", "PowerShell(dotnet format *)",
+      "PowerShell(npx playwright test *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          { "type": "command", "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-restricted.mjs\"" }
+        ]
+      }
+    ]
+  },
+  "worktree": { "baseRef": "head" },
+  "extraKnownMarketplaces": {
+    "claude-plugins-official": { "source": { "source": "github", "repo": "anthropics/claude-plugins-official" } },
+    "dotnet-agent-skills": { "source": { "source": "github", "repo": "dotnet/skills" } }
+  },
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true,
+    "feature-dev@claude-plugins-official": true,
+    "microsoft-docs@claude-plugins-official": true,
+    "claude-md-management@claude-plugins-official": true,
+    "pr-review-toolkit@claude-plugins-official": true,
+    "dotnet-data@dotnet-agent-skills": true
+  }
+}

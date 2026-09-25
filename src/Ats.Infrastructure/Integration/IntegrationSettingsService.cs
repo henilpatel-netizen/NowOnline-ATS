@@ -1,8 +1,10 @@
+using Ats.Application.Common;
 using Ats.Application.Integration;
 using Ats.Domain.Entities;
 using Ats.Domain.Enums;
 using Ats.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Ats.Infrastructure.Integration;
 
@@ -11,12 +13,15 @@ public sealed class IntegrationSettingsService : IIntegrationSettingsService
     private readonly AtsDbContext _db;
     private readonly IVacancyFeedRepository _feed;
     private readonly IReferralToolClient _client;
+    private readonly ILogger<IntegrationSettingsService> _logger;
 
-    public IntegrationSettingsService(AtsDbContext db, IVacancyFeedRepository feed, IReferralToolClient client)
+    public IntegrationSettingsService(AtsDbContext db, IVacancyFeedRepository feed, IReferralToolClient client,
+        ILogger<IntegrationSettingsService> logger)
     {
         _db = db;
         _feed = feed;
         _client = client;
+        _logger = logger;
     }
 
     public async Task<TenantSettings> GetAsync(CancellationToken ct = default)
@@ -25,8 +30,11 @@ public sealed class IntegrationSettingsService : IIntegrationSettingsService
         return await _db.TenantSettings.FirstAsync(ct);
     }
 
-    public async Task<bool> UpdateAsync(IntegrationSettingsInput input, CancellationToken ct = default)
+    public async Task<OperationResult> UpdateAsync(IntegrationSettingsInput input, CancellationToken ct = default)
     {
+        if (ReferralToolBaseUrl.Validate(input.ReferralToolBaseUrl) is { } urlError)
+            return OperationResult.Fail(urlError);
+
         var settings = await _db.TenantSettings.FirstAsync(ct);
         settings.IntegrationEnabled = input.IntegrationEnabled;
         settings.ReferralToolBaseUrl = string.IsNullOrWhiteSpace(input.ReferralToolBaseUrl) ? null : input.ReferralToolBaseUrl.Trim();
@@ -51,11 +59,49 @@ public sealed class IntegrationSettingsService : IIntegrationSettingsService
         try
         {
             await _db.SaveChangesAsync(ct);
-            return true;
         }
         catch (DbUpdateConcurrencyException)
         {
-            return false;
+            return OperationResult.Fail("These settings were changed by someone else. Reload the page and try again.");
+        }
+
+        if (settings.IntegrationEnabled)
+            await WakePostponedMessagesAsync(settings.TenantId);
+        return OperationResult.Ok;
+    }
+
+    // Postponed messages (settings problem, rejected credentials) otherwise wait up to MaxBackoffSeconds
+    // after the owner fixes the settings. Best effort, after the save has succeeded: a row a worker claims
+    // meanwhile is left alone, and the rows are detached so the audit write on this context is unaffected.
+    // Any failure here is logged and swallowed: the settings are already committed.
+    private async Task WakePostponedMessagesAsync(int tenantId)
+    {
+        var now = DateTimeOffset.UtcNow;
+        List<OutboxMessage> waiting = [];
+        var count = 0;
+        try
+        {
+            waiting = await _db.OutboxMessages
+                .Where(m => m.Status == OutboxStatus.Pending && m.NextAttemptAt > now)
+                .ToListAsync(CancellationToken.None);
+            count = waiting.Count;
+            if (count == 0) return;
+
+            foreach (var m in waiting) m.NextAttemptAt = now;
+            await _db.SaveChangesAsync(CancellationToken.None);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Expected race: a worker claimed one of the rows, so the batch rolls back to its backoff.
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not wake {Count} postponed outbox messages for tenant {TenantId}; they retry after their backoff.",
+                count, tenantId);
+        }
+        finally
+        {
+            foreach (var m in waiting) _db.Entry(m).State = EntityState.Detached;
         }
     }
 
@@ -87,11 +133,8 @@ public sealed class IntegrationSettingsService : IIntegrationSettingsService
     public async Task<ConnectionTestResult> TestConnectionAsync(CancellationToken ct = default)
     {
         var s = await _db.TenantSettings.FirstAsync(ct);
-        if (s.ReferralToolCustomerId is null || string.IsNullOrWhiteSpace(s.ReferralToolBaseUrl)
-            || string.IsNullOrWhiteSpace(s.ReferralToolApiKey) || string.IsNullOrWhiteSpace(s.ReferralToolAuthToken))
-        {
-            return new ConnectionTestResult(false, "Fill base URL, customer id, X-Api-Key, and X-Auth-Token first.");
-        }
+        if (ReferralToolRules.ConnectionProblem(s) is { } problem)
+            return new ConnectionTestResult(false, problem);
 
         var (page, _) = await _feed.GetPageAsync(1, 1, ct);
         var sampleRef = page.FirstOrDefault()?.ExternalRef;
@@ -99,10 +142,14 @@ public sealed class IntegrationSettingsService : IIntegrationSettingsService
             return new ConnectionTestResult(false, "Publish a job first so there is a vacancy to test with.");
 
         var settings = new ReferralToolSettings(
-            s.ReferralToolBaseUrl!, s.ReferralToolApiKey!, s.ReferralToolAuthToken!, s.ReferralToolCustomerId.Value);
+            s.ReferralToolBaseUrl!, s.ReferralToolApiKey!, s.ReferralToolAuthToken!, s.ReferralToolCustomerId!.Value);
         var (result, exists) = await _client.CheckVacancyExistsAsync(settings, sampleRef, ct);
-        var ok = result.Reached && result.HttpStatus is >= 200 and < 300;
+        var ok = result.Reached && result.HttpStatus is >= 200 and < 300 && exists is not null;
+        // Not reached: Body is the transport exception message (no request headers), so it names the cause.
+        var reason = result.Reached || string.IsNullOrWhiteSpace(result.Body)
+            ? ""
+            : $" Reason: {(result.Body.Length <= 300 ? result.Body : result.Body[..300])}";
         return new ConnectionTestResult(ok,
-            $"Test for {sampleRef}: reached={result.Reached}, HTTP {result.HttpStatus}, vacancy exists={exists}.");
+            $"Test for {sampleRef}: reached={result.Reached}, HTTP {result.HttpStatus}, vacancy exists={exists?.ToString() ?? "unknown"}.{reason}");
     }
 }

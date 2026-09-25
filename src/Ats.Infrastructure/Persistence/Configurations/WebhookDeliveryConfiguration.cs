@@ -11,6 +11,8 @@ public class WebhookDeliveryConfiguration : IEntityTypeConfiguration<WebhookDeli
         b.HasKey(d => d.Id);
         b.Property(d => d.ResponseBody).HasMaxLength(2000);
         b.HasIndex(d => new { d.TenantId, d.OutboxMessageId });
+        // The shell summary reads the tenant's latest attempt on every back-office page.
+        b.HasIndex(d => new { d.TenantId, d.Id });
         b.HasOne<OutboxMessage>().WithMany().HasForeignKey(d => d.OutboxMessageId).OnDelete(DeleteBehavior.Cascade);
     }
 }

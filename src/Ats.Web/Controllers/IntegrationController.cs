@@ -57,16 +57,12 @@ public class IntegrationController : Controller
     public async Task<IActionResult> Index(IntegrationSettingsViewModel vm)
     {
         if (!ModelState.IsValid) return View(vm);
-        var saved = await _settings.UpdateAsync(new IntegrationSettingsInput(
+        var result = await _settings.UpdateAsync(new IntegrationSettingsInput(
             vm.IntegrationEnabled, vm.ReferralToolBaseUrl, vm.ReferralToolCustomerId,
             vm.CodeParameterName, vm.ReferralToolAuthToken, vm.ReferralToolApiKey, vm.RowVersion));
-        if (!saved)
-        {
-            TempData["Error"] = "These settings were changed by someone else. Reload the page and try again.";
-            return RedirectToAction(nameof(Index));
-        }
-        await _audit.LogAsync("IntegrationSettingsSaved", "TenantSettings", null, "Updated integration settings");
-        TempData["Success"] = "Integration settings saved.";
+        if (result.Succeeded)
+            await _audit.LogAsync("IntegrationSettingsSaved", "TenantSettings", null, "Updated integration settings");
+        this.SetResultMessage(result, "Integration settings saved.");
         return RedirectToAction(nameof(Index));
     }
 

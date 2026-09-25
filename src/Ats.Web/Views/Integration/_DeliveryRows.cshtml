@@ -8,6 +8,13 @@
         OutboxStatus.Failed => ("Failed", PillTone.Danger),
         _ => ("Pending", PillTone.Warning)
     };
+    // WebhookDelivery.HttpStatus: null = sent or sending with no reply on file, 0 = never sent.
+    string Reply(int? status) => status switch
+    {
+        null => "no reply",
+        0 => "not sent",
+        var code => $"HTTP {code}"
+    };
 }
 <div class="ats-thead ats-table--deliveries">
     <span>#</span><span>Candidate ref</span><span>Vacancy</span><span>Status sent</span><span>State</span><span>Last attempt</span>
@@ -26,7 +33,7 @@
         <span class="ats-cell-stack ats-xsmall ats-muted">
             @if (last is not null)
             {
-                <span>@last.Kind · HTTP @(last.HttpStatus?.ToString() ?? "-") · <local-time utc="@last.AttemptedAt" format="short"></local-time> · @e.Message.Attempts attempt(s)</span>
+                <span>@last.Kind · @Reply(last.HttpStatus) · <local-time utc="@last.AttemptedAt" format="short"></local-time> · @e.Message.Attempts attempt(s)</span>
             }
             @if (!string.IsNullOrEmpty(e.Message.LastError))
             {

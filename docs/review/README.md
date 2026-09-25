@@ -30,6 +30,7 @@ enforcement, DataProtection, timezone handling, health checks, CI/tooling, and m
 | 6 | `phase-06-accessibility.md` | Keyboard nav, modal focus, contrast, icons, i18n, skip link | Frontend, UI/UX |
 | 7 | `phase-07-feature-completeness-and-workflows.md` | Password reset, user/team mgmt, notifications, role-aware UI | Feature completeness |
 | 8 | `phase-08-code-quality-consistency-tests.md` | Business-logic tests, dead code, pattern consistency, logging | Maintainability, Architecture |
+| 10 | `phase-10-outbox-delivery-correctness.md` | Outbox status truthfulness, ordering, attempt accounting (added 2026-09-25) | Backend, Integration |
 
 ## Module scorecard (baseline → target)
 
