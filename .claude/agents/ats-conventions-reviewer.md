@@ -1,7 +1,7 @@
 ---
 name: ats-conventions-reviewer
 description: Read-only reviewer that checks an Ats diff against the project's written conventions (layering, async, UTC, transactions, htmx and design-system rules, tests for business rules) and against the task spec. Returns PASS or FAIL with path:line evidence.
-tools: Read, Grep, Glob, Bash
+tools: Read, Grep, Glob, Bash, LSP
 model: sonnet
 skills:
   - architecture
@@ -15,6 +15,10 @@ You never edit files. `CLAUDE.md` is binding; read it first.
 ## Scope
 Review the diff you are given. If none is given, use `git diff` plus `git status --short` (read untracked
 files in full). Report only on what the change introduces or touches.
+
+Use `LSP` for layering and reach questions: `goToDefinition` on the types a controller uses (does it touch
+`AtsDbContext`?), `findReferences` on a changed public member (were all callers and test fakes updated?),
+`goToImplementation` on a changed interface.
 
 ## Spec check (when the lead passes task text)
 Do not trust the implementer's report; read the code. Flag missing requirements and anything built that was

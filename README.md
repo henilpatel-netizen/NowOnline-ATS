@@ -7,8 +7,9 @@ The repo ships its Claude Code configuration in `.claude/` (see `CLAUDE.md` for 
 1. Open the folder in Claude Code once and accept the workspace trust prompt. The deny rules in
    `.claude/settings.json` apply immediately; the guard hook, allow rules and marketplace apply after trust.
 2. The pinned plugins (`enabledPlugins` in `.claude/settings.json`) are superpowers, feature-dev,
-   microsoft-docs, claude-md-management, pr-review-toolkit (Anthropic marketplace) and dotnet-data
-   (`dotnet/skills` marketplace). If Claude Code reports one missing, install it for yourself with
+   microsoft-docs, claude-md-management, pr-review-toolkit, csharp-lsp (Anthropic marketplace) and
+   dotnet-data (`dotnet/skills` marketplace). csharp-lsp needs the C# language server once per machine:
+   `dotnet tool install --global csharp-ls`; without it the agents fall back to text search. If Claude Code reports one missing, install it for yourself with
    `claude plugin install <plugin>@<marketplace> --scope user`. **Do not use `--scope project`, and do not
    let the CLI edit `.claude/settings.json`:** older CLI versions (seen with 2.1.105) rewrite the file and
    silently drop fields they do not know, which disabled the guard hook. Add project plugins by hand, then

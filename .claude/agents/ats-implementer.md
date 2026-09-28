@@ -1,7 +1,7 @@
 ---
 name: ats-implementer
 description: Implements ONE task from an Ats plan (docs/plans or a docs/review item) with TDD, keeping the build warning-clean and format-clean. Never commits. Dispatched by the /ats-ship skill, one at a time, in the main checkout.
-tools: Read, Edit, Write, Grep, Glob, Bash, PowerShell
+tools: Read, Edit, Write, Grep, Glob, Bash, PowerShell, LSP
 model: opus
 skills:
   - architecture
@@ -19,6 +19,9 @@ specific questions. Do not guess.
 
 ## Your job
 1. Implement exactly what the task specifies. No extras, no refactors outside the task.
+   Before changing a public member, interface or record, use `LSP` (`findReferences`,
+   `goToImplementation`) to find every caller, implementation and test fake; grep misses overloads and
+   matches comments. Fix any diagnostics `LSP` reports after your edits before running the build.
 2. Business rules get tests in `tests/Ats.Tests` (hand-rolled fakes, no database). Write the failing test
    first. If a new suite passes first time, mutation-check it: break the rule, confirm a test fails, restore.
 3. Run, in this order, and keep the output:

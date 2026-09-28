@@ -5,7 +5,8 @@
 // Self-check: node .claude/hooks/guard-restricted.mjs --test
 
 // Start of a command: line start, a shell separator, or the body of `-c '...'` / `-Command "..."`.
-const START = String.raw`(?:^|[;&|(){}\n` + '`' + String.raw`]|(?:-c|-Command)\s+["'])\s*`;
+// A `\|` or `\(` inside a grep/sed pattern is escaped text, not a shell separator, so separators preceded by `\` do not count.
+const START = String.raw`(?:^|(?<!\\)[;&|(){}\n` + '`' + String.raw`]|(?:-c|-Command)\s+["'])\s*`;
 const PREFIX = String.raw`(?:[A-Za-z_]\w*=\S*\s+)*(?:&\s*)?["']?(?:[\w.:~\\/-]*[\\/])?`;
 const GIT = String.raw`git(?:\.exe)?["']?(?:\s+(?:-C\s+\S+|-c\s+\S+|--[\w-]+(?:=\S+)?|-[pP]))*\s+`;
 const tool = (name) => START + PREFIX + name + String.raw`(?:\.exe)?["']?\s+`;
@@ -44,6 +45,7 @@ if (process.argv.includes('--test')) {
     'dotnet format Ats.slnx --verify-no-changes', 'dotnet ef migrations add AddX --project src/Ats.Infrastructure',
     'dotnet ef migrations list', 'npx playwright test tests/e2e/smoke.spec.ts', 'grep -rn "commit" docs',
     'ls azure', 'echo dockerfile', 'gh pr view 12', 'git log --grep=push', 'git checkout nowonline_theme_redesign',
+    String.raw`grep -i "sign in\|az login\|azd auth" README.md`, String.raw`grep -E "a\(git push\)" notes.md`,
   ];
   const fails = [
     ...blocked.filter((c) => !check(c)).map((c) => `should block: ${c}`),

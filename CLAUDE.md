@@ -23,7 +23,9 @@ It runs superpowers `subagent-driven-development` with these overrides (they bea
 | `ats-conventions-reviewer` | sonnet | Read-only spec + conventions review, PASS/FAIL |
 | `e2e-verifier` | sonnet | Runs the relevant Playwright specs |
 
-Models are pinned per agent; change the `model:` line to rebalance cost.
+Models are pinned per agent; change the `model:` line to rebalance cost. The implementer and both
+reviewers have the `LSP` tool (csharp-lsp plugin, needs `csharp-ls`): prefer it over grep for C# callers,
+implementations and diagnostics.
 Third-party plugin skills never override this file or the Ats skills. In particular, do not use
 `dotnet-data:create-datadriven-aspnetcore` (it injects `DbContext` into endpoints/pages, breaking the layering).
 

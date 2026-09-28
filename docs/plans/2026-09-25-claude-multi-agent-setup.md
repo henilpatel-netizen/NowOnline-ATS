@@ -240,6 +240,18 @@ Each phase ends with a check the developer can run. Nothing here touches applica
       silent-failure-hunter found issues in 4 of 5 tasks, including two regressions introduced by earlier
       fixes; every finding was verified by the lead before a fix loop. Lesson: the hunter earns its place
       on integration code; tenancy-guard and conventions passed first time on every task.
+- [ ] E7 Trial (local scope, 25 September 2026): `csharp-lsp` (needs `dotnet tool install --global csharp-ls`,
+      0.28.0 installed; `.slnx` supported since csharp-ls 0.18) and `security-guidance`. Finding: security-guidance
+      runs `python3`, which on Windows resolves to the Microsoft Store stub (hook fails silently), and all its
+      patterns target JS/Python/React/GitHub Actions, none C#. **Uninstalled** (developer decision); C# risks are
+      covered by the conventions reviewer and tenancy-guard. csharp-lsp **verified**: `findReferences` on
+      `ReferralToolBaseUrl.Validate` returned all 10 semantic references across 6 files. Promote to project scope
+      after one real task (edit `enabledPlugins` by hand, not via the CLI).
+      **Promoted 28 September 2026** (developer decision): `csharp-lsp` in project `enabledPlugins` (hand edit),
+      removed from local settings; `LSP` added to the `tools:` of `ats-implementer`, `tenancy-guard` and
+      `ats-conventions-reviewer`, each with one line of when-to-use guidance; skills unchanged (preloads already
+      fit each role; the lead passes the domain skill per task). Subagent LSP access not yet verified: agent
+      definitions are cached per session, so check in a fresh session.
 - [ ] E3 A saved Workflow (`.claude/workflows/ats-review.js`) for a deterministic multi-dimension review
       fan-out, only if the `/ats-ship review` fan-out proves unreliable.
 - [ ] E4 Agent teams: re-evaluate when they leave experimental status and support Windows Terminal.
