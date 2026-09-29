@@ -7,7 +7,8 @@ description: The Ats Phase 1 aggregates - Job, Candidate, JobApplication, Applic
 
 ## Aggregates
 - `Job` (TenantEntity, ISoftDeletable): Draft/Published/Closed lifecycle; `ExternalRef` = `JOB-{n}` from
-  `TenantSettings.LastJobNumber` (stable, never reused). References Department/Location/PipelineTemplate.
+  `TenantSettings.LastJobNumber` (stable, never reused; it is the ReferralTool vacancy `Id` in the
+  vacancy push). References Department/Location/PipelineTemplate.
 - `Candidate` (TenantEntity, ISoftDeletable): deduped per tenant by `Email` (unique `(TenantId, Email)`).
 - `JobApplication` (TenantEntity, ISoftDeletable): the candidate-on-a-job aggregate. Named
   `JobApplication` (not `Application`) to avoid colliding with the `Ats.Application` namespace; the
@@ -15,7 +16,7 @@ description: The Ats Phase 1 aggregates - Job, Candidate, JobApplication, Applic
   `RowVersion` optimistic concurrency; `Status` Active/Hired/Rejected/Withdrawn; `CurrentStageId`
   points at a stage. `Origin` (`ApplicationOrigin`: Unknown/CareerSite/Manual/Referral) is
   presentation-only — it drives source chips in the UI and is never read by the outbox, worker,
-  feed, or ReferralTool client. Rows predating the column are `Unknown`, rendered as "Not recorded".
+  vacancy push, or ReferralTool client. Rows predating the column are `Unknown`, rendered as "Not recorded".
 - `ApplicationEvent` (TenantEntity): append-only stage-move history (`FromStageId?`, `ToStageId`,
   `OccurredAt`, `MovedByUserId?`).
 

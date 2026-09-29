@@ -117,6 +117,14 @@ public sealed class FakeOutboxEnqueuer : IOutboxEnqueuer
         Staged.Add((applicationId, toStageId));
         return Task.CompletedTask;
     }
+
+    public List<Job> VacancySyncs { get; } = new();
+
+    public Task StageVacancySyncAsync(Job job, CancellationToken ct = default)
+    {
+        VacancySyncs.Add(job);
+        return Task.CompletedTask;
+    }
 }
 
 public sealed class FakeCandidateRepository : ICandidateRepository

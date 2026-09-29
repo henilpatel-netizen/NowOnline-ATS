@@ -34,6 +34,9 @@ public sealed class OutboxClaimStore : IOutboxClaimStore
     // shows as a rejected attempt in the delivery log), but its save to the message fails on RowVersion.
     // Cost: at most one message per application per poll cycle, so a burst of k updates for one
     // application takes about k * PollSeconds to drain.
+    // The same rule orders vacancy syncs per job (a NULL key never matches, so each kind only blocks its
+    // own stream). Two NOT EXISTS, not one with OR, so each can use its index; the IS NOT NULL lets the
+    // optimiser match the filtered job index.
     // The NOT EXISTS reads with READCOMMITTEDLOCK, not READPAST: an older row locked by another
     // worker must block, not be skipped, and the hint also stops RCSI (on by default in Azure SQL)
     // from reading a stale version instead of waiting for that worker's commit.
@@ -46,14 +49,18 @@ public sealed class OutboxClaimStore : IOutboxClaimStore
         // Status + NextAttemptAt must be in the CTE projection to be updatable through it.
         const string sql = @"
 WITH due AS (
-    SELECT TOP({0}) Id, TenantId, ApplicationId, Status, NextAttemptAt
+    SELECT TOP({0}) Id, TenantId, ApplicationId, JobId, Status, NextAttemptAt
     FROM OutboxMessages AS m WITH (READPAST, UPDLOCK, ROWLOCK)
     WHERE m.Status IN ({1}, {2}) AND m.NextAttemptAt <= {3}
       AND NOT EXISTS (
           SELECT 1 FROM OutboxMessages AS older WITH (READCOMMITTEDLOCK)
           WHERE older.TenantId = m.TenantId AND older.ApplicationId = m.ApplicationId
             AND older.Id < m.Id AND older.Status IN ({1}, {2}))
-    ORDER BY m.ApplicationId, m.Id
+      AND NOT EXISTS (
+          SELECT 1 FROM OutboxMessages AS olderJob WITH (READCOMMITTEDLOCK)
+          WHERE olderJob.TenantId = m.TenantId AND olderJob.JobId = m.JobId AND olderJob.JobId IS NOT NULL
+            AND olderJob.Id < m.Id AND olderJob.Status IN ({1}, {2}))
+    ORDER BY m.Id
 )
 UPDATE due SET Status = {2}, NextAttemptAt = {4}
 OUTPUT inserted.Id, inserted.TenantId, inserted.ApplicationId, inserted.NextAttemptAt AS Lease;";

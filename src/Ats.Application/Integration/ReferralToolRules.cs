@@ -21,6 +21,38 @@ public static class ReferralToolRules
         return OutboxOutcome.Failed;
     }
 
+    // Ats never DELETEs: ReferralTool renames a deleted vacancy's ExternalId, orphaning referred candidates.
+    public static VacancyCall DecideVacancyCall(bool exists, bool inactive) =>
+        exists ? VacancyCall.Update : inactive ? VacancyCall.None : VacancyCall.Create;
+
+    // ReferralTool answers every vacancy failure with 400; only one carrying model errors is permanent.
+    // Any other 400 (not unique, does not exist, a caught exception) reflects state that a retry re-reads.
+    public static OutboxOutcome ClassifyVacancyCall(bool reached, int httpStatus, string? body)
+    {
+        if (!reached || httpStatus >= 500) return OutboxOutcome.Transient;
+        if (httpStatus is >= 200 and < 300) return OutboxOutcome.Delivered;
+        if (IsCredentialRejection(httpStatus)) return OutboxOutcome.Postpone;
+        if (httpStatus == 400 && HasValidationErrors(body)) return OutboxOutcome.Failed;
+        return OutboxOutcome.Transient;
+    }
+
+    public static bool HasValidationErrors(string? body)
+    {
+        if (string.IsNullOrWhiteSpace(body)) return false;
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            return doc.RootElement.ValueKind == JsonValueKind.Object
+                && doc.RootElement.TryGetProperty("errors", out var errors)
+                && errors.ValueKind == JsonValueKind.Object
+                && errors.EnumerateObject().Any();
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
     // ReferralTool refused the X-Api-Key / X-Auth-Token: a settings problem the owner fixes, so the
     // message waits without spending attempts (as with SettingsProblem) instead of dead-lettering.
     public static bool IsCredentialRejection(int httpStatus) => httpStatus is 401 or 403;
@@ -54,27 +86,27 @@ public static class ReferralToolRules
 
     // Why these settings cannot reach ReferralTool, ignoring the enabled switch so an owner can test
     // before switching the integration on. Null when they can.
-    public static string? ConnectionProblem(TenantSettings s)
+    public static string? ConnectionProblem(TenantSettings s, bool allowInsecure = false)
     {
         if (s.ReferralToolCustomerId is null
             || string.IsNullOrWhiteSpace(s.ReferralToolBaseUrl)
             || string.IsNullOrWhiteSpace(s.ReferralToolApiKey)
             || string.IsNullOrWhiteSpace(s.ReferralToolAuthToken))
             return "Integration settings are incomplete: fill in the base URL, customer id, X-Api-Key and X-Auth-Token.";
-        return ReferralToolBaseUrl.Validate(s.ReferralToolBaseUrl);
+        return ReferralToolBaseUrl.Validate(s.ReferralToolBaseUrl, allowInsecure);
     }
 
     // Why the worker cannot deliver with these settings, or null when it can.
-    public static string? SettingsProblem(TenantSettings? s) =>
-        s is null || !s.IntegrationEnabled ? "Integration is disabled." : ConnectionProblem(s);
+    public static string? SettingsProblem(TenantSettings? s, bool allowInsecure = false) =>
+        s is null || !s.IntegrationEnabled ? "Integration is disabled." : ConnectionProblem(s, allowInsecure);
 
     // Why an enabled integration postpones every message and so never produces a Failed one: unusable
     // settings, or ReferralTool refused the credentials on the tenant's latest delivery attempt (any
     // kind; a later accepted attempt clears it). Null when it can deliver or is switched off on purpose.
-    public static string? BlockedReason(TenantSettings? s, int? latestDeliveryStatus)
+    public static string? BlockedReason(TenantSettings? s, int? latestDeliveryStatus, bool allowInsecure = false)
     {
         if (s is null || !s.IntegrationEnabled) return null;
-        if (ConnectionProblem(s) is { } problem) return problem;
+        if (ConnectionProblem(s, allowInsecure) is { } problem) return problem;
         return latestDeliveryStatus is { } status && IsCredentialRejection(status)
             ? "ReferralTool rejected the X-Api-Key or X-Auth-Token; check the credentials in the integration settings."
             : null;

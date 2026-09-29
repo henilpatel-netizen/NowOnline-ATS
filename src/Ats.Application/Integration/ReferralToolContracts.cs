@@ -9,3 +9,5 @@ public sealed record StatusUpdateRequest(
 // MaybeSent=false only when the request definitely never left (see ReferralToolRules.IsDefinitelyNotSent);
 // a timeout or a reply cut off mid-stream may still have been processed by ReferralTool.
 public sealed record ReferralCallResult(bool Reached, int HttpStatus, string? Body, bool MaybeSent = true);
+
+public enum VacancyCall { None, Create, Update }

@@ -5,23 +5,26 @@ using Ats.Domain.Enums;
 using Ats.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Ats.Infrastructure.Integration;
 
 public sealed class IntegrationSettingsService : IIntegrationSettingsService
 {
     private readonly AtsDbContext _db;
-    private readonly IVacancyFeedRepository _feed;
+    private readonly IOutboxEnqueuer _outbox;
     private readonly IReferralToolClient _client;
     private readonly ILogger<IntegrationSettingsService> _logger;
+    private readonly bool _allowInsecureUrl;
 
-    public IntegrationSettingsService(AtsDbContext db, IVacancyFeedRepository feed, IReferralToolClient client,
-        ILogger<IntegrationSettingsService> logger)
+    public IntegrationSettingsService(AtsDbContext db, IOutboxEnqueuer outbox, IReferralToolClient client,
+        ILogger<IntegrationSettingsService> logger, IOptions<IntegrationOptions> opts)
     {
         _db = db;
-        _feed = feed;
+        _outbox = outbox;
         _client = client;
         _logger = logger;
+        _allowInsecureUrl = opts.Value.AllowInsecureReferralToolUrl;
     }
 
     public async Task<TenantSettings> GetAsync(CancellationToken ct = default)
@@ -32,7 +35,7 @@ public sealed class IntegrationSettingsService : IIntegrationSettingsService
 
     public async Task<OperationResult> UpdateAsync(IntegrationSettingsInput input, CancellationToken ct = default)
     {
-        if (ReferralToolBaseUrl.Validate(input.ReferralToolBaseUrl) is { } urlError)
+        if (ReferralToolBaseUrl.Validate(input.ReferralToolBaseUrl, _allowInsecureUrl) is { } urlError)
             return OperationResult.Fail(urlError);
 
         var settings = await _db.TenantSettings.FirstAsync(ct);
@@ -105,13 +108,19 @@ public sealed class IntegrationSettingsService : IIntegrationSettingsService
         }
     }
 
-    public async Task<string> GenerateFeedKeyAsync(CancellationToken ct = default)
+    public Task<int> CountPublishedJobsAsync(CancellationToken ct = default) =>
+        _db.Jobs.CountAsync(j => j.Status == JobStatus.Published, ct);
+
+    public async Task<int?> QueueVacancySyncAsync(CancellationToken ct = default)
     {
-        var key = FeedApiKey.Generate();
-        var settings = await _db.TenantSettings.FirstAsync(ct);
-        settings.FeedApiKeyHash = FeedApiKey.Hash(key);
+        var s = await _db.TenantSettings.AsNoTracking().FirstAsync(ct);
+        if (ReferralToolRules.SettingsProblem(s, _allowInsecureUrl) is not null) return null;
+
+        var jobs = await _db.Jobs.Where(j => j.Status != JobStatus.Draft).ToListAsync(ct);
+        foreach (var job in jobs)
+            await _outbox.StageVacancySyncAsync(job, ct);
         await _db.SaveChangesAsync(ct);
-        return key;
+        return jobs.Count;
     }
 
     public async Task<OutboxCounts> GetOutboxCountsAsync(CancellationToken ct = default)
@@ -133,11 +142,12 @@ public sealed class IntegrationSettingsService : IIntegrationSettingsService
     public async Task<ConnectionTestResult> TestConnectionAsync(CancellationToken ct = default)
     {
         var s = await _db.TenantSettings.FirstAsync(ct);
-        if (ReferralToolRules.ConnectionProblem(s) is { } problem)
+        if (ReferralToolRules.ConnectionProblem(s, _allowInsecureUrl) is { } problem)
             return new ConnectionTestResult(false, problem);
 
-        var (page, _) = await _feed.GetPageAsync(1, 1, ct);
-        var sampleRef = page.FirstOrDefault()?.ExternalRef;
+        var sampleRef = await _db.Jobs.AsNoTracking()
+            .Where(j => j.Status != JobStatus.Draft).OrderBy(j => j.Id)
+            .Select(j => j.ExternalRef).FirstOrDefaultAsync(ct);
         if (sampleRef is null)
             return new ConnectionTestResult(false, "Publish a job first so there is a vacancy to test with.");
 

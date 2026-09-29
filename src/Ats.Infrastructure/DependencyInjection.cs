@@ -40,9 +40,9 @@ public static class DependencyInjection
     public static IServiceCollection AddAtsInfrastructure(this IServiceCollection services, IConfiguration config)
     {
         // ITenantContext and ICurrentUser are registered by each HOST (QUAL-6): how a tenant and a
-        // user are resolved is host-specific (claims in the web app, a feed key in the API, a
-        // settable value in the worker). Infrastructure no longer owns an HTTP implementation, so the
-        // worker no longer has to remove-and-replace one.
+        // user are resolved is host-specific (claims in the web app, a settable value in the
+        // worker). Infrastructure no longer owns an HTTP implementation, so the worker no longer
+        // has to remove-and-replace one.
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<TenantSaveChangesInterceptor>();
 
@@ -74,7 +74,6 @@ public static class DependencyInjection
         services.AddScoped<IFileStore, LocalFileStore>();
         services.AddScoped<ICareerRepository, CareerRepository>();
         services.AddScoped<ICareerService, CareerService>();
-        services.AddScoped<IVacancyFeedRepository, VacancyFeedRepository>();
         services.AddScoped<IOutboxEnqueuer, OutboxEnqueuer>();
         services.AddScoped<IIntegrationSettingsService, IntegrationSettingsService>();
         services.AddScoped<IDeliveryLogService, DeliveryLogService>();

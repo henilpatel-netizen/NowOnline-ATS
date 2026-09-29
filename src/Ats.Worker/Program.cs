@@ -16,7 +16,11 @@ builder.Services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<WorkerTen
 // A background process acts as no one; audit/application services still require an ICurrentUser.
 builder.Services.AddScoped<ICurrentUser, AnonymousCurrentUser>();
 
-builder.Services.Configure<IntegrationOptions>(builder.Configuration.GetSection("Integration"));
+builder.Services.AddOptions<IntegrationOptions>()
+    .Bind(builder.Configuration.GetSection("Integration"))
+    .Validate(o => !o.AllowInsecureReferralToolUrl || builder.Environment.IsDevelopment(),
+        "Integration:AllowInsecureReferralToolUrl is only allowed in Development.")
+    .ValidateOnStart();
 builder.Services.AddScoped<IOutboxClaimStore, OutboxClaimStore>();
 builder.Services.AddScoped<IOutboxProcessor, OutboxProcessor>();
 builder.Services.AddHostedService<OutboxDrainer>();

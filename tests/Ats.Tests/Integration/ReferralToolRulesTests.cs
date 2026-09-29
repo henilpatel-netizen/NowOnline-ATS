@@ -238,6 +238,25 @@ public class ReferralToolRulesTests
         Assert.Equal(ReferralToolBaseUrl.Validate(s.ReferralToolBaseUrl), ReferralToolRules.ConnectionProblem(s));
     }
 
+    [Fact]
+    public void Connection_check_accepts_a_localhost_url_only_with_the_insecure_switch()
+    {
+        var s = Usable();
+        s.ReferralToolBaseUrl = "https://localhost:44377";
+        Assert.Null(ReferralToolRules.ConnectionProblem(s, allowInsecure: true));
+        Assert.Equal(ReferralToolBaseUrl.Validate(s.ReferralToolBaseUrl), ReferralToolRules.ConnectionProblem(s, allowInsecure: false));
+        Assert.Contains("localhost", ReferralToolRules.ConnectionProblem(s, allowInsecure: false));
+    }
+
+    [Fact]
+    public void Settings_check_accepts_an_http_localhost_url_only_with_the_insecure_switch()
+    {
+        var s = Usable();
+        s.ReferralToolBaseUrl = "http://localhost:47882";
+        Assert.Null(ReferralToolRules.SettingsProblem(s, allowInsecure: true));
+        Assert.NotNull(ReferralToolRules.SettingsProblem(s));
+    }
+
     private static TenantSettings Usable() => new()
     {
         IntegrationEnabled = true,

@@ -1,4 +1,5 @@
 using Ats.Application.Common;
+using Ats.Application.Integration;
 using Ats.Domain.Entities;
 using Ats.Domain.Enums;
 
@@ -18,7 +19,11 @@ public interface IJobService
 public sealed class JobService : IJobService
 {
     private readonly IJobRepository _repo;
-    public JobService(IJobRepository repo) => _repo = repo;
+    private readonly IOutboxEnqueuer _outbox;
+    public JobService(IJobRepository repo, IOutboxEnqueuer outbox)
+    {
+        _repo = repo; _outbox = outbox;
+    }
 
     public Task<List<Job>> ListAsync(CancellationToken ct = default) => _repo.ListAsync(ct);
 
@@ -63,6 +68,7 @@ public sealed class JobService : IJobService
         job.LocationId = input.LocationId;
         job.EmploymentType = input.EmploymentType;
         job.PipelineTemplateId = input.PipelineTemplateId;
+        if (job.PublishedAt is not null) await _outbox.StageVacancySyncAsync(job, ct);
         await _repo.SaveChangesAsync(ct);
         return OperationResult.Ok;
     }
@@ -74,6 +80,7 @@ public sealed class JobService : IJobService
         if (job.Status == JobStatus.Published) return OperationResult.Fail("Job is already published.");
         job.Status = JobStatus.Published;
         job.PublishedAt ??= DateTimeOffset.UtcNow;
+        await _outbox.StageVacancySyncAsync(job, ct);
         await _repo.SaveChangesAsync(ct);
         return OperationResult.Ok;
     }
@@ -84,6 +91,7 @@ public sealed class JobService : IJobService
         if (job is null) return OperationResult.Fail("Job not found.");
         if (job.Status != JobStatus.Published) return OperationResult.Fail("Only a published job can be closed.");
         job.Status = JobStatus.Closed;
+        await _outbox.StageVacancySyncAsync(job, ct);
         await _repo.SaveChangesAsync(ct);
         return OperationResult.Ok;
     }
@@ -93,6 +101,7 @@ public sealed class JobService : IJobService
         var job = await _repo.GetAsync(id, ct);
         if (job is null) return OperationResult.Fail("Job not found.");
         job.IsDeleted = true;   // soft delete
+        if (job.PublishedAt is not null) await _outbox.StageVacancySyncAsync(job, ct);
         await _repo.SaveChangesAsync(ct);
         return OperationResult.Ok;
     }

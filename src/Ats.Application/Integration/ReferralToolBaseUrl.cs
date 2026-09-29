@@ -8,9 +8,17 @@ namespace Ats.Application.Integration;
 public static class ReferralToolBaseUrl
 {
     // Returns a user-facing error, or null when the value is acceptable. Blank means "not configured".
-    public static string? Validate(string? value)
+    // allowInsecure (Development only, IntegrationOptions.AllowInsecureReferralToolUrl) also accepts
+    // http and skips the private-host check.
+    public static string? Validate(string? value, bool allowInsecure = false)
     {
         if (string.IsNullOrWhiteSpace(value)) return null;
+
+        if (allowInsecure)
+            return Uri.TryCreate(value.Trim(), UriKind.Absolute, out var local)
+                && (local.Scheme == Uri.UriSchemeHttps || local.Scheme == Uri.UriSchemeHttp)
+                ? null
+                : "The ReferralTool base URL must be a full http:// or https:// address.";
 
         if (!Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
             return "The ReferralTool base URL must be a full https:// address.";

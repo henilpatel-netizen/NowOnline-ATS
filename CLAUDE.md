@@ -40,7 +40,6 @@ Solution: `Ats.slnx` (modern XML solution format, .NET 10 default; projects unde
 | `Ats.Application` | Use-case services, abstractions (`ITenantContext`, `IIdentityService`), validators. |
 | `Ats.Infrastructure` | EF Core `AtsDbContext`, tenancy filters + interceptor, Identity impl, DI. |
 | `Ats.Web` | MVC back-office (root: `/Jobs`, `/Candidates`, `/Board`, ...) + public career site (`Careers` area, `/careers/{slug}`). |
-| `Ats.Api` | REST API: vacancy feed + integration endpoints. |
 | `Ats.Worker` | Background host: outbox delivery, notifications. |
 | `Ats.Tests` | xUnit tests for pure Application-layer logic (no database). Under `tests/`. |
 
@@ -139,6 +138,6 @@ four phases (`docs/plans/2026-07-30-ats-redesign-phase-{1..4}-*.md`).
 | Entities | `.claude/skills/entities/SKILL.md` | Job/Candidate/JobApplication/Event, soft delete, ExternalRef |
 | Pipeline | `.claude/skills/pipeline/SKILL.md` | Templates, stages, board moves, history, concurrency |
 | Career site | `.claude/skills/career-site/SKILL.md` | Careers area, slug tenancy, IFileStore, public apply |
-| Integration | `.claude/skills/integration/SKILL.md` | Feed, outbox, worker, ReferralTool client, settings |
+| Integration | `.claude/skills/integration/SKILL.md` | Vacancy push, outbox, worker, ReferralTool client, settings |
 | Audit | `.claude/skills/audit/SKILL.md` | Audit log, dashboard metrics, integration test tools |
 | Orchestration | `.claude/skills/ats-ship/SKILL.md` | `/ats-ship`: implement, parallel review, done-gate, no git |

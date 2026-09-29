@@ -3,5 +3,7 @@ namespace Ats.Domain.Enums;
 public enum DeliveryKind
 {
     CheckVacancy = 0,
-    StatusUpdate = 1
+    StatusUpdate = 1,
+    VacancyCreate = 2,
+    VacancyUpdate = 3
 }

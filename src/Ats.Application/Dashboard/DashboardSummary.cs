@@ -8,8 +8,7 @@ public sealed record AttentionItem(string Icon, string Tone, string Headline, st
 public sealed record ActivityItem(string Actor, string Text, DateTimeOffset OccurredAt);
 
 public sealed record IntegrationHealth(
-    bool Connected, int? CustomerId, DateTimeOffset? FeedLastPulledAt,
-    int Delivered24h, int Failed24h, int Pending);
+    bool Connected, int? CustomerId, int Delivered24h, int Failed24h, int Pending);
 
 public sealed record DashboardSummary(
     int OpenJobs,

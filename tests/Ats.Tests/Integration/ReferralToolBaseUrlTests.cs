@@ -37,6 +37,7 @@ public class ReferralToolBaseUrlTests
     public void Rejects_non_https_or_malformed(string url)
     {
         Assert.NotNull(ReferralToolBaseUrl.Validate(url));
+        Assert.NotNull(ReferralToolBaseUrl.Validate(url, allowInsecure: false));
     }
 
     [Theory]
@@ -65,5 +66,27 @@ public class ReferralToolBaseUrlTests
     public void Rejects_private_loopback_and_link_local_hosts(string url)
     {
         Assert.NotNull(ReferralToolBaseUrl.Validate(url));
+        Assert.NotNull(ReferralToolBaseUrl.Validate(url, allowInsecure: false));
+    }
+
+    [Theory]
+    [InlineData("https://localhost:44377")]
+    [InlineData("http://localhost:47882")]
+    [InlineData("http://127.0.0.1:5000")]
+    [InlineData("https://192.168.1.10")]
+    [InlineData("http://api.referraltool.nl")]
+    [InlineData("https://api.referraltool.nl")]
+    public void Insecure_switch_accepts_http_and_local_hosts(string url)
+    {
+        Assert.Null(ReferralToolBaseUrl.Validate(url, allowInsecure: true));
+    }
+
+    [Theory]
+    [InlineData("ftp://api.referraltool.nl")]
+    [InlineData("api.referraltool.nl")]
+    [InlineData("not a url")]
+    public void Insecure_switch_still_rejects_other_schemes_and_malformed(string url)
+    {
+        Assert.NotNull(ReferralToolBaseUrl.Validate(url, allowInsecure: true));
     }
 }

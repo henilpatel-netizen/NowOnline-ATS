@@ -27,23 +27,31 @@ public sealed class OutboxProcessor : IOutboxProcessor
             return OutboxOutcome.Skip;
 
         var s = await _db.TenantSettings.FirstOrDefaultAsync(ct);
-        if (ReferralToolRules.SettingsProblem(s) is { } problem)
+        if (ReferralToolRules.SettingsProblem(s, _opts.AllowInsecureReferralToolUrl) is { } problem)
             return await PostponeAsync(msg, problem, ct);
 
         var settings = new ReferralToolSettings(
             s!.ReferralToolBaseUrl!, s.ReferralToolApiKey!, s.ReferralToolAuthToken!, s.ReferralToolCustomerId!.Value);
 
-        // Pre-flight: only send once ReferralTool has imported the vacancy.
+        var vacancy = msg.Kind == OutboxKind.VacancySync ? VacancyPayload.TryParse(msg.Payload) : null;
+        if (msg.Kind == OutboxKind.VacancySync && vacancy is null)
+            return await FinishAsync(msg, OutboxStatus.Failed, "VacancySync payload is missing or unreadable.");
+
+        // Pre-flight: does the vacancy exist in ReferralTool? A status update waits for it; a vacancy sync
+        // picks POST or PUT from it, so for a sync "not there yet" is a successful check.
         var (check, exists) = await _client.CheckVacancyExistsAsync(settings, msg.ExternalVacancyId, ct);
-        Record(Log(msg.Id, DeliveryKind.CheckVacancy), check, exists == true);
+        Record(Log(msg.Id, DeliveryKind.CheckVacancy), check,
+            msg.Kind == OutboxKind.VacancySync ? exists is not null : exists == true);
         if (check.Reached && ReferralToolRules.IsCredentialRejection(check.HttpStatus))
             return await PostponeAsync(msg, CredentialsRejected(check.HttpStatus), ct);
         if (!check.Reached || check.HttpStatus is < 200 or >= 300)
             return await DeferAsync(msg, $"Vacancy check failed ({check.HttpStatus}).", ct);
         if (exists is null)
             return await DeferAsync(msg, "Vacancy check returned an unreadable response.", ct);
+        if (msg.Kind == OutboxKind.VacancySync)
+            return await SyncVacancyAsync(msg, settings, vacancy!, exists.Value, ct);
         if (exists == false)
-            return await DeferAsync(msg, "Vacancy not imported yet.", ct);
+            return await DeferAsync(msg, "Vacancy not in ReferralTool yet.", ct);
 
         // Read before this attempt's row exists, so it only sees earlier sends of this message.
         var hadPossiblyProcessedAttempt = await _db.WebhookDeliveries
@@ -73,19 +81,47 @@ public sealed class OutboxProcessor : IOutboxProcessor
             return await DeferAsync(msg, $"Transient send failure ({send.HttpStatus}).", ct);
 
         if (outcome == OutboxOutcome.Delivered)
-        {
-            msg.Status = OutboxStatus.Delivered;
-            msg.LastError = null;
-            await _db.SaveChangesAsync(CancellationToken.None);
-            return OutboxOutcome.Delivered;
-        }
+            return await FinishAsync(msg, OutboxStatus.Delivered, null);
 
         // 4xx with no earlier attempt ReferralTool may have recorded: terminal (unmapped status, bad
         // code, validation).
-        msg.Status = OutboxStatus.Failed;
-        msg.LastError = Trunc($"{send.HttpStatus}: {send.Body}", 1000);
+        return await FinishAsync(msg, OutboxStatus.Failed, Trunc($"{send.HttpStatus}: {send.Body}", 1000));
+    }
+
+    // Idempotent by construction: existence is re-checked on every attempt, so a POST that timed out after
+    // ReferralTool stored it becomes a PUT next time. No pre-send intent row is needed (unlike status updates).
+    // A timeout on the final attempt can dead-letter a call ReferralTool did store; the next change to the
+    // job re-checks and heals it.
+    private async Task<OutboxOutcome> SyncVacancyAsync(
+        OutboxMessage msg, ReferralToolSettings settings, VacancyPayload vacancy, bool exists, CancellationToken ct)
+    {
+        var call = ReferralToolRules.DecideVacancyCall(exists, vacancy.Inactive);
+        if (call == VacancyCall.None)
+            return await FinishAsync(msg, OutboxStatus.Delivered, null);
+
+        var attempt = Log(msg.Id, call == VacancyCall.Create ? DeliveryKind.VacancyCreate : DeliveryKind.VacancyUpdate);
+        var result = call == VacancyCall.Create
+            ? await _client.CreateVacancyAsync(settings, vacancy, ct)
+            : await _client.UpdateVacancyAsync(settings, vacancy, ct);
+        var outcome = ReferralToolRules.ClassifyVacancyCall(result.Reached, result.HttpStatus, result.Body);
+        Record(attempt, result, outcome == OutboxOutcome.Delivered);
         await _db.SaveChangesAsync(CancellationToken.None);
-        return OutboxOutcome.Failed;
+
+        return outcome switch
+        {
+            OutboxOutcome.Delivered => await FinishAsync(msg, OutboxStatus.Delivered, null),
+            OutboxOutcome.Postpone => await PostponeAsync(msg, CredentialsRejected(result.HttpStatus), CancellationToken.None),
+            OutboxOutcome.Failed => await FinishAsync(msg, OutboxStatus.Failed, Trunc($"{result.HttpStatus}: {result.Body}", 1000)),
+            _ => await DeferAsync(msg, $"Vacancy {call} failed ({result.HttpStatus}): {result.Body}", ct)
+        };
+    }
+
+    private async Task<OutboxOutcome> FinishAsync(OutboxMessage msg, OutboxStatus status, string? error)
+    {
+        msg.Status = status;
+        msg.LastError = error;
+        await _db.SaveChangesAsync(CancellationToken.None);
+        return status == OutboxStatus.Delivered ? OutboxOutcome.Delivered : OutboxOutcome.Failed;
     }
 
     public async Task RecordFailureAsync(OutboxClaim claim, string error, CancellationToken ct = default)

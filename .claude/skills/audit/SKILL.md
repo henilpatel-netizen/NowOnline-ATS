@@ -10,7 +10,7 @@ description: The Ats audit log, dashboard metrics, and integration test tools - 
 `IAuditLogger.LogAsync` writes one entry, stamping the user from `ICurrentUser` (the `Name` claim), and
 never throws into the caller. Back-office controllers call it after successful mutations: job
 create/publish/close/delete, pipeline save/delete, department/location create/update/delete, candidate
-create/update, integration settings save, feed-key regenerate. Stage moves are not duplicated here; they
+create/update, integration settings save, "Sync vacancies now" (`VacancySyncQueued`). Stage moves are not duplicated here; they
 live in `ApplicationEvent` (application Details) and outbound deliveries in `WebhookDelivery` (Integration
 delivery log). The Owner-only `AuditController` shows recent entries via `IAuditQuery`.
 
@@ -20,8 +20,8 @@ applications, active-by-stage counts, recent applications), all tenant-scoped. `
 renders it.
 
 ## Integration test tools
-The Integration page shows the count of jobs the feed would return and a Test-connection button that
-calls `IReferralToolClient.CheckVacancyExistsAsync` with the saved settings and a sample published
+The Integration page shows the count of published jobs and a Test-connection button that
+calls `IReferralToolClient.CheckVacancyExistsAsync` with the saved settings and a sample non-draft
 `ExternalRef`. It is a read-only probe: it never sends a status update or writes a `WebhookDelivery`.
 The ReferralTool HttpClient is registered in `AddAtsInfrastructure` (shared by Web and Worker).
 

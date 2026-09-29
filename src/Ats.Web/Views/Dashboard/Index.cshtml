@@ -90,9 +90,6 @@
                 <span class="ats-eyebrow">ReferralTool · @(Model.Integration.Connected ? "connected" : "off")</span>
             </div>
             <p class="ats-small ats-on-dark-muted mb-3">
-                @(Model.Integration.FeedLastPulledAt is null
-                    ? "No vacancy feed pull recorded yet."
-                    : $"Vacancy feed pulled {Ats.Application.Common.RelativeTime.Long(Model.Integration.FeedLastPulledAt, DateTimeOffset.UtcNow)}.")
                 @Model.Integration.Delivered24h delivered, @Model.Integration.Failed24h failed, @Model.Integration.Pending pending.
             </p>
             <a asp-controller="Integration" asp-action="Index" class="btn btn-outline-light btn-sm">

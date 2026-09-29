@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Ats.Application.Abstractions;
+using Ats.Application.Integration;
 using Ats.Infrastructure;
 using Ats.Infrastructure.Persistence;
 using Microsoft.AspNetCore.DataProtection;
@@ -29,6 +30,15 @@ builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(keyPath));
 
 builder.Services.AddAtsInfrastructure(builder.Configuration);
+
+// Vacancy snapshots carry an absolute career-site URL; fail at startup rather than on the first publish.
+builder.Services.AddOptions<IntegrationOptions>()
+    .Bind(builder.Configuration.GetSection("Integration"))
+    .Validate(o => Uri.TryCreate(o.CareerSiteBaseUrl, UriKind.Absolute, out var u) && u.Scheme is "https" or "http",
+        "Integration:CareerSiteBaseUrl must be an absolute http(s) URL.")
+    .Validate(o => !o.AllowInsecureReferralToolUrl || builder.Environment.IsDevelopment(),
+        "Integration:AllowInsecureReferralToolUrl is only allowed in Development.")
+    .ValidateOnStart();
 
 // Host-owned tenant/user resolution (QUAL-6).
 builder.Services.AddHttpContextAccessor();

@@ -8,8 +8,12 @@ public interface IIntegrationSettingsService
     Task<TenantSettings> GetAsync(CancellationToken ct = default);
     // Fails on an invalid base URL, or if another admin saved the settings since this edit was loaded.
     Task<OperationResult> UpdateAsync(IntegrationSettingsInput input, CancellationToken ct = default);
-    // Generates a new feed key, stores only its hash, and returns the plaintext (shown once).
-    Task<string> GenerateFeedKeyAsync(CancellationToken ct = default);
+    // Published jobs, shown on the vacancy card.
+    Task<int> CountPublishedJobsAsync(CancellationToken ct = default);
+
+    // Stages a vacancy sync for every non-draft job (first switch-on, or after the integration was off).
+    // Returns null when the settings cannot deliver, otherwise how many were queued (0 = no published or closed jobs).
+    Task<int?> QueueVacancySyncAsync(CancellationToken ct = default);
 
     // Outbox counts for the health banner, from a single grouped query (QUAL-3).
     Task<OutboxCounts> GetOutboxCountsAsync(CancellationToken ct = default);

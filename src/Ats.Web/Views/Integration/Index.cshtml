@@ -1,21 +1,11 @@
 ﻿@model Ats.Web.Models.IntegrationSettingsViewModel
-@using Ats.Application.Common
 @{
     ViewData["Title"] = "Integrations";
     ViewData["Eyebrow"] = "Outbound plumbing:";
     // Typed health model, so a renamed field is a compile error rather than a silently empty
     // banner (QUAL-3).
     var health = ViewData["Health"] as IntegrationHealthViewModel ?? new IntegrationHealthViewModel();
-    var lastPull = health.FeedLastPulledAt;
     var recent = health.RecentDeliveries;
-}
-
-@if (TempData["FeedKey"] is string newKey)
-{
-    <div class="alert alert-warning d-flex align-items-start gap-2 mb-3" role="alert">
-        <span class="ms ms-sm">key</span>
-        <span>New feed API key (copy now, shown once):<br><code>@newKey</code></span>
-    </div>
 }
 
 <div class="ats-card-dark mb-3 d-flex align-items-center gap-4 flex-wrap">
@@ -27,7 +17,6 @@
                 <span class="ats-board-col-dot d-inline-block" style="background:@(Model.IntegrationEnabled ? "var(--no-medium-aqua)" : "var(--no-roman-silver)")"></span>
                 @(Model.IntegrationEnabled ? "Connected" : "Disabled")
                 @if (Model.ReferralToolCustomerId is not null) { <text>· customer @Model.ReferralToolCustomerId</text> }
-                · feed @(lastPull is null ? "never pulled" : RelativeTime.Long(lastPull, DateTimeOffset.UtcNow))
             </span>
         </span>
     </div>
@@ -69,17 +58,14 @@
     </div>
     <div class="col-lg-5">
         <div class="ats-card d-flex flex-column gap-3">
-            <div><span class="ats-eyebrow">Inbound:</span><h2 class="mt-1 mb-0">Vacancy feed key.</h2></div>
-            <p class="ats-small ats-muted mb-0">ReferralTool authenticates with this key to pull your published vacancies. Only the hash is stored.</p>
+            <div><span class="ats-eyebrow">Vacancies:</span><h2 class="mt-1 mb-0">Pushed to ReferralTool.</h2></div>
+            <p class="ats-small ats-muted mb-0">Publishing, editing, closing or deleting a job sends it to ReferralTool automatically. Closed and deleted jobs are marked inactive there. After connecting for the first time, press Sync vacancies now to send jobs published before.</p>
             <div class="d-flex align-items-center justify-content-between">
-                <span class="ats-small">Status</span><strong class="ats-small">@(Model.HasFeedKey ? "configured" : "not set")</strong>
+                <span class="ats-small">Published jobs</span><strong class="ats-stat-mini">@Model.PublishedJobCount</strong>
             </div>
-            <div class="d-flex align-items-center justify-content-between">
-                <span class="ats-small">Published jobs exposed</span><strong class="ats-stat-mini">@Model.PublishedJobCount</strong>
-            </div>
-            <form asp-action="GenerateFeedKey" method="post"
-                  hx-confirm="Generate a new feed key? The old key stops working immediately.">
-                <button type="submit" class="btn btn-outline-secondary btn-sm">@(Model.HasFeedKey ? "Regenerate" : "Generate") feed key</button>
+            <form asp-action="SyncVacancies" method="post"
+                  hx-confirm="Send every published and closed job to ReferralTool now?">
+                <button type="submit" class="btn btn-outline-secondary btn-sm"><span class="ms ms-sm">sync</span> Sync vacancies now</button>
             </form>
         </div>
     </div>

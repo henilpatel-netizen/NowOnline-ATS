@@ -6,13 +6,20 @@ using Ats.Domain.Enums;
 using Ats.Infrastructure.Persistence;
 using Ats.Infrastructure.Shell;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Ats.Infrastructure.Dashboard;
 
 public sealed class DashboardService : IDashboardService
 {
     private readonly AtsDbContext _db;
-    public DashboardService(AtsDbContext db) => _db = db;
+    private readonly bool _allowInsecureUrl;
+
+    public DashboardService(AtsDbContext db, IOptions<IntegrationOptions> opts)
+    {
+        _db = db;
+        _allowInsecureUrl = opts.Value.AllowInsecureReferralToolUrl;
+    }
 
     public async Task<DashboardSummary> GetAsync(CancellationToken ct = default)
     {
@@ -89,7 +96,7 @@ public sealed class DashboardService : IDashboardService
 
         var failed = OutboxCount(OutboxStatus.Failed);
         if (failed > 0)
-            attention.Add(new AttentionItem("sync_problem", "danger", $"{failed} status updates failed to deliver", "ReferralTool", "/Integration/Deliveries"));
+            attention.Add(new AttentionItem("sync_problem", "danger", $"{failed} ReferralTool deliveries failed", "ReferralTool", "/Integration/Deliveries"));
         var drafts = await _db.Jobs.CountAsync(j => j.Status == JobStatus.Draft, ct);
         if (drafts > 0)
             attention.Add(new AttentionItem("edit_note", "info", $"{drafts} job(s) still in draft", "Not published", "/Jobs?status=Draft"));
@@ -97,7 +104,7 @@ public sealed class DashboardService : IDashboardService
         // Integration health.
         var settings = await _db.TenantSettings.FirstOrDefaultAsync(ct);
         var blockedReason = settings is { IntegrationEnabled: true }
-            ? ReferralToolRules.BlockedReason(settings, await ShellSummaryService.LatestDeliveryStatusAsync(_db, ct))
+            ? ReferralToolRules.BlockedReason(settings, await ShellSummaryService.LatestDeliveryStatusAsync(_db, ct), _allowInsecureUrl)
             : null;
         if (blockedReason is not null)
             attention.Insert(0, new AttentionItem("sync_disabled", "danger", "ReferralTool integration is blocked", blockedReason, "/Integration"));
@@ -107,7 +114,6 @@ public sealed class DashboardService : IDashboardService
         var health = new IntegrationHealth(
             settings?.IntegrationEnabled ?? false,
             settings?.ReferralToolCustomerId,
-            settings?.FeedLastPulledAt,
             delivered, failed, pending);
 
         // Activity feed from the audit log.

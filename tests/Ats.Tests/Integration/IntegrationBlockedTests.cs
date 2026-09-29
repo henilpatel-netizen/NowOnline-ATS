@@ -59,6 +59,15 @@ public class IntegrationBlockedTests
         Assert.Equal(ReferralToolBaseUrl.Validate(s.ReferralToolBaseUrl), ReferralToolRules.BlockedReason(s, 200));
     }
 
+    [Fact]
+    public void Enabled_integration_with_a_localhost_url_is_not_blocked_with_the_insecure_switch()
+    {
+        var s = Usable();
+        s.ReferralToolBaseUrl = "https://localhost:44377";
+        Assert.Null(ReferralToolRules.BlockedReason(s, null, allowInsecure: true));
+        Assert.NotNull(ReferralToolRules.BlockedReason(s, null));
+    }
+
     [Theory]
     [InlineData(401)]
     [InlineData(403)]

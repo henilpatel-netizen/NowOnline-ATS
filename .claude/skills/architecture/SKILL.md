@@ -14,7 +14,6 @@ description: Ats solution layout, strict layering, DI registration, and where ea
   `HttpTenantContext`, `IdentityService`, `OnboardingStore`, `DependencyInjection`. References Application.
 - `Ats.Web` — MVC back-office at the root (`/Jobs`, `/Candidates`, `/Board`, `/Integration`, ...); cookie
   auth; controllers are thin. The public career site is the `Careers` area at `/careers/{slug}`.
-- `Ats.Api` — REST API (feed + integration; built out in Phase 3).
 - `Ats.Worker` — background host (outbox delivery; built out in Phase 3).
 
 ## Layering (strict)
@@ -34,7 +33,7 @@ Infrastructure wiring is centralised in `Ats.Infrastructure/DependencyInjection.
 - New back-office page or view -> follow `.claude/skills/ui/SKILL.md` (layouts, tokens, components).
 
 ## Conventions
-- Cookie auth for back-office; JWT for Api (Phase 3+). Auth always behind `IIdentityService`.
+- Cookie auth for back-office. Auth always behind `IIdentityService`.
 - Timestamps via `KeyedEntity.CreatedAt/UpdatedAt`, stamped by the interceptor, stored UTC.
 
 ## Data-access conventions (Phase 3/4)
@@ -68,7 +67,6 @@ Infrastructure wiring is centralised in `Ats.Infrastructure/DependencyInjection.
   from the queries actually rendering the screens; they are deleted. Do not reintroduce a second one.
 - **`ITenantContext` and `ICurrentUser` are registered by each HOST, never by Infrastructure.**
   Web = `HttpTenantContext` (tenant_id claim, or slug via `HttpContext.Items`) + `CurrentUser`;
-  Api = `FeedTenantContext` (Items only — feed requests carry no claims) + `AnonymousCurrentUser`;
   Worker = `WorkerTenantContext` + `AnonymousCurrentUser`. A new host must register both or the
   container cannot build `IApplicationService`/`IAuditLogger` — it fails at startup, deliberately,
   rather than silently attributing writes to nobody.

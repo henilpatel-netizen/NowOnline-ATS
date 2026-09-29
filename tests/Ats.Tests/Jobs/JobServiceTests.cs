@@ -10,11 +10,12 @@ namespace Ats.Tests.Jobs;
 // externally visible. Previously untested (QUAL-1).
 public class JobServiceTests
 {
-    private static (JobService Service, FakeJobRepository Repo) Build(params Job[] jobs)
+    private static (JobService Service, FakeJobRepository Repo, FakeOutboxEnqueuer Outbox) Build(params Job[] jobs)
     {
         var repo = new FakeJobRepository();
         repo.Jobs.AddRange(jobs);
-        return (new JobService(repo), repo);
+        var outbox = new FakeOutboxEnqueuer();
+        return (new JobService(repo, outbox), repo, outbox);
     }
 
     private static Job DraftJob(int id = 1) => new()
@@ -36,7 +37,7 @@ public class JobServiceTests
     [InlineData("   ")]
     public async Task A_job_needs_a_title(string title)
     {
-        var (service, repo) = Build();
+        var (service, repo, _) = Build();
 
         var result = await service.CreateAsync(Input(title: title));
 
@@ -48,7 +49,7 @@ public class JobServiceTests
     [Fact]
     public async Task A_job_needs_a_pipeline_that_exists()
     {
-        var (service, repo) = Build();
+        var (service, repo, _) = Build();
         repo.PipelineExists = false;
 
         var result = await service.CreateAsync(Input());
@@ -61,7 +62,7 @@ public class JobServiceTests
     [Fact]
     public async Task A_new_job_starts_as_a_draft_with_a_numbered_reference()
     {
-        var (service, repo) = Build();
+        var (service, repo, _) = Build();
         repo.NextNumber = 77;
 
         var result = await service.CreateAsync(Input(title: "  Developer  "));
@@ -77,7 +78,7 @@ public class JobServiceTests
     [Fact]
     public async Task A_clashing_job_number_is_reported_rather_than_throwing()
     {
-        var (service, repo) = Build();
+        var (service, repo, _) = Build();
         repo.NumberClash = true;
 
         var result = await service.CreateAsync(Input());
@@ -91,7 +92,7 @@ public class JobServiceTests
     [Fact]
     public async Task Updating_without_an_id_is_rejected()
     {
-        var (service, _) = Build(DraftJob());
+        var (service, _, _) = Build(DraftJob());
 
         var result = await service.UpdateAsync(Input(id: null));
 
@@ -102,7 +103,7 @@ public class JobServiceTests
     [Fact]
     public async Task Updating_an_unknown_job_is_rejected()
     {
-        var (service, _) = Build();
+        var (service, _, _) = Build();
 
         var result = await service.UpdateAsync(Input(id: 999));
 
@@ -117,7 +118,7 @@ public class JobServiceTests
         var job = DraftJob();
         job.Status = JobStatus.Published;
         job.PublishedAt = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
-        var (service, _) = Build(job);
+        var (service, _, _) = Build(job);
 
         var result = await service.UpdateAsync(Input(id: job.Id, title: "Renamed"));
 
@@ -134,7 +135,7 @@ public class JobServiceTests
     public async Task Publishing_a_draft_publishes_it_and_stamps_the_date()
     {
         var job = DraftJob();
-        var (service, _) = Build(job);
+        var (service, _, _) = Build(job);
 
         var result = await service.PublishAsync(job.Id);
 
@@ -148,7 +149,7 @@ public class JobServiceTests
     {
         var job = DraftJob();
         job.Status = JobStatus.Published;
-        var (service, _) = Build(job);
+        var (service, _, _) = Build(job);
 
         var result = await service.PublishAsync(job.Id);
 
@@ -164,7 +165,7 @@ public class JobServiceTests
         var job = DraftJob();
         job.Status = JobStatus.Closed;
         job.PublishedAt = original;
-        var (service, _) = Build(job);
+        var (service, _, _) = Build(job);
 
         await service.PublishAsync(job.Id);
 
@@ -176,7 +177,7 @@ public class JobServiceTests
     public async Task Only_a_published_job_can_be_closed()
     {
         var job = DraftJob();   // still a draft
-        var (service, _) = Build(job);
+        var (service, _, _) = Build(job);
 
         var result = await service.CloseAsync(job.Id);
 
@@ -190,7 +191,7 @@ public class JobServiceTests
     {
         var job = DraftJob();
         job.Status = JobStatus.Published;
-        var (service, _) = Build(job);
+        var (service, _, _) = Build(job);
 
         var result = await service.CloseAsync(job.Id);
 
@@ -201,7 +202,7 @@ public class JobServiceTests
     [Fact]
     public async Task Publishing_or_closing_an_unknown_job_is_rejected()
     {
-        var (service, _) = Build();
+        var (service, _, _) = Build();
 
         Assert.False((await service.PublishAsync(404)).Succeeded);
         Assert.False((await service.CloseAsync(404)).Succeeded);
@@ -214,7 +215,7 @@ public class JobServiceTests
     {
         // Applications reference the job, so the row must survive; the global filter hides it.
         var job = DraftJob();
-        var (service, repo) = Build(job);
+        var (service, repo, _) = Build(job);
 
         var result = await service.DeleteAsync(job.Id);
 
@@ -226,11 +227,85 @@ public class JobServiceTests
     [Fact]
     public async Task Deleting_an_unknown_job_is_rejected()
     {
-        var (service, _) = Build();
+        var (service, _, _) = Build();
 
         var result = await service.DeleteAsync(404);
 
         Assert.False(result.Succeeded);
         Assert.Contains("not found", result.Error);
+    }
+
+    // ---- ReferralTool vacancy sync -----------------------------------------------------------
+
+    private static Job PublishedJob(int id = 1)
+    {
+        var job = DraftJob(id);
+        job.Status = JobStatus.Published;
+        job.PublishedAt = DateTimeOffset.UtcNow;
+        return job;
+    }
+
+    [Fact]
+    public async Task Creating_a_draft_does_not_sync()
+    {
+        var (service, _, outbox) = Build();
+        await service.CreateAsync(Input());
+        Assert.Empty(outbox.VacancySyncs);
+    }
+
+    [Fact]
+    public async Task Publishing_syncs_the_job()
+    {
+        var (service, _, outbox) = Build(DraftJob());
+        await service.PublishAsync(1);
+        Assert.Equal(JobStatus.Published, Assert.Single(outbox.VacancySyncs).Status);
+    }
+
+    [Fact]
+    public async Task Closing_syncs_the_job()
+    {
+        var (service, _, outbox) = Build(PublishedJob());
+        await service.CloseAsync(1);
+        Assert.Equal(JobStatus.Closed, Assert.Single(outbox.VacancySyncs).Status);
+    }
+
+    [Fact]
+    public async Task Editing_a_never_published_draft_does_not_sync()
+    {
+        var (service, _, outbox) = Build(DraftJob());
+        await service.UpdateAsync(Input(id: 1));
+        Assert.Empty(outbox.VacancySyncs);
+    }
+
+    [Fact]
+    public async Task Editing_a_published_job_syncs_the_new_title()
+    {
+        var (service, _, outbox) = Build(PublishedJob());
+        await service.UpdateAsync(Input(id: 1, title: "Lead Developer"));
+        Assert.Equal("Lead Developer", Assert.Single(outbox.VacancySyncs).Title);
+    }
+
+    [Fact]
+    public async Task Deleting_a_published_job_syncs_it_as_deleted()
+    {
+        var (service, _, outbox) = Build(PublishedJob());
+        await service.DeleteAsync(1);
+        Assert.True(Assert.Single(outbox.VacancySyncs).IsDeleted);
+    }
+
+    [Fact]
+    public async Task Deleting_a_never_published_draft_does_not_sync()
+    {
+        var (service, _, outbox) = Build(DraftJob());
+        await service.DeleteAsync(1);
+        Assert.Empty(outbox.VacancySyncs);
+    }
+
+    [Fact]
+    public async Task A_rejected_transition_does_not_sync()
+    {
+        var (service, _, outbox) = Build(DraftJob());
+        await service.CloseAsync(1);   // only a published job can be closed
+        Assert.Empty(outbox.VacancySyncs);
     }
 }

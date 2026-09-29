@@ -39,7 +39,7 @@ Handle the status it returns:
 ## 2. Collect the change
 `git diff` + `git status --short` against the baseline gives the task's files. Classify them:
 - **UI** if any `.cshtml`, `wwwroot/css`, `wwwroot/js`, controller, or `Areas/Careers` file changed.
-- **Data** if any entity, configuration, repository, query, migration, middleware, `Ats.Api` or `Ats.Worker`
+- **Data** if any entity, configuration, repository, query, migration, middleware or `Ats.Worker`
   file changed.
 
 ## 3. Review (parallel: one message, several Agent calls)

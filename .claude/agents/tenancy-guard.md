@@ -1,6 +1,6 @@
 ---
 name: tenancy-guard
-description: Read-only tenant-isolation reviewer for Ats diffs. Use after every change that touches data access, entities, migrations, controllers, middleware, the API or the worker. Returns PASS or FAIL with path:line evidence.
+description: Read-only tenant-isolation reviewer for Ats diffs. Use after every change that touches data access, entities, migrations, controllers, middleware or the worker. Returns PASS or FAIL with path:line evidence.
 tools: Read, Grep, Glob, Bash, LSP
 model: opus
 skills:
@@ -20,7 +20,7 @@ count; read them in full). Read surrounding code when needed to judge a hunk. Re
 introduces or touches, not pre-existing code.
 
 To build the concrete leak path, use `LSP`: `findReferences` / `incomingCalls` on each changed repository,
-query or service method shows which controllers, API endpoints and worker paths reach it, and
+query or service method shows which controllers and worker paths reach it, and
 `goToDefinition` confirms whether an entity extends `TenantEntity`. Prefer it over grep for C# symbols.
 
 ## Check
@@ -32,8 +32,8 @@ query or service method shows which controllers, API endpoints and worker paths 
 5. An ID from user input (route, form, query, JSON) used to load or change a row without going through the
    filtered context, e.g. `Find` on a non-tenant entity that links to tenant data, or a lookup on `Tenants`
    that trusts a client-supplied tenant id.
-6. A new public or anonymous endpoint (Careers area, Api) that resolves the tenant by any route other than
-   the slug middleware or the feed-key filter.
+6. A new public or anonymous endpoint (Careers area) that resolves the tenant by any route other than
+   the slug middleware.
 7. Worker code handling a message without setting `WorkerTenantContext` to that message's `TenantId` first.
 8. Migrations: tenant tables without `TenantId`, dropped or changed tenant-leading indexes, and unique
    indexes that should be `(TenantId, X)` but are only `(X)`, except `IX_Users_Email`, which is global by design.

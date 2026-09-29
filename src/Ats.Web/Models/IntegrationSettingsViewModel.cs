@@ -16,7 +16,6 @@ public class IntegrationSettingsViewModel
     // Display-only flags so the view can show "configured" without revealing secrets.
     public bool HasAuthToken { get; set; }
     public bool HasApiKey { get; set; }
-    public bool HasFeedKey { get; set; }
     public int PublishedJobCount { get; set; }
 
     // Optimistic-concurrency token, round-tripped as base64 through a hidden field.
@@ -27,7 +26,6 @@ public class IntegrationSettingsViewModel
 // Integrations health banner used to rely on: a renamed key failed silently (QUAL-3).
 public sealed class IntegrationHealthViewModel
 {
-    public DateTimeOffset? FeedLastPulledAt { get; init; }
     public int Delivered { get; init; }
     public int Failed { get; init; }
     public int Pending { get; init; }

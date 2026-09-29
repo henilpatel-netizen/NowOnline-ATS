@@ -39,15 +39,3 @@ test('an unknown career-site slug returns 404, not another tenant', async ({ pag
   const response = await page.goto('/careers/definitely-not-a-real-tenant-slug');
   expect(response?.status()).toBe(404);
 });
-
-test('the vacancy feed rejects a missing API key', async ({ request }) => {
-  const response = await request.get('/api/feed/vacancies');
-  expect([401, 403, 404]).toContain(response.status());
-});
-
-test('the vacancy feed rejects a wrong API key', async ({ request }) => {
-  const response = await request.get('/api/feed/vacancies', {
-    headers: { Authorization: 'Token not-a-real-key' },
-  });
-  expect([401, 403, 404]).toContain(response.status());
-});

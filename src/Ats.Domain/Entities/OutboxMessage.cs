@@ -5,8 +5,12 @@ namespace Ats.Domain.Entities;
 
 public class OutboxMessage : TenantEntity
 {
-    public int ApplicationId { get; set; }
-    // Payload snapshot (what we will POST to ReferralTool).
+    public int? ApplicationId { get; set; }
+    public OutboxKind Kind { get; set; } = OutboxKind.CandidateStatus;
+    public int? JobId { get; set; }
+    // VacancySync only: the VacancyPayload JSON snapshot.
+    public string? Payload { get; set; }
+    // CandidateStatus payload snapshot (empty for VacancySync).
     public string Code { get; set; } = string.Empty;
     public string ExternalVacancyId { get; set; } = string.Empty;
     public string ExternalCandidateId { get; set; } = string.Empty;

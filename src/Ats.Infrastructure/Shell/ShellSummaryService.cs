@@ -4,6 +4,7 @@ using Ats.Application.Shell;
 using Ats.Domain.Enums;
 using Ats.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Ats.Infrastructure.Shell;
 
@@ -16,12 +17,14 @@ public sealed class ShellSummaryService : IShellSummaryService
 
     private readonly AtsDbContext _db;
     private readonly ITenantContext _tenant;
+    private readonly bool _allowInsecureUrl;
     private ShellSummary? _cached;
 
-    public ShellSummaryService(AtsDbContext db, ITenantContext tenant)
+    public ShellSummaryService(AtsDbContext db, ITenantContext tenant, IOptions<IntegrationOptions> opts)
     {
         _db = db;
         _tenant = tenant;
+        _allowInsecureUrl = opts.Value.AllowInsecureReferralToolUrl;
     }
 
     public async Task<ShellSummary> GetAsync(CancellationToken ct = default)
@@ -51,7 +54,7 @@ public sealed class ShellSummaryService : IShellSummaryService
 
         var settings = await _db.TenantSettings.AsNoTracking().FirstOrDefaultAsync(ct);
         var blocked = settings is { IntegrationEnabled: true }
-            && ReferralToolRules.BlockedReason(settings, await LatestDeliveryStatusAsync(_db, ct)) is not null;
+            && ReferralToolRules.BlockedReason(settings, await LatestDeliveryStatusAsync(_db, ct), _allowInsecureUrl) is not null;
 
         return _cached = new ShellSummary(openJobs, candidates, failed, idle, staleDrafts, blocked);
     }

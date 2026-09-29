@@ -13,26 +13,23 @@ public class IntegrationController : Controller
     private readonly IIntegrationSettingsService _settings;
     private readonly IDeliveryLogService _log;
     private readonly IAuditLogger _audit;
-    private readonly IVacancyFeedRepository _feed;
 
     public IntegrationController(IIntegrationSettingsService settings, IDeliveryLogService log,
-        IAuditLogger audit, IVacancyFeedRepository feed)
+        IAuditLogger audit)
     {
-        _settings = settings; _log = log; _audit = audit; _feed = feed;
+        _settings = settings; _log = log; _audit = audit;
     }
 
     [HttpGet]
     public async Task<IActionResult> Index()
     {
         var s = await _settings.GetAsync();
-        var (_, total) = await _feed.GetPageAsync(1, 1);
 
         // Typed health model instead of ViewData string keys, and one grouped count query instead of
         // four (QUAL-3).
         var counts = await _settings.GetOutboxCountsAsync();
         ViewData["Health"] = new IntegrationHealthViewModel
         {
-            FeedLastPulledAt = s.FeedLastPulledAt,
             Delivered = counts.Delivered,
             Failed = counts.Failed,
             Pending = counts.Pending,
@@ -47,8 +44,7 @@ public class IntegrationController : Controller
             CodeParameterName = s.CodeParameterName,
             HasAuthToken = !string.IsNullOrEmpty(s.ReferralToolAuthToken),
             HasApiKey = !string.IsNullOrEmpty(s.ReferralToolApiKey),
-            HasFeedKey = !string.IsNullOrEmpty(s.FeedApiKeyHash),
-            PublishedJobCount = total,
+            PublishedJobCount = await _settings.CountPublishedJobsAsync(),
             RowVersion = s.RowVersion
         });
     }
@@ -67,12 +63,17 @@ public class IntegrationController : Controller
     }
 
     [HttpPost]
-    public async Task<IActionResult> GenerateFeedKey()
+    public async Task<IActionResult> SyncVacancies()
     {
-        var key = await _settings.GenerateFeedKeyAsync();
-        await _audit.LogAsync("FeedKeyRegenerated", "TenantSettings", null, "Regenerated feed API key");
-        TempData["FeedKey"] = key;   // shown once
-        TempData["Success"] = "New feed API key generated. Copy it now; it will not be shown again.";
+        var queued = await _settings.QueueVacancySyncAsync();
+        if (queued > 0)
+            await _audit.LogAsync("VacancySyncQueued", "TenantSettings", null, $"Queued {queued} vacancy sync(s)");
+        TempData[queued > 0 ? "Success" : "Error"] = queued switch
+        {
+            null => "Nothing queued: enable and complete the integration settings first.",
+            0 => "Nothing queued: there are no published or closed jobs yet.",
+            _ => $"Queued {queued} vacancy sync(s) to ReferralTool."
+        };
         return RedirectToAction(nameof(Index));
     }
 

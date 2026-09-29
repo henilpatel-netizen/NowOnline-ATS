@@ -10,7 +10,6 @@ public class TenantSettings : TenantEntity
     public string? ReferralToolAuthToken { get; set; }
     public int? ReferralToolCustomerId { get; set; }
     public string CodeParameterName { get; set; } = "ref";
-    public string? FeedApiKeyHash { get; set; }
     public int LastJobNumber { get; set; }
     public string? ReferralToolApiKey { get; set; }
 
@@ -22,7 +21,8 @@ public class TenantSettings : TenantEntity
     public string? CareerHeroHeadlineOutlined { get; set; }
     public string? CareerHeroIntro { get; set; }
 
-    // Telemetry for the integration health panels. Written by the vacancy feed endpoint.
+    // Unused since the vacancy push (2026-09-28); dropped in a follow-up migration once rollback is no longer needed.
+    public string? FeedApiKeyHash { get; set; }
     public DateTimeOffset? FeedLastPulledAt { get; set; }
 
     // Optimistic-concurrency token for the integration settings screen.

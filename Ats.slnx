@@ -1,6 +1,5 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/Ats.Api/Ats.Api.csproj" />
     <Project Path="src/Ats.Application/Ats.Application.csproj" />
     <Project Path="src/Ats.Domain/Ats.Domain.csproj" />
     <Project Path="src/Ats.Infrastructure/Ats.Infrastructure.csproj" />

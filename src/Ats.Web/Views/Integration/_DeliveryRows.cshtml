@@ -17,7 +17,7 @@
     };
 }
 <div class="ats-thead ats-table--deliveries">
-    <span>#</span><span>Candidate ref</span><span>Vacancy</span><span>Status sent</span><span>State</span><span>Last attempt</span>
+    <span>#</span><span>Candidate ref</span><span>Vacancy</span><span>Sent</span><span>State</span><span>Last attempt</span>
 </div>
 @foreach (var e in Model)
 {
@@ -26,9 +26,16 @@
     var pill = new StatusPillModel(st.Label, st.Tone);
     <div class="ats-trow ats-table--deliveries @(e.Message.Status == OutboxStatus.Failed ? "ats-trow--danger" : "")">
         <span class="ats-mono ats-xsmall ats-muted">@e.Message.Id</span>
-        <code>@e.Message.ExternalCandidateId</code>
+        @if (e.Message.Kind == OutboxKind.VacancySync)
+        {
+            <span class="ats-muted">-</span>
+        }
+        else
+        {
+            <code>@e.Message.ExternalCandidateId</code>
+        }
         <code>@e.Message.ExternalVacancyId</code>
-        <span class="ats-small">@e.Message.CandidateStatus</span>
+        <span class="ats-small">@(e.Message.Kind == OutboxKind.VacancySync ? "Vacancy sync" : e.Message.CandidateStatus)</span>
         <span><partial name="Partials/_StatusPill" model="pill" /></span>
         <span class="ats-cell-stack ats-xsmall ats-muted">
             @if (last is not null)
@@ -44,5 +51,5 @@
 }
 @if (Model.Count == 0)
 {
-    <partial name="Partials/_EmptyState" model="@(new EmptyStateModel("cloud_done", "No status updates yet."))" />
+    <partial name="Partials/_EmptyState" model="@(new EmptyStateModel("cloud_done", "No deliveries yet."))" />
 }
