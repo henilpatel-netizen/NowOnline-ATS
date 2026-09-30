@@ -33,6 +33,14 @@
         {
             <a class="btn btn-outline-secondary btn-sm" asp-controller="Resume" asp-action="Download" asp-route-applicationId="@Model.ApplicationId" hx-boost="false">Download CV</a>
         }
+        @* On the board the drawer sits outside #ats-content and inherits no boost config, so the
+           form carries it itself; without htmx, hx-confirm would not gate the post. *@
+        <form asp-controller="Applications" asp-action="Remove" asp-route-id="@Model.ApplicationId" method="post"
+              hx-boost="true" hx-target="#ats-content" hx-select="#ats-content"
+              hx-select-oob="#ats-sidebar,#ats-topbar" hx-swap="outerHTML" hx-indicator="#ats-nav-progress"
+              hx-confirm="Remove this candidate from the job? Their history on this job is hidden." data-confirm-title="Remove from job" data-confirm-ok="Remove from job" data-confirm-variant="danger">
+            <button type="submit" class="btn btn-outline-danger btn-sm"><span class="ms ms-sm">delete</span> Remove from job</button>
+        </form>
     </div>
 </div>
 
@@ -42,7 +50,7 @@
         @foreach (var p in Model.Progress)
         {
             <span class="flex-grow-1 d-flex flex-column gap-1">
-                <span style="height:5px;border-radius:99px;background:@(p.Reached ? "var(--no-oxford-blue)" : "var(--no-stage-empty)")"></span>
+                <span class="ats-progress-seg @(p.Reached ? "ats-stage-reached" : "ats-stage-empty")"></span>
                 <span class="ats-xsmall @(p.IsCurrent ? "" : "ats-muted")">@p.Name</span>
             </span>
         }
@@ -68,7 +76,7 @@
     @if (Model.ResumeFileName is not null)
     {
         <div class="ats-file-card">
-            <span class="ms" style="color:var(--no-danger-ink)">picture_as_pdf</span>
+            <span class="ms text-danger">picture_as_pdf</span>
             <span class="ats-cell-stack flex-grow-1">
                 <span class="ats-small">@Model.ResumeFileName</span>
                 <span class="ats-xsmall ats-muted">@Size(Model.ResumeSizeBytes)</span>

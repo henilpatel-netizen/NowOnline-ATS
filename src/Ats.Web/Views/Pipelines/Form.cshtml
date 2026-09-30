@@ -51,7 +51,7 @@
     <div class="d-flex align-items-center gap-2 border-top pt-3">
         <button type="submit" class="btn btn-primary">Save pipeline</button>
         <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a>
-        <span class="ms-auto ats-xsmall ats-muted">Changes apply to new applications; candidates already in a removed stage move to the previous one.</span>
+        <span class="ms-auto ats-xsmall ats-muted">Changes apply to every job using this pipeline. A stage that still has candidates, including removed ones, cannot be deleted.</span>
     </div>
 </form>
 

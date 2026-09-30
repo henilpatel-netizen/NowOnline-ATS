@@ -24,9 +24,8 @@
 
     @* Shared libraries load here, not at the end of <body>: page-specific scripts render inside
        <main> so they re-run after a boosted swap, and <main> parses first. Anything a page's inline
-       init depends on (Sortable, htmx, jQuery, validation) must already exist at that point.
+       init depends on (Sortable, htmx, validation) must already exist at that point.
        These files are fingerprinted and served immutable, so the blocking cost is first-load only. *@
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/lib/htmx/dist/htmx.min.js"></script>
     <script src="~/lib/sortablejs/Sortable.min.js"></script>
@@ -41,7 +40,10 @@
        (WCAG 2.4.1). Visually hidden until focused. *@
     <a class="ats-skip-link" href="#ats-content">Skip to content</a>
     <div id="ats-nav-progress" class="ats-nav-progress" aria-hidden="true"><span></span></div>
-    <div class="ats-shell">
+    @* hx-history-elt: Back/Forward snapshots and restores only the shell. Without it htmx restores
+       all of <body>, re-running site.js and bringing back #ats-confirm, the drawer, toasts and any
+       modal backdrop that was fading out when the snapshot was taken. Keep those outside. *@
+    <div class="ats-shell" hx-history-elt>
         <vc:sidebar-nav></vc:sidebar-nav>
         <div class="ats-main">
             <vc:top-bar></vc:top-bar>
@@ -81,13 +83,33 @@
                 }
                 @RenderBody()
                 @* Inside the swapped region on purpose: page-specific scripts must re-run after a
-                   boosted navigation. Shared libraries are loaded once at the end of <body>. *@
+                   boosted navigation or a history restore. Shared libraries load once in <head>. *@
                 @await RenderSectionAsync("Scripts", required: false)
             </main>
         </div>
     </div>
     @* htmx swaps the candidate drawer in here (Phase 2). *@
     <div id="ats-drawer-host"></div>
+
+    @* The one confirm dialog for every hx-confirm (site.js fills it from the form's attributes).
+       Outside #ats-content so a boosted swap never removes it. *@
+    <div class="modal fade" id="ats-confirm" tabindex="-1"
+         aria-labelledby="ats-confirm-title" aria-describedby="ats-confirm-message">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="ats-confirm-title">Are you sure?</h2>
+                </div>
+                <div class="modal-body">
+                    <p class="ats-muted mb-0" id="ats-confirm-message"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" data-confirm-cancel>Cancel</button>
+                    <button type="button" class="btn btn-primary" data-confirm-ok>Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     @* site.js registers listeners on document.body, so it must load after the body exists. *@
     <script src="~/js/site.js"></script>

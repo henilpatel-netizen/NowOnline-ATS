@@ -12,7 +12,8 @@ public class JobApplicationConfiguration : IEntityTypeConfiguration<JobApplicati
         b.HasKey(a => a.Id);
         b.Property(a => a.SourceCode).HasMaxLength(36);
         b.Property(a => a.RowVersion).IsRowVersion();
-        b.HasIndex(a => new { a.TenantId, a.JobId, a.CandidateId }).IsUnique();
+        // Filtered so a candidate removed from a job (soft-deleted) can be added to it again.
+        b.HasIndex(a => new { a.TenantId, a.JobId, a.CandidateId }).IsUnique().HasFilter("[IsDeleted] = 0");
         // Hot paths: status filters (dashboard/shell/list) and candidate-id lookups
         // (CandidateListQuery's ids.Contains) — the unique index above can't serve either.
         b.HasIndex(a => new { a.TenantId, a.Status });

@@ -1,11 +1,10 @@
 ﻿@model Ats.Web.Models.Shared.PipelineBarModel
 @{
-    var ramp = new[] { "var(--no-stage-1)", "var(--no-stage-2)", "var(--no-stage-3)", "var(--no-stage-4)", "var(--no-stage-5)" };
     var total = Model.Segments.Sum(s => s.Count);
 }
 @if (total == 0)
 {
-    <span class="ats-pipebar"><span style="flex:1;background:var(--no-stage-empty)"></span></span>
+    <span class="ats-pipebar"><span class="ats-stage-empty" style="flex:1"></span></span>
 }
 else
 {
@@ -14,7 +13,7 @@ else
         {
             var seg = Model.Segments[i];
             if (seg.Count == 0) { continue; }
-            <span style="flex:@Math.Max(1, seg.Count);background:@ramp[i % ramp.Length]" title="@seg.Count @seg.Label"></span>
+            <span class="ats-stage-@(i % 5 + 1)" style="flex:@Math.Max(1, seg.Count)" title="@seg.Count @seg.Label"></span>
         }
     </span>
 }

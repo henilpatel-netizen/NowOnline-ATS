@@ -19,6 +19,7 @@ public interface IApplicationService
     Task<OperationResult> AddCandidateToJobAsync(AddCandidateToJobInput input, CancellationToken ct = default);
     Task<OperationResult> AddExistingCandidateToJobAsync(int jobId, int candidateId, CancellationToken ct = default);
     Task<OperationResult> MoveStageAsync(int applicationId, int toStageId, byte[] rowVersion, CancellationToken ct = default);
+    Task<OperationResult> RemoveAsync(int applicationId, CancellationToken ct = default);
 }
 
 public sealed class ApplicationService : IApplicationService
@@ -148,5 +149,15 @@ public sealed class ApplicationService : IApplicationService
         var ok = await _repo.TrySaveChangesAsync(ct);
         return ok ? OperationResult.Ok
                   : OperationResult.Fail("This application was changed by someone else. Reload the board and try again.");
+    }
+
+    public async Task<OperationResult> RemoveAsync(int applicationId, CancellationToken ct = default)
+    {
+        var application = await _repo.GetAsync(applicationId, ct);
+        if (application is null) return OperationResult.Fail("Application not found.");
+        application.IsDeleted = true;
+        return await _repo.TrySaveChangesAsync(ct)
+            ? OperationResult.Ok
+            : OperationResult.Fail("This application was changed by someone else. Reload the board and try again.");
     }
 }

@@ -49,13 +49,13 @@ public sealed class PipelineTemplateService : IPipelineTemplateService
             }
 
             // Concurrency: reject if another admin saved this template since it was loaded.
-            if (input.RowVersion is { Length: > 0 })
+            if (input.RowVersion is { Length: > 0 }) _repo.SetExpectedRowVersion(template, input.RowVersion);
+            return await _repo.TrySaveChangesAsync(ct) switch
             {
-                _repo.SetExpectedRowVersion(template, input.RowVersion);
-                if (!await _repo.TrySaveChangesAsync(ct))
-                    return OperationResult.Fail("This pipeline was changed by someone else. Reload the page and try again.");
-                return OperationResult.Ok;
-            }
+                TemplateSaveOutcome.Conflict => OperationResult.Fail("This pipeline was changed by someone else. Reload the page and try again."),
+                TemplateSaveOutcome.StageInUse => OperationResult.Fail("This stage still has candidates (including removed ones) and cannot be deleted."),
+                _ => OperationResult.Ok
+            };
         }
         else
         {
@@ -74,8 +74,8 @@ public sealed class PipelineTemplateService : IPipelineTemplateService
         if (template is null) return OperationResult.Fail("Template not found.");
         if (await _repo.IsUsedByJobAsync(id, ct))
             return OperationResult.Fail("This template is used by one or more jobs and cannot be deleted.");
-        await _repo.RemoveAsync(template, ct);
-        await _repo.SaveChangesAsync(ct);
+        if (!await _repo.TryRemoveAsync(template, ct))
+            return OperationResult.Fail("This pipeline is still used by deleted jobs and cannot be removed.");
         return OperationResult.Ok;
     }
 

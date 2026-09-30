@@ -1,5 +1,6 @@
 using Ats.Application.Integration;
 using Ats.Domain.Entities;
+using Ats.Domain.Enums;
 using Xunit;
 
 namespace Ats.Tests.Integration;
@@ -355,5 +356,86 @@ public class ReferralToolRulesTests
     public void Vacancy_check_reply_without_a_readable_exists_flag_is_null(string body)
     {
         Assert.Null(ReferralToolRules.ReadVacancyExists(body));
+    }
+
+    // ---- Candidate status dedupe (contract: do not resend an identical stage) -----------------
+
+    private static OutboxMessage Queued(string code = "1RR123456", string vacancy = "JOB-1",
+                                        string candidate = "c-1", string status = "Applied",
+                                        OutboxKind kind = OutboxKind.CandidateStatus) =>
+        new() { Kind = kind, Code = code, ExternalVacancyId = vacancy, ExternalCandidateId = candidate, CandidateStatus = status };
+
+    [Fact]
+    public void An_identical_candidate_status_already_in_the_outbox_is_a_duplicate()
+    {
+        var same = ReferralToolRules.SameCandidateStatus("1RR123456", "JOB-1", "c-1", "Applied").Compile();
+        Assert.True(same(Queued()));
+    }
+
+    public static TheoryData<OutboxMessage> DifferentMessages => new()
+    {
+        Queued(code: "2RR999999"),
+        Queued(vacancy: "JOB-2"),
+        Queued(candidate: "c-2"),
+        Queued(status: "Interview"),
+        Queued(kind: OutboxKind.VacancySync),
+    };
+
+    [Theory]
+    [MemberData(nameof(DifferentMessages))]
+    public void A_message_differing_in_any_payload_field_or_kind_is_not_a_duplicate(OutboxMessage existing)
+    {
+        var same = ReferralToolRules.SameCandidateStatus("1RR123456", "JOB-1", "c-1", "Applied").Compile();
+        Assert.False(same(existing));
+    }
+
+    // An identical earlier message blocks a resend only if ReferralTool has it or may still get it.
+    // Composed the way OutboxEnqueuer composes it, over in-memory deliveries.
+    private const int EarlierId = 40;
+
+    private static bool BlocksResend(OutboxStatus status, params WebhookDelivery[] deliveries) =>
+        ReferralToolRules.BlocksIdenticalResend(status,
+            ReferralToolRules.PossiblyProcessedStatusUpdates(deliveries.AsQueryable(), EarlierId).Any());
+
+    private static WebhookDelivery Attempt(int? httpStatus, DeliveryKind kind = DeliveryKind.StatusUpdate,
+                                           int messageId = EarlierId) =>
+        new() { OutboxMessageId = messageId, Kind = kind, HttpStatus = httpStatus };
+
+    [Theory]
+    [InlineData(OutboxStatus.Delivered)]
+    [InlineData(OutboxStatus.Pending)]
+    [InlineData(OutboxStatus.Processing)]
+    public void An_identical_message_that_was_or_will_be_sent_blocks_the_resend(OutboxStatus status)
+    {
+        Assert.True(BlocksResend(status));
+    }
+
+    [Fact]
+    public void A_failed_identical_message_with_no_attempt_on_file_does_not_block()
+    {
+        Assert.False(BlocksResend(OutboxStatus.Failed));
+    }
+
+    [Fact]
+    public void A_failed_identical_message_whose_attempts_were_not_sent_or_rejected_does_not_block()
+    {
+        Assert.False(BlocksResend(OutboxStatus.Failed, Attempt(0), Attempt(400), Attempt(401), Attempt(404)));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(200)]
+    [InlineData(500)]
+    public void A_failed_identical_message_that_ReferralTool_may_have_recorded_blocks(int? httpStatus)
+    {
+        Assert.True(BlocksResend(OutboxStatus.Failed, Attempt(0), Attempt(httpStatus)));
+    }
+
+    [Fact]
+    public void Only_status_update_attempts_of_that_message_count()
+    {
+        Assert.False(BlocksResend(OutboxStatus.Failed,
+            Attempt(200, kind: DeliveryKind.CheckVacancy),
+            Attempt(200, messageId: EarlierId + 1)));
     }
 }

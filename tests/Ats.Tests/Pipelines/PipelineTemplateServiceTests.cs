@@ -249,6 +249,28 @@ public class PipelineTemplateServiceTests
         Assert.Equal(token, repo.ExpectedRowVersion);
     }
 
+    // ---- Stage removal blocked by applications ------------------------------------------------
+
+    public static TheoryData<byte[]?> RowVersions => new() { null, new byte[] { 1, 2, 3 } };
+
+    [Theory]
+    [MemberData(nameof(RowVersions))]
+    public async Task Removing_a_stage_that_applications_still_point_at_reports_a_friendly_failure(byte[]? rowVersion)
+    {
+        // Removed (soft-deleted) applications are hidden by the query filter but their foreign key
+        // still blocks the delete, so the database is the only reliable check.
+        var (service, repo) = Build(
+            new PipelineStage { Id = 1, Name = "Applied", Order = 1 },
+            new PipelineStage { Id = 2, Name = "Interview", Order = 2 });
+        repo.StageInUse = true;
+
+        var result = await service.SaveAsync(new PipelineTemplateInput(
+            TemplateId, "Standard", new() { Stage(1, "Applied", 1), Stage(2, "Interview", 2, delete: true) }, rowVersion));
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("This stage still has candidates (including removed ones) and cannot be deleted.", result.Error);
+    }
+
     // ---- Delete -------------------------------------------------------------------------------
 
     [Fact]
@@ -262,6 +284,19 @@ public class PipelineTemplateServiceTests
         Assert.False(result.Succeeded);
         Assert.Contains("used by one or more jobs", result.Error);
         Assert.Empty(repo.RemovedTemplates);
+    }
+
+    [Fact]
+    public async Task A_template_still_referenced_by_deleted_jobs_reports_a_friendly_failure()
+    {
+        // Soft-deleted jobs pass the in-use check but their foreign key still blocks the delete.
+        var (service, repo) = Build(new PipelineStage { Id = 1, Name = "Applied", Order = 1 });
+        repo.RemoveBlocked = true;
+
+        var result = await service.DeleteAsync(TemplateId);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("This pipeline is still used by deleted jobs and cannot be removed.", result.Error);
     }
 
     [Fact]

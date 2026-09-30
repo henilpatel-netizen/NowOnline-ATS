@@ -9,6 +9,7 @@ public interface ICandidateService
     Task<Candidate?> GetAsync(int id, CancellationToken ct = default);
     Task<OperationResult> CreateAsync(string firstName, string lastName, string email, string? phone, CancellationToken ct = default);
     Task<OperationResult> UpdateAsync(int id, string firstName, string lastName, string email, string? phone, CancellationToken ct = default);
+    Task<OperationResult> DeleteAsync(int id, CancellationToken ct = default);
 }
 
 public sealed class CandidateService : ICandidateService
@@ -52,5 +53,18 @@ public sealed class CandidateService : ICandidateService
         candidate.Phone = phone?.Trim();
         await _repo.SaveChangesAsync(ct);
         return OperationResult.Ok;
+    }
+
+    public async Task<OperationResult> DeleteAsync(int id, CancellationToken ct = default)
+    {
+        var candidate = await _repo.GetAsync(id, ct);
+        if (candidate is null) return OperationResult.Fail("Candidate not found.");
+        candidate.IsDeleted = true;
+        foreach (var application in await _repo.ListApplicationsAsync(id, ct))
+            application.IsDeleted = true;
+        // Applications carry a RowVersion, so a board move between load and save is a conflict.
+        return await _repo.TrySaveChangesAsync(ct)
+            ? OperationResult.Ok
+            : OperationResult.Fail("This candidate was changed by someone else. Reload the page and try again.");
     }
 }

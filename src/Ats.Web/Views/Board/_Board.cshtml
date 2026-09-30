@@ -1,8 +1,5 @@
 ﻿@model Ats.Web.Models.BoardViewModel
 @using Ats.Web.Models.Shared
-@{
-    var ramp = new[] { "var(--no-stage-1)", "var(--no-stage-2)", "var(--no-stage-3)", "var(--no-stage-4)", "var(--no-stage-5)" };
-}
 <div id="board-container">
     @if (!string.IsNullOrEmpty(Model.Error))
     {
@@ -10,16 +7,16 @@
             <span class="ms ms-sm">error</span> @Model.Error
         </div>
     }
-    <div class="ats-board ats-scroll">
+    <div class="ats-board ats-scroll" tabindex="0" role="region" aria-label="Pipeline board">
         @foreach (var col in Model.Columns)
         {
             var terminalHired = col.Stage.IsTerminal && col.Stage.TerminalOutcome == Ats.Domain.Entities.StageOutcome.Hired;
             var terminalRej = col.Stage.IsTerminal && col.Stage.TerminalOutcome == Ats.Domain.Entities.StageOutcome.Rejected;
             var colClass = terminalHired ? "ats-board-col--hired" : terminalRej ? "ats-board-col--rejected" : "";
-            var dot = terminalHired ? "var(--no-stage-5)" : terminalRej ? "var(--no-danger-ink)" : ramp[col.StageIndex % ramp.Length];
+            var dot = terminalHired ? "ats-stage-5" : terminalRej ? "ats-stage-rejected" : $"ats-stage-{col.StageIndex % 5 + 1}";
             <div class="ats-board-col @colClass" data-stage-id="@col.Stage.Id">
                 <div class="ats-board-col-head">
-                    <span class="ats-board-col-dot" style="background:@dot"></span>
+                    <span class="ats-board-col-dot @dot"></span>
                     <span class="ats-board-col-name">@col.Stage.Name</span>
                     <span class="ats-board-col-count">@col.Cards.Count</span>
                 </div>

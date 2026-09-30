@@ -62,6 +62,30 @@ stage `ApplicationEvent`, only on first arrival at a stage, when the application
 `Code`=SourceCode, `ExternalVacancyId`=Job.ExternalRef, `ExternalCandidateId`=Candidate.Key,
 `CandidateStatus`=stage.ReferralStatusOverride ?? stage.Name. `Kind` = `CandidateStatus`; vacancy
 messages leave `ApplicationId` null.
+It also skips when an identical `CandidateStatus` message (same `Code`, `ExternalVacancyId`,
+`ExternalCandidateId` and `CandidateStatus`, `ReferralToolRules.SameCandidateStatus`) exists that
+ReferralTool has or may still get (`ReferralToolRules.BlocksIdenticalResend`): it is `Pending`,
+`Processing` or `Delivered`, or it is `Failed` with a `StatusUpdate` delivery that passes
+`MayHaveBeenProcessed` (`PossiblyProcessedStatusUpdates`, the same definition the worker uses). A
+`Failed` message ReferralTool never received (dead-lettered on "Vacancy not in ReferralTool yet.",
+only `HttpStatus` 0 attempts, a 4xx before the event type was seeded) does not block, so the status is
+queued again. The contract forbids resending an identical stage, and a candidate removed from a job and
+added again is a new application with no events. A skip is logged at Information with the application
+id, the matched message id and status, and the `CandidateStatus`, never `Code` or the candidate key.
+All three rule parts are pure and unit-tested; the composed queries were checked with `ToQueryString()`
+(fully translated, tenant filter applied), but no e2e covers them because they only run for referral
+applications.
+- **Known limitation:** a deleted and re-created candidate gets a new `Candidate.Key`, so ReferralTool
+  sees a new candidate.
+- **Known limitation:** claim ordering is per `(TenantId, ApplicationId)`. A re-applied candidate's new
+  application can send a later stage before the old application's still-pending earlier stage, which
+  breaks the contract's per-candidate ordering. The proper fix is a third claim `NOT EXISTS` on
+  `(TenantId, ExternalCandidateId, ExternalVacancyId)` plus an index; out of scope for now.
+- **Known limitation:** a Pending or Processing identical message blocks the resend on the assumption
+  that it will be delivered. If it later dead-letters without ReferralTool receiving it, the re-applied
+  application's status is never queued (first-arrival rule); the only trace is the Information log of the
+  skip. The same `(TenantId, ExternalCandidateId, ExternalVacancyId)` index would also make the dedupe
+  lookup cheap; today it scans the tenant's outbox.
 
 ## Worker delivery (Ats.Worker)
 `OutboxDrainer` polls every `Integration:PollSeconds`. `OutboxClaimStore` claims due Pending messages

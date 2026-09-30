@@ -130,7 +130,9 @@ public sealed class FakeOutboxEnqueuer : IOutboxEnqueuer
 public sealed class FakeCandidateRepository : ICandidateRepository
 {
     public List<Candidate> Candidates { get; } = new();
+    public List<JobApplication> Applications { get; } = new();
     public int SaveCount { get; private set; }
+    public bool ConcurrencyConflict { get; set; }
     private int _nextId = 100;
 
     public Task<List<Candidate>> ListAsync(CancellationToken ct = default) => Task.FromResult(Candidates.ToList());
@@ -141,6 +143,9 @@ public sealed class FakeCandidateRepository : ICandidateRepository
 
     public Task<Candidate?> GetByEmailAsync(string email, CancellationToken ct = default) =>
         Task.FromResult(Candidates.FirstOrDefault(c => c.Email == email));
+
+    public Task<List<JobApplication>> ListApplicationsAsync(int candidateId, CancellationToken ct = default) =>
+        Task.FromResult(Applications.Where(a => a.CandidateId == candidateId).ToList());
 
     public Task AddAsync(Candidate candidate, CancellationToken ct = default)
     {
@@ -153,5 +158,12 @@ public sealed class FakeCandidateRepository : ICandidateRepository
     {
         SaveCount++;
         return Task.CompletedTask;
+    }
+
+    public Task<bool> TrySaveChangesAsync(CancellationToken ct = default)
+    {
+        if (ConcurrencyConflict) return Task.FromResult(false);
+        SaveCount++;
+        return Task.FromResult(true);
     }
 }

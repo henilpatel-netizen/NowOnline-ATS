@@ -12,7 +12,7 @@
     <div asp-validation-summary="All" role="alert" class="text-danger small"></div>
     <label class="d-flex flex-column gap-1" style="max-width:12rem">
         <span class="form-label mb-0">Accent colour</span>
-        <input asp-for="AccentColor" type="color" class="form-control form-control-color" style="width:4rem;height:2.4rem" />
+        <input asp-for="AccentColor" type="color" class="form-control form-control-color ats-color-input" />
         <span asp-validation-for="AccentColor" class="text-danger small"></span>
     </label>
     @{
@@ -22,7 +22,7 @@
         var accentRatio = BrandColor.BestTextContrast(Model.AccentColor);
         var accentOk = BrandColor.MeetsAaText(Model.AccentColor);
     }
-    <div class="ats-small @(accentOk ? "ats-muted" : "")" style="max-width:34rem@(accentOk ? "" : ";color:var(--no-warning-ink)")" role="note">
+    <div class="ats-small @(accentOk ? "ats-muted" : "text-warning")" style="max-width:34rem" role="note">
         <span class="ms ms-sm" aria-hidden="true">@(accentOk ? "check_circle" : "warning")</span>
         Text on this accent is contrast-matched automatically (currently
         <strong>@accentRatio.ToString("0.0"):1</strong>).

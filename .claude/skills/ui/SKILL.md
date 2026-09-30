@@ -64,9 +64,38 @@ invalid falls back to the default.
 
 ## Forms
 Use tag helpers: `asp-for`, `asp-validation-for`, `asp-validation-summary="ModelOnly"`. Inputs get
-`class="form-control"`, primary action `class="btn btn-primary"`. Client-side validation is wired in
-`_AuthLayout`; for back-office forms add `<partial name="_ValidationScriptsPartial" />` in a
-`@section Scripts`.
+`class="form-control"`, primary action `class="btn btn-primary"`.
+
+**Validation (themed, no native bubbles) — enforced by `tests/e2e/form-validation.spec.ts`.**
+There is no jQuery or jQuery Validation any more. Forms use native HTML5 constraints, and
+`wwwroot/js/ats-validation.js` (rendered by `_ValidationScriptsPartial`, which all three layouts
+include; the career site gets it without `site.js`) replaces the browser bubble:
+- It cancels every `invalid` event (document, capture phase), writes a short British English message
+  under the field, sets `aria-invalid="true"` and appends the message id to `aria-describedby`
+  (existing ids are kept), focuses the first invalid field, and clears the message once the field is
+  valid again (`input`/`change`). Invalid forms never submit, boosted ones included: the browser
+  blocks the submit before htmx sees it.
+- The message goes into the field's `asp-validation-for` span when the form has one, so a client
+  and a server (ModelState) message never appear side by side; otherwise a span is created after
+  the field. Server-rendered errors get the same aria wiring on load.
+- `[Required]`, `[StringLength]` and `[RegularExpression]` reach the browser as `data-val-*` only;
+  the script copies them onto `required` / `maxlength` / `minlength` / `pattern` on load, after every
+  htmx swap and again on each submit click (so rows added by page scripts are covered).
+  A `[RegularExpression]` pattern lands in an HTML `pattern` attribute, which browsers compile with
+  the `v` flag, so it must be valid there: inside a character class escape `(` `)` `[` `]` `{` `}`
+  `/` `-` `|`. An invalid pattern is silently ignored and the field is then checked only on the
+  server. A `data-val-required` field that is not rendered (a removed pipeline stage row) is left unrequired,
+  since the browser cannot focus it.
+- Styling is token-mapped in `ats-tokens.css`: `.field-validation-error` (danger ink) and
+  `.form-control[aria-invalid="true"]` (danger border). Do not use Bootstrap's `.is-invalid`: its
+  icon is a hard-coded `#dc3545`.
+
+**Add a validated field:** put the attribute on the view model (`[Required]`, `[EmailAddress]`,
+`[StringLength]`), render `<input asp-for="X" class="form-control" />` plus
+`<span asp-validation-for="X" class="text-danger small"></span>`. For an input without a model
+property (e.g. the resume `type="file"`), write the native attribute (`required`, `type="email"`)
+yourself; give it a label or `aria-label`. Never add `novalidate` or call `reportValidity()`.
+Always validate on the server too: client constraints are a convenience.
 
 ## Add a new back-office page (checklist)
 1. Controller action returns `View(...)`; the page is `Views/<Controller>/<Action>.cshtml`.
@@ -93,7 +122,8 @@ The auth cookie is `HttpOnly` + `Secure`, so test over https.
   (`Views/Home/Status.cshtml`, neutral `_AuthLayout`) for 404/403; `UseExceptionHandler` renders
   `Views/Shared/Error.cshtml` for 500. The neutral layout serves both back-office and careers visitors.
 - Polish: an inline-SVG favicon (Sky-Blue `#0085CA`) in all layouts; `_Alerts` are dismissible;
-  `site.js` disables a form's submit button on submit and wires the `Ctrl/Cmd+K` search shortcut.
+  `site.js` disables a form's submit button once its request goes out (see Boosted navigation rule 4)
+  and wires the `Ctrl/Cmd+K` search shortcut.
 
 ## Global search
 `SearchController` (`GET /Search?q=`) returns the `_Results` partial via htmx into the topbar. Backed
@@ -165,7 +195,7 @@ Two containers carry the boost config, with identical attributes:
 Measured with `tests/e2e/nav-cost.spec.ts`: an in-content navigation went from **1 document +
 17 assets + 862ms** to **1 xhr + 0 assets + 42ms**. Keep that spec passing.
 
-**Four rules that are easy to break:**
+**Five rules that are easy to break:**
 1. **`hx-target` / `hx-select` are inherited by every descendant.** Because they now sit on
    `#ats-content`, anything *inside* it that drives its own htmx request must override them or it
    will filter its own response for `#ats-content` and swap nothing. Today that is exactly one
@@ -175,7 +205,7 @@ Measured with `tests/e2e/nav-cost.spec.ts`: an in-content navigation went from *
    `<body>` still carries no boost config: putting it there would catch the top bar too.
 2. **Shared libraries load in `<head>`; page scripts render inside `<main>`.** `@section Scripts` is
    rendered inside `#ats-content` so page JS re-runs after a swap — and `<main>` parses *before* the
-   end of `<body>`, so anything a page's inline init needs (htmx, jQuery, Sortable, validation) must
+   end of `<body>`, so anything a page's inline init needs (htmx, Sortable, validation) must
    already be defined. Add a new shared library to `<head>`, never per-page.
 3. **Document title comes from `data-page-title` on `#ats-content`,** not from parsing the response:
    htmx replays cached DOM on Back/Forward with no HTTP response.
@@ -185,12 +215,62 @@ Measured with `tests/e2e/nav-cost.spec.ts`: an in-content navigation went from *
    navigation. If you add another per-page region outside the content area, add its id there too.
 4. **Confirmation uses `hx-confirm`, never `onsubmit="return confirm(...)"`.** A boosted submit is
    driven by htmx, which does not consult the native `onsubmit` return value, so a native confirm
-   silently stops gating the action. All five destructive forms use `hx-confirm`.
+   silently stops gating the action. Every destructive form uses `hx-confirm`, which shows the
+   themed confirm modal (see "Confirm dialog" below), never the browser's native dialog.
+   `site.js` disables an htmx form's submit button on `htmx:beforeRequest` (which fires only after
+   the confirm is accepted) and re-enables it when `htmx:afterRequest` reports failure. Plain forms
+   are disabled on the next tick after `submit`, unless something called `preventDefault`. Never go
+   back to disabling on the `submit` event itself: it runs before the confirm dialog, so cancelling
+   left the button dead until reload.
+   The drawer lives outside `#ats-content`, so a form in it (Remove from job) carries the boost
+   config itself; `site.js` re-runs `htmx.process` after wrapping the drawer, and keeps a drawer that
+   issued a boosted request open until the new page is swapped in. It then closes the drawer and moves
+   focus to the new page's `h1` (or `#ats-content`, with `tabindex="-1"`), since the trigger that
+   opened the drawer was swapped away and focus would otherwise fall to `<body>`.
+5. **History snapshots cover `.ats-shell` only (`hx-history-elt`), enforced by
+   `tests/e2e/history-restore.spec.ts`.** htmx snapshots its history element before each boosted
+   swap and puts it back on Back/Forward. Without `hx-history-elt` that element is `<body>`: a restore
+   re-ran `site.js` (every listener bound again, one confirm sent twice), duplicated `#ats-confirm`
+   and brought back a `.modal-backdrop` that was mid-fade when the snapshot was taken, blocking the
+   page until reload. Anything that is live state rather than page content (`site.js`,
+   `#ats-confirm`, `#ats-drawer-host`, `#ats-toasts`, Bootstrap backdrops) must stay **outside**
+   `.ats-shell`; page `@section Scripts` inside `#ats-content` still re-run on restore. `site.js`
+   also closes a confirm left open when Back fires and removes any stray backdrop.
 
 Opt out with `hx-boost="false"` for anything whose response is not a back-office page (file
 downloads; the sign-out form, whose response is the login page on `_AuthLayout`). `site.js` also
 falls back to a real navigation for any non-HTML response, any page lacking `#ats-content`, and any
 non-2xx or network error — so a boosted click can never silently do nothing.
+
+## Confirm dialog — enforced by `tests/e2e/confirm-modal.spec.ts`
+One Bootstrap modal, `#ats-confirm` in `_Layout` (outside `#ats-content`, so a swap never removes
+it), serves every `hx-confirm`. `site.js` handles `htmx:confirm`: only when `evt.detail.question` is
+set (the element or an ancestor has `hx-confirm`) it prevents the native dialog, fills the modal and
+calls `evt.detail.issueRequest(true)` from the confirm button alone. Cancel, Escape and a backdrop
+click send nothing. One confirm at a time: a second one while the modal is open is dropped; one
+that arrives while it is fading out is held and shown once it has closed. Focus
+moves to Cancel for a danger confirm (to the confirm button otherwise), is trapped by Bootstrap, and
+returns to the trigger on close (a hidden dropdown item hands it to its menu toggle).
+
+```cshtml
+<form asp-action="Delete" asp-route-id="@x.Id" method="post"
+      hx-confirm="Delete this pipeline?"
+      data-confirm-title="Delete pipeline" data-confirm-ok="Delete pipeline" data-confirm-variant="danger">
+```
+- `hx-confirm` is the message. `data-confirm-title` (default "Are you sure?"), `data-confirm-ok`
+  (confirm button text, default "Confirm"; name the action, e.g. "Delete job", "Publish job") and
+  `data-confirm-variant="danger"` (solid `.btn-danger`, for Delete/Remove; otherwise `.btn-primary`)
+  are optional, but every existing form sets all that apply.
+- It works in the candidate drawer: the modal (z-index 1055, backdrop 1050) sits above the drawer
+  (1045), and the drawer's Escape/Tab handler ignores keys inside `.modal`, so Escape closes only the
+  confirm.
+- Modal styling is Bootstrap variables mapped to tokens in `ats-tokens.css` (`.modal`,
+  `.modal-backdrop`, `.btn-danger`). Never add a second modal system.
+- e2e: import `test`/`expect` from `tests/e2e/confirm.ts` in any spec that confirms; its `page`
+  fixture fails the test if a native dialog fires. Use `acceptConfirm(page, message?)` /
+  `dismissConfirm(page, message?, 'cancel' | 'escape' | 'backdrop')`, never `page.on('dialog')`.
+  Pages from `browser.newPage()` fall outside the fixture; a native dialog there is auto-dismissed
+  and the following `acceptConfirm` times out, so the regression still fails.
 
 ## Layout invariants (Phase 9) — enforced by `tests/e2e/layout-audit.spec.ts`
 - **The content area has no width cap.** It shares the top bar's `1.75rem` horizontal padding, so
@@ -223,6 +303,21 @@ style beats every media query, which is what made the tables impossible to make 
 768px the templates collapse to a single column and the header row is hidden. Adding a screen means
 adding one class next to the others, not a `style=` attribute.
 
+**Row menus.** A `.dropdown` inside an `.ats-trow--link` row must set
+`data-bs-popper-config='{"strategy":"fixed"}'` on its toggle, or `.ats-card-flush`'s overflow clips
+the menu on the first and last rows. Every row's controls share `z-index: 2`, so a later row would
+paint over an open menu; `.ats-trow--link:has(.dropdown-menu.show)` lifts the open row above the rest.
+Locked by `tests/e2e/row-menus.spec.ts`. A menu that needs more width takes a class
+(`.ats-menu-wide`), never an inline `min-width`.
+Menu styling is `--bs-dropdown-*` mapped to tokens on `.dropdown-menu` in `ats-tokens.css`; Bootstrap's
+pressed item is a hard-coded `#0d6efd`, so never drop that mapping. A destructive item is
+`.dropdown-item text-danger` (danger ink, danger-soft on hover/focus/active). Locked by
+`tests/e2e/dropdown-theme.spec.ts` (no Bootstrap blue, axe colour-contrast on focus/hover/press).
+
+**Icon-only row controls** (edit / delete glyphs on Organisation and Pipelines) take `.ats-icon-hit`
+for a 24x24px minimum target (WCAG 2.5.8); a destructive glyph adds `.ats-icon-danger` for its colour.
+Never colour one with an inline `style`.
+
 ## Async feedback (Phase 5, UX-2/UX-3)
 htmx toggles `.htmx-request` on whatever `hx-indicator` points at, so progress needs no JS:
 - `.ats-spinner` — inline spinner (global search).
@@ -236,8 +331,27 @@ htmx toggles `.htmx-request` on whatever `hx-indicator` points at, so progress n
 ## Colour (Phase 5, UX-5)
 No one-off hex in views. Text on dark surfaces uses `--ats-on-dark`, `--ats-on-dark-muted`,
 `--ats-on-dark-subtle`, `--ats-on-dark-label`, `--ats-on-dark-danger` (helper classes
-`.ats-on-dark-*`). The only file that may contain raw hex is the Branding view component, which
-*defines* the per-tenant token values. A dark theme is now a token swap; it has not been built.
+`.ats-on-dark-*`). Raw hex belongs only where tokens are *defined*: `ats-tokens.css` (NowOnline palette and the
+Bootstrap `-rgb` triples) and the Branding view component (per-tenant token values). A dark theme is now a token swap; it has not been built.
+
+## Status colours and native controls — enforced by `tests/e2e/status-colours.spec.ts`
+- `ats-tokens.css` maps Bootstrap's `--bs-{danger,success,warning,info}` (+ `-rgb`, `-text-emphasis`,
+  `-bg-subtle`, `-border-subtle`) and `--bs-form-{valid,invalid}-*` to NowOnline tokens. The colour is
+  the `--no-*-ink` shade (AA on white, the app background and its own soft tint), the subtle
+  background is `--no-*-soft` (same pair as the pills), the border is `--no-*-border`. So
+  `text-danger`, `text-success`/`-warning`/`-info`, `alert-*` and field errors are on-brand with no
+  extra class. **The `-rgb` triples are literal numbers**: change a `--no-*-ink` and update its triple.
+- For a status-coloured bit of text in a view, use `text-danger` etc., not an inline `color:`.
+  `PillToneCss.Ink` returns those classes (neutral: `.ats-ink-muted`).
+- The file input's "Choose file" button (`::file-selector-button`), checkbox focus glow and the colour
+  picker (`.ats-color-input`) are themed too.
+- Former inline colours are classes in `ats-components.css`: stage ramp fills `.ats-stage-1..5`
+  (plus `-empty`, `-reached`, `-rejected`; index is `i % 5 + 1`), connection dots `.ats-dot--on/--off`,
+  `.ats-divider-top/-bottom`, `.ats-icon-tile-dark`, `.ats-check-panel`, `.ats-on-dark-label`, and the
+  back-office career hero preview `.ats-hero-preview*`. Data-driven sizes (bar `width`/`flex`) and the
+  computed `_Avatar` colours stay inline.
+- `.btn-danger` hover/active is `color-mix()` of the danger ink with Oxford Blue; there is no token
+  for it, so it stays.
 
 ## Accessibility (Phase 6, verified by axe in Phase 9) — the rules that are easy to undo
 Target is WCAG 2.1 AA, enforced by `tests/e2e/a11y.spec.ts` (axe-core over 11 back-office screens

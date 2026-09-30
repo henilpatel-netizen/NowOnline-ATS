@@ -2,16 +2,40 @@
 // markup must expose a re-apply function taking a scope, so it can run again after an htmx swap.
 window.Ats = window.Ats || {};
 
-// Disable submit buttons on form submit to prevent double-posts and signal progress.
-document.addEventListener('submit', function (e) {
-    var form = e.target;
-    if (!(form instanceof HTMLFormElement)) return;
-    var btn = form.querySelector('button[type="submit"], input[type="submit"]');
-    if (btn && !btn.disabled) {
-        // Let the form post first, then disable on the next tick.
-        setTimeout(function () { btn.disabled = true; btn.classList.add('disabled'); }, 0);
+// Disable a form's submit button once its request actually goes out, to prevent double-posts and
+// signal progress. Disabling on the submit event itself ran before htmx showed the hx-confirm
+// dialog, so cancelling it left the button dead until reload.
+(function () {
+    function submitButton(form) {
+        return form instanceof HTMLFormElement
+            ? form.querySelector('button[type="submit"], input[type="submit"]') : null;
     }
-}, true);
+    function setBusy(btn, busy) {
+        btn.disabled = busy;
+        btn.classList.toggle('disabled', busy);
+    }
+
+    // Native posts (hx-boost="false" forms such as sign-out). Checked on the next tick, after every
+    // listener has run: if htmx or client-side validation cancelled the native submit, leave the
+    // button alone. Disabling later also lets the button's own name/value post first.
+    document.addEventListener('submit', function (e) {
+        var btn = submitButton(e.target);
+        if (!btn || btn.disabled) return;
+        setTimeout(function () { if (!e.defaultPrevented) setBusy(btn, true); }, 0);
+    }, true);
+
+    // htmx forms (boosted or hx-post): beforeRequest fires only after hx-confirm was accepted.
+    document.body.addEventListener('htmx:beforeRequest', function (evt) {
+        var btn = submitButton(evt.detail.elt);
+        if (btn) setBusy(btn, true);
+    });
+    // A failed or aborted request must not leave the button stuck.
+    document.body.addEventListener('htmx:afterRequest', function (evt) {
+        if (evt.detail.successful) return;
+        var btn = submitButton(evt.detail.elt);
+        if (btn) setBusy(btn, false);
+    });
+})();
 
 // Ctrl/Cmd+K focuses global search; Escape clears the result list.
 (function () {
@@ -130,6 +154,9 @@ document.addEventListener('submit', function (e) {
         // Move focus into the dialog: the close button if present, otherwise the panel itself.
         var p = panel();
         if (!p) return;
+        // Rebuilding innerHTML discarded the nodes htmx had processed, so hx-* attributes in the
+        // drawer (the Remove from job form) must be processed again.
+        if (window.htmx) htmx.process(p);
         var closeBtn = p.querySelector('[data-drawer-close]');
         (closeBtn || p).focus();
     });
@@ -140,6 +167,8 @@ document.addEventListener('submit', function (e) {
 
     document.addEventListener('keydown', function (e) {
         if (!host.innerHTML) return;
+        // A confirm dialog opened from the drawer handles its own Escape and Tab.
+        if (e.target.closest && e.target.closest('.modal')) return;
 
         if (e.key === 'Escape') { close(); return; }
 
@@ -204,9 +233,20 @@ document.addEventListener('submit', function (e) {
         }
     });
 
-    // Title after a boosted swap, and after Back/Forward restores cached content.
+    // Title after a boosted swap, and after Back/Forward restores cached content. A drawer that
+    // issued the request itself (see beforeRequest below) is closed here, once the new page is in.
+    // Its trigger was swapped away, so focus goes to the new page's heading instead of <body>.
     document.body.addEventListener('htmx:afterSwap', function (evt) {
-        if (evt.target && evt.target.id === CONTENT_ID) syncTitleFromContent();
+        if (!evt.target || evt.target.id !== CONTENT_ID) return;
+        syncTitleFromContent();
+        var host = document.getElementById('ats-drawer-host');
+        if (!host || !host.innerHTML || !Ats.closeDrawer) return;
+        Ats.closeDrawer();
+        var main = document.getElementById(CONTENT_ID);
+        var target = (main && main.querySelector('h1')) || main;
+        if (!target) return;
+        if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+        target.focus();
     });
     document.body.addEventListener('htmx:historyRestore', syncTitleFromContent);
 
@@ -223,25 +263,111 @@ document.addEventListener('submit', function (e) {
         hardNavigate(evt.detail.pathInfo && evt.detail.pathInfo.requestPath);
     });
 
-    // A drawer left open over a freshly swapped page would be stale.
+    // A drawer left open over a freshly swapped page would be stale. A request fired from inside
+    // the drawer keeps it until the swap: htmx dispatches the request's events on the source form,
+    // and on a detached form they never reach these body listeners (error fallbacks included).
     document.body.addEventListener('htmx:beforeRequest', function (evt) {
         if (!isBoosted(evt)) return;
         var host = document.getElementById('ats-drawer-host');
-        if (host) host.innerHTML = '';
+        if (host && !host.contains(evt.detail.elt)) host.innerHTML = '';
+    });
+})();
+
+// ---------------------------------------------------------------------------------------------
+// Themed confirm. htmx raises htmx:confirm before EVERY request; only those with a question (the
+// element or an ancestor carries hx-confirm) are held for #ats-confirm, the rest pass straight
+// through. The request is issued only from the confirm button; Cancel, Escape and the backdrop
+// just close the dialog. Optional attributes on the hx-confirm element: data-confirm-title,
+// data-confirm-ok (button text) and data-confirm-variant="danger".
+// ---------------------------------------------------------------------------------------------
+(function () {
+    var dialog = document.getElementById('ats-confirm');
+    if (!dialog || !window.bootstrap) return;
+    var modal = bootstrap.Modal.getOrCreateInstance(dialog);
+    var title = document.getElementById('ats-confirm-title');
+    var message = document.getElementById('ats-confirm-message');
+    var ok = dialog.querySelector('[data-confirm-ok]');
+    var cancel = dialog.querySelector('[data-confirm-cancel]');
+    var issue = null;
+    var trigger = null;
+    var initialFocus = null;
+    var hiding = false;
+    var queued = null;
+
+    function open(src, question, issueRequest, from) {
+        var danger = src.getAttribute('data-confirm-variant') === 'danger';
+        issue = issueRequest;
+        trigger = from;
+        title.textContent = src.getAttribute('data-confirm-title') || 'Are you sure?';
+        message.textContent = question;
+        ok.textContent = src.getAttribute('data-confirm-ok') || 'Confirm';
+        ok.classList.toggle('btn-danger', danger);
+        ok.classList.toggle('btn-primary', !danger);
+        initialFocus = danger ? cancel : ok;
+        modal.show();
+    }
+
+    document.body.addEventListener('htmx:confirm', function (evt) {
+        if (!evt.detail.question) return;
+        evt.preventDefault();
+        if (issue) return;   // one pending confirm at a time; a second one is dropped
+        var src = evt.detail.elt.closest('[hx-confirm]') || evt.detail.elt;
+        var args = [src, evt.detail.question, evt.detail.issueRequest, document.activeElement];
+        // Bootstrap ignores show() while the fade-out runs, so hold this one until it has finished.
+        if (hiding) { queued = args; return; }
+        open.apply(null, args);
     });
 
-    // jQuery Unobtrusive Validation binds once on initial load. Forms that arrive in a swap must be
-    // parsed explicitly, or client-side validation silently stops working after the first navigation.
-    document.body.addEventListener('htmx:afterSettle', function (evt) {
-        var $ = window.jQuery;
-        if (!$ || !$.validator || !$.validator.unobtrusive) return;
-        var scope = evt.target && evt.target.querySelectorAll ? evt.target : document;
-        scope.querySelectorAll('form').forEach(function (form) {
-            try {
-                $(form).removeData('validator').removeData('unobtrusiveValidation');
-                $.validator.unobtrusive.parse(form);
-            } catch (e) { /* a form without validation metadata is fine */ }
-        });
+    dialog.addEventListener('hide.bs.modal', function () { hiding = true; issue = null; });
+
+    dialog.addEventListener('shown.bs.modal', function () { if (initialFocus) initialFocus.focus(); });
+
+    // Bootstrap traps focus on focusin, but the modal is the last thing in <body>: Tab from its last
+    // button goes to the browser chrome, where no focusin fires. Wrap between the two buttons here.
+    dialog.addEventListener('keydown', function (e) {
+        if (e.key !== 'Tab') return;
+        if (e.shiftKey && (document.activeElement === cancel || document.activeElement === dialog)) {
+            e.preventDefault();
+            ok.focus();
+        } else if (!e.shiftKey && document.activeElement === ok) {
+            e.preventDefault();
+            cancel.focus();
+        }
+    });
+
+    ok.addEventListener('click', function () {
+        var go = issue;
+        issue = null;
+        modal.hide();
+        if (go) go(true);
+    });
+
+    // Back to the control that asked. A dropdown item is hidden by then, so use its toggle.
+    dialog.addEventListener('hidden.bs.modal', function () {
+        hiding = false;
+        issue = null;
+        var t = trigger;
+        trigger = null;
+        if (t && document.contains(t)) {
+            if (t.offsetParent === null) {
+                var dropdown = t.closest('.dropdown');
+                t = dropdown && dropdown.querySelector('[data-bs-toggle="dropdown"]');
+            }
+            if (t) t.focus();
+        }
+        var next = queued;
+        queued = null;
+        if (next && document.contains(next[0])) open.apply(null, next);
+    });
+
+    // Back/Forward: a confirm left open belongs to the page that was just replaced, so close it
+    // without sending. A backdrop with no modal behind it would block every click on the page.
+    document.body.addEventListener('htmx:historyRestore', function () {
+        queued = null;
+        if (dialog.classList.contains('show')) { modal.hide(); return; }
+        if (hiding) return;
+        document.querySelectorAll('.modal-backdrop').forEach(function (b) { b.remove(); });
+        document.body.classList.remove('modal-open');
     });
 })();
 

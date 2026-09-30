@@ -40,12 +40,13 @@ public static class PillToneCss
         _ => "ats-pill--neutral"
     };
 
+    // Text-colour class for the tone. Bootstrap's .text-* are mapped to the NowOnline inks.
     public static string Ink(PillTone tone) => tone switch
     {
-        PillTone.Success => "var(--no-success-ink)",
-        PillTone.Warning => "var(--no-warning-ink)",
-        PillTone.Danger => "var(--no-danger-ink)",
-        PillTone.Info => "var(--no-info-ink)",
-        _ => "var(--ats-ink-muted)"
+        PillTone.Success => "text-success",
+        PillTone.Warning => "text-warning",
+        PillTone.Danger => "text-danger",
+        PillTone.Info => "text-info",
+        _ => "ats-ink-muted"
     };
 }

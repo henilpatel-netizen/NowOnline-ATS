@@ -1,5 +1,6 @@
 using Ats.Application.Pipelines;
 using Ats.Domain.Entities;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ats.Infrastructure.Persistence.Repositories;
@@ -24,12 +25,26 @@ public sealed class PipelineTemplateRepository : IPipelineTemplateRepository
         return Task.CompletedTask;
     }
 
-    public Task RemoveAsync(PipelineTemplate template, CancellationToken ct = default)
+    public async Task<bool> TryRemoveAsync(PipelineTemplate template, CancellationToken ct = default)
     {
-        _db.PipelineStages.RemoveRange(template.Stages);
+        var stages = template.Stages.ToList();
+        _db.PipelineStages.RemoveRange(stages);
         _db.PipelineTemplates.Remove(template);
-        return Task.CompletedTask;
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+            return true;
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: ForeignKeyViolation })
+        {
+            // Undo the pending delete so a later SaveChanges in this request cannot retry it.
+            foreach (var stage in stages) _db.Entry(stage).State = EntityState.Unchanged;
+            _db.Entry(template).State = EntityState.Unchanged;
+            return false;
+        }
     }
+
+    private const int ForeignKeyViolation = 547;
 
     public Task<bool> IsUsedByJobAsync(int id, CancellationToken ct = default) =>
         _db.Jobs.AnyAsync(j => j.PipelineTemplateId == id, ct);
@@ -50,9 +65,19 @@ public sealed class PipelineTemplateRepository : IPipelineTemplateRepository
         entry.Property(t => t.Name).IsModified = true;
     }
 
-    public async Task<bool> TrySaveChangesAsync(CancellationToken ct = default)
+    public async Task<TemplateSaveOutcome> TrySaveChangesAsync(CancellationToken ct = default)
     {
-        try { await _db.SaveChangesAsync(ct); return true; }
-        catch (DbUpdateConcurrencyException) { return false; }
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+            return TemplateSaveOutcome.Saved;
+        }
+        catch (DbUpdateConcurrencyException) { return TemplateSaveOutcome.Conflict; }
+        catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: ForeignKeyViolation })
+        {
+            // Drop the whole failed edit so a later SaveChanges in this request cannot retry it.
+            _db.ChangeTracker.Clear();
+            return TemplateSaveOutcome.StageInUse;
+        }
     }
 }

@@ -67,6 +67,16 @@ public class CandidatesController : Controller
     }
 
     [HttpPost]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var name = (await _service.GetAsync(id))?.FullName;
+        var result = await _service.DeleteAsync(id);
+        if (result.Succeeded) await _audit.LogAsync("CandidateDeleted", "Candidate", id.ToString(), $"Deleted candidate {id} '{name}'");
+        this.SetResultMessage(result, "Candidate deleted.");
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
     public async Task<IActionResult> AddToJob(int candidateId, int jobId)
     {
         if (jobId == 0) { TempData["Error"] = "Pick a job."; return RedirectToAction(nameof(Index)); }

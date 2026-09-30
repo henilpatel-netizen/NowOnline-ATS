@@ -49,13 +49,13 @@
             </span>
             <span class="ats-small ats-muted">@(c.LastActivity is null ? "—" : RelativeTime.Long(c.LastActivity, now))</span>
             <span class="d-flex justify-content-end ats-row-actions">
-                @if (Model.PublishedJobs.Count > 0)
-                {
-                    <div class="dropdown">
-                        <button type="button" class="btn btn-sm btn-outline-secondary border-0 px-2" data-bs-toggle="dropdown" aria-label="Add to job">
-                            <span class="ms ms-sm">more_horiz</span>
-                        </button>
-                        <div class="dropdown-menu dropdown-menu-end p-2" style="min-width:16rem">
+                <div class="dropdown">
+                    <button type="button" class="btn btn-sm btn-outline-secondary border-0 px-2" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-label="Actions">
+                        <span class="ms ms-sm">more_horiz</span>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end p-2 @(Model.PublishedJobs.Count > 0 ? "ats-menu-wide" : "")">
+                        @if (Model.PublishedJobs.Count > 0)
+                        {
                             <form asp-action="AddToJob" method="post" class="d-flex gap-1">
                                 <input type="hidden" name="candidateId" value="@c.Id" />
                                 <select name="jobId" class="form-select form-select-sm" aria-label="Add to job" asp-items="Model.PublishedJobs">
@@ -63,9 +63,14 @@
                                 </select>
                                 <button class="btn btn-sm btn-primary" type="submit">Add</button>
                             </form>
-                        </div>
+                            <hr class="dropdown-divider">
+                        }
+                        <form asp-action="Delete" asp-route-id="@c.Id" method="post"
+                              hx-confirm="Delete this candidate and remove them from all jobs?" data-confirm-title="Delete candidate" data-confirm-ok="Delete candidate" data-confirm-variant="danger">
+                            <button class="dropdown-item text-danger" type="submit">Delete</button>
+                        </form>
                     </div>
-                }
+                </div>
             </span>
         </div>
     }

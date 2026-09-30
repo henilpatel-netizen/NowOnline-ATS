@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using System.Text.Json;
 using Ats.Domain.Entities;
+using Ats.Domain.Enums;
 
 namespace Ats.Application.Integration;
 
@@ -62,6 +63,31 @@ public static class ReferralToolRules
     // it). HttpStatus 0 means definitely not sent and does not count. Translated to SQL by EF.
     public static Expression<Func<WebhookDelivery, bool>> MayHaveBeenProcessed { get; } =
         d => d.HttpStatus == null || (d.HttpStatus >= 200 && d.HttpStatus < 300) || d.HttpStatus >= 500;
+
+    // ReferralTool's duplicate guard rejects the same event for the same candidate, so an identical
+    // status is not queued twice. This matters when a removed application is re-added to the job: it
+    // is a new application with no events, but the same code, vacancy and candidate. Whether a match
+    // actually blocks is BlocksIdenticalResend. Translated to SQL by EF.
+    public static Expression<Func<OutboxMessage, bool>> SameCandidateStatus(
+        string code, string externalVacancyId, string externalCandidateId, string candidateStatus) =>
+        m => m.Kind == OutboxKind.CandidateStatus
+             && m.Code == code
+             && m.ExternalVacancyId == externalVacancyId
+             && m.ExternalCandidateId == externalCandidateId
+             && m.CandidateStatus == candidateStatus;
+
+    // An identical earlier message blocks a resend only when ReferralTool has it or may still get it:
+    // it is Pending, Processing or Delivered, or it Failed after an attempt ReferralTool may have
+    // recorded. A Failed message it never received (dead-lettered while the vacancy was missing, never
+    // sent, a 4xx before the event type was seeded) must not block the status forever.
+    public static bool BlocksIdenticalResend(OutboxStatus earlierStatus, bool earlierMayHaveBeenProcessed) =>
+        earlierStatus != OutboxStatus.Failed || earlierMayHaveBeenProcessed;
+
+    // The status-update attempts of one message that ReferralTool may have recorded. Translated to SQL.
+    public static IQueryable<WebhookDelivery> PossiblyProcessedStatusUpdates(
+        IQueryable<WebhookDelivery> deliveries, int outboxMessageId) =>
+        deliveries.Where(d => d.OutboxMessageId == outboxMessageId && d.Kind == DeliveryKind.StatusUpdate)
+                  .Where(MayHaveBeenProcessed);
 
     // Failures that happen before any request byte reaches ReferralTool.
     public static bool IsDefinitelyNotSent(Exception ex) =>

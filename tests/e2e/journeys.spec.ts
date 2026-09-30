@@ -35,7 +35,7 @@ test('validation: an empty job is rejected and keeps what was typed', async ({ p
 
   // Still on the form, with an error, and the typed description intact.
   await expect(page.locator('#Title')).toBeVisible();
-  await expect(page.locator('.text-danger, .validation-summary-errors').first()).toBeVisible();
+  await expect(page.locator('.field-validation-error, .validation-summary-errors').first()).toBeVisible();
   await expect(page.locator('#Description')).toHaveValue(description);
 });
 
@@ -48,7 +48,10 @@ test('candidate lifecycle: create and find by search', async ({ page }) => {
   await page.locator('#Email').fill(`${RUN}@example.com`);
   await page.getByRole('button', { name: /save|create/i }).first().click();
 
-  await expect(page).toHaveURL(/\/Candidates/);
+  // /\/Candidates/ also matches /Candidates/Create, so it passed before the POST had finished and the
+  // search then raced the redirect. Wait for the list and the outcome message instead.
+  await expect(page).toHaveURL(/\/Candidates$/);
+  await expect(page.getByText('Candidate created.')).toBeVisible();
 
   const search = page.locator('.ats-search input').first();
   await search.fill(last);

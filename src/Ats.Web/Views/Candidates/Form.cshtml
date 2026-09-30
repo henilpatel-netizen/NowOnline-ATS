@@ -16,3 +16,10 @@
         <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a>
     </div>
 </form>
+@if (Model.Id != 0)
+{
+    <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="col-md-6 mt-3"
+          hx-confirm="Delete this candidate and remove them from all jobs?" data-confirm-title="Delete candidate" data-confirm-ok="Delete candidate" data-confirm-variant="danger">
+        <button type="submit" class="btn btn-outline-danger"><span class="ms ms-sm">delete</span> Delete candidate</button>
+    </form>
+}

@@ -295,4 +295,62 @@ public class ApplicationServiceTests
         Assert.Single(candidates.Candidates);
         Assert.Equal(900, Assert.Single(repo.Applications).CandidateId);
     }
+
+    // ---- Remove from job ---------------------------------------------------------------------
+
+    [Fact]
+    public async Task Removing_an_unknown_application_fails()
+    {
+        var (service, repo, _, _) = Build();
+
+        var result = await service.RemoveAsync(12345);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("Application not found.", result.Error);
+        Assert.Equal(0, repo.SaveCount);
+    }
+
+    [Fact]
+    public async Task Removing_an_application_soft_deletes_it()
+    {
+        var (service, repo, _, _) = Build();
+        var app = SeedApplication(repo);
+
+        var result = await service.RemoveAsync(app.Id);
+
+        Assert.True(result.Succeeded);
+        Assert.True(app.IsDeleted);
+        Assert.Contains(app, repo.Applications);   // soft delete: the row stays
+        Assert.Equal(1, repo.SaveCount);
+    }
+
+    [Fact]
+    public async Task Removing_an_application_leaves_the_candidate_and_their_other_applications_alone()
+    {
+        var (service, repo, candidates, _) = Build();
+        var candidate = new Candidate { Id = 900, FirstName = "A", LastName = "B", Email = "a@b.test" };
+        candidates.Candidates.Add(candidate);
+        var app = SeedApplication(repo);
+        var other = new JobApplication { Id = 501, CandidateId = 900, JobId = 2, CurrentStageId = Applied, Status = ApplicationStatus.Active };
+        repo.Applications.Add(other);
+
+        await service.RemoveAsync(app.Id);
+
+        Assert.False(candidate.IsDeleted);
+        Assert.Equal(0, candidates.SaveCount);
+        Assert.False(other.IsDeleted);
+    }
+
+    [Fact]
+    public async Task Removing_an_application_during_a_concurrent_board_move_reports_a_friendly_failure()
+    {
+        var (service, repo, _, _) = Build();
+        var app = SeedApplication(repo);
+        repo.ConcurrencyConflict = true;
+
+        var result = await service.RemoveAsync(app.Id);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("This application was changed by someone else. Reload the board and try again.", result.Error);
+    }
 }

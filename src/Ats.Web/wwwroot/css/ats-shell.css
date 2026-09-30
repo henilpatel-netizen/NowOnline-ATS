@@ -303,6 +303,9 @@
 
 .ats-auth-card { width: 100%; max-width: 26rem; }
 
+/* The auth card sits on a fixed dark gradient, so its brand name ignores the tenant sidebar colour. */
+.ats-auth-brand .ats-brand-name { color: var(--ats-on-dark); }
+
 .ats-auth-brand {
   display: flex;
   align-items: center;

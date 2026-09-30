@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, dismissConfirm } from './confirm';
 
 /**
  * Regression guard for NAV-2. Boosting the content area means hx-target/hx-select are inherited by
@@ -62,9 +62,9 @@ test('a destructive action asks for confirmation and cancelling changes nothing'
   const remove = page.getByRole('button', { name: /delete|remove/i }).first();
   test.skip((await remove.count()) === 0, 'no deletable pipeline on this tenant');
 
-  // hx-confirm raises a native dialog; dismissing it must abort the request.
-  page.once('dialog', d => d.dismiss());
+  // hx-confirm opens the themed confirm modal; cancelling it must abort the request.
   await remove.click();
+  await dismissConfirm(page);
   await page.waitForTimeout(500);
 
   expect(await page.locator('.ats-trow').count(), 'cancelling must not delete').toBe(before);

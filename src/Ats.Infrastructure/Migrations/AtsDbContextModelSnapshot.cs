@@ -218,7 +218,8 @@ namespace Ats.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId", "Email")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
 
                     b.HasIndex("TenantId", "LastName", "FirstName");
 
@@ -391,7 +392,8 @@ namespace Ats.Infrastructure.Migrations
                     b.HasIndex("TenantId", "Status");
 
                     b.HasIndex("TenantId", "JobId", "CandidateId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
 
                     b.ToTable("Applications", (string)null);
                 });
@@ -784,12 +786,12 @@ namespace Ats.Infrastructure.Migrations
                     b.HasOne("Ats.Domain.Entities.Department", "Department")
                         .WithMany()
                         .HasForeignKey("DepartmentId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("Ats.Domain.Entities.Location", "Location")
                         .WithMany()
                         .HasForeignKey("LocationId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("Ats.Domain.Entities.PipelineTemplate", null)
                         .WithMany()

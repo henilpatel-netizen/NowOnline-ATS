@@ -9,6 +9,9 @@ description: The Ats pipeline and candidate board - templates, stages, stage-to-
 `PipelineTemplate` has ordered `PipelineStage`s (`Order`, `IsTerminal`, `TerminalOutcome`,
 `ReferralStatusOverride`). Edited via `IPipelineTemplateService.SaveAsync` which diffs the posted
 stage set (add/update/remove by id, reorder by `Order`). A template used by a job cannot be deleted.
+Renames and reorders apply at once to every job on the template. A stage that is still the current
+stage of any application, including removed (soft-deleted) ones, cannot be deleted: the save returns
+`TemplateSaveOutcome.StageInUse` and a friendly error (details in the entities skill).
 
 ## Stage-to-status mapping
 `ReferralStatusOverride` (defaults to the stage name) is what Phase 3 will send to ReferralTool as the

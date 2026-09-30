@@ -19,8 +19,17 @@ public sealed class CandidateRepository : ICandidateRepository
     public Task<Candidate?> GetByEmailAsync(string email, CancellationToken ct = default) =>
         _db.Candidates.FirstOrDefaultAsync(c => c.Email == email, ct);
 
+    public Task<List<JobApplication>> ListApplicationsAsync(int candidateId, CancellationToken ct = default) =>
+        _db.Applications.Where(a => a.CandidateId == candidateId).ToListAsync(ct);
+
     public async Task AddAsync(Candidate candidate, CancellationToken ct = default) =>
         await _db.Candidates.AddAsync(candidate, ct);
 
     public Task SaveChangesAsync(CancellationToken ct = default) => _db.SaveChangesAsync(ct);
+
+    public async Task<bool> TrySaveChangesAsync(CancellationToken ct = default)
+    {
+        try { await _db.SaveChangesAsync(ct); return true; }
+        catch (DbUpdateConcurrencyException) { return false; }
+    }
 }

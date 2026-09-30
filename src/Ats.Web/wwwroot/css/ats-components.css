@@ -377,6 +377,17 @@
 .ats-trow--link { cursor: pointer; }
 .ats-trow--link:hover { background: var(--ats-surface-subtle); }
 .ats-trow--danger { background: var(--no-danger-row); }
+.ats-icon-danger { color: var(--no-danger-ink); }
+/* Icon-only row controls: a 24x24px minimum target (WCAG 2.5.8) around an 18px glyph. */
+.ats-icon-hit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
+}
+/* Row menu holding the inline Add-to-job form: wide enough for the job select plus its button. */
+.ats-menu-wide { min-width: 16rem; }
 
 /* ---------- Per-screen column templates (UX-1) ----------
    These live here, never as an inline style on the row: an inline grid-template-columns beats every
@@ -475,7 +486,7 @@
   font-family: var(--no-font-mono);
   font-weight: 700;
   font-size: .6875rem;
-  color: var(--ats-ink-subtle);
+  color: var(--ats-ink-muted);
 }
 
 .ats-board-cards { display: flex; flex-direction: column; gap: .625rem; min-height: 3rem; }
@@ -497,7 +508,7 @@
   transform: translateY(-1px);
 }
 
-.ats-board-card--rejected { border-color: #EBD9DE; opacity: .8; }
+.ats-board-card--rejected { border-color: #EBD9DE; }
 
 .ats-board-card-name {
   font-family: var(--no-font-display);
@@ -515,7 +526,7 @@
   text-align: center;
   font-size: .75rem;
   font-weight: 300;
-  color: #6C8579;
+  color: var(--no-success-ink);
   line-height: 1.5;
 }
 
@@ -777,7 +788,7 @@
   padding: .875rem;
   text-align: center;
   font-size: .8125rem;
-  color: var(--ats-ink-subtle);
+  color: var(--ats-ink-muted);
   border: 1px dashed var(--ats-border);
   border-radius: var(--no-radius-md);
 }
@@ -844,6 +855,11 @@
   z-index: 2;
 }
 
+/* Every row's controls share z-index 2, so a later row's buttons would paint over an earlier row's
+   open menu. Lift the whole row while its menu is open. The menus themselves use Popper's fixed
+   strategy (data-bs-popper-config on the toggle) to escape .ats-card-flush's overflow clipping. */
+.ats-trow--link:has(.dropdown-menu.show) { z-index: 1000; }
+
 /* The focusable element is the title link, so show the ring on the whole row for a clear target. */
 .ats-trow--link:focus-within {
   outline: 2px solid var(--ats-focus-ring);
@@ -907,4 +923,125 @@
   .ats-audit-action { order: 2; margin-left: auto; }
   .ats-audit-icon { order: 3; }
   .ats-audit-body { order: 4; flex: 1 1 60%; }
+}
+
+/* ---------- Colour helpers that used to be inline styles in views ---------- */
+
+.ats-on-dark-label { color: var(--ats-on-dark-label); }
+.ats-ink-muted { color: var(--ats-ink-muted); }
+
+/* Stage ramp fills (pipeline bars, board column dots): index 1-5, Applied -> Hired. */
+.ats-stage-1 { background: var(--no-stage-1); }
+.ats-stage-2 { background: var(--no-stage-2); }
+.ats-stage-3 { background: var(--no-stage-3); }
+.ats-stage-4 { background: var(--no-stage-4); }
+.ats-stage-5 { background: var(--no-stage-5); }
+.ats-stage-empty { background: var(--no-stage-empty); }
+.ats-stage-reached { background: var(--no-oxford-blue); }
+.ats-stage-rejected { background: var(--no-danger-ink); }
+
+/* Connection status dot: connected (aqua) or off (silver). Not text, so the 3:1 non-text rule
+   applies, not 4.5:1. */
+.ats-dot--on { background: var(--no-medium-aqua); }
+.ats-dot--off { background: var(--no-roman-silver); }
+
+.ats-divider-top { border-top: 1px solid var(--ats-border-subtle); }
+.ats-divider-bottom { border-bottom: 1px solid var(--ats-border-subtle); }
+
+/* Drawer stage progress segment. */
+.ats-progress-seg { height: 5px; border-radius: var(--no-radius-pill); }
+
+/* Dashboard "Needs you" rows: an ink link with a square tone icon. */
+.ats-attention-link { color: var(--ats-ink); border-radius: var(--no-radius-md); }
+.ats-attention-link:hover { color: var(--ats-ink); background: var(--ats-surface-subtle); }
+.ats-pill-icon {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  justify-content: center;
+  border-radius: var(--no-radius-sm);
+}
+
+/* Icon tile on a dark card (Integrations health banner). */
+.ats-icon-tile-dark {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--no-radius-md);
+  background: color-mix(in srgb, var(--no-medium-aqua) 18%, transparent);
+  color: var(--no-medium-aqua);
+}
+
+/* A checkbox row presented as a tinted panel (Integration enabled). */
+.ats-check-panel {
+  background: var(--ats-bg);
+  border-radius: var(--no-radius-md);
+  cursor: pointer;
+}
+
+/* Native colour picker on the Branding page. */
+.ats-color-input { width: 4rem; height: 2.4rem; }
+
+/* Career-site hero preview inside the back-office browser frame. ats-careers.css is not loaded in
+   the back office, so the preview has its own small copy of the hero look. */
+.ats-hero-preview {
+  position: relative;
+  overflow: hidden;
+  padding: 3.5rem 4rem;
+  background: var(--no-oxford-blue);
+}
+
+.ats-hero-preview-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(10px);
+}
+
+.ats-hero-preview-blob--accent {
+  width: 520px;
+  height: 420px;
+  right: -120px;
+  top: -140px;
+  background: var(--ats-accent);
+  opacity: .34;
+}
+
+.ats-hero-preview-blob--aqua {
+  width: 380px;
+  height: 320px;
+  right: 120px;
+  bottom: -180px;
+  background: var(--no-medium-aqua);
+  opacity: .26;
+}
+
+.ats-hero-preview-body {
+  position: relative;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ats-hero-preview-title {
+  margin: 0;
+  font-family: var(--no-font-display);
+  font-weight: 800;
+  font-size: 3rem;
+  line-height: 1.12;
+  letter-spacing: var(--no-track-display);
+  color: var(--ats-on-dark);
+}
+
+.ats-hero-preview-title .outlined { color: transparent; -webkit-text-stroke: 1.5px var(--ats-on-dark); }
+
+.ats-hero-preview-intro {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 300;
+  line-height: 1.56;
+  color: var(--ats-on-dark-subtle);
 }

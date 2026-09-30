@@ -64,6 +64,7 @@
 .careers-filter-pill.active { background: var(--no-oxford-blue); color: #fff; border-color: var(--no-oxford-blue); }
 
 .careers-detail { max-width: 788px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+.careers-thanks-icon { font-size: 3rem; color: var(--no-success); }
 
 .careers-footer {
   background: var(--no-oxford-blue); color: #fff; margin-top: 3rem;

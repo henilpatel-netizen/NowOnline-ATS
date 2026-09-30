@@ -31,13 +31,11 @@
     <footer class="careers-footer">
         <div class="careers-footer-inner">
             <span style="font-family:var(--no-font-display);font-weight:800;font-size:1.25rem;letter-spacing:-.01em">@tenantName</span>
-            <span class="ats-small" style="color:var(--ats-on-dark-label)">Powered by ATS · when you know, you know.</span>
+            <span class="ats-small ats-on-dark-label">Powered by ATS · when you know, you know.</span>
         </div>
     </footer>
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
-    <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js"></script>
+    <partial name="_ValidationScriptsPartial" />
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

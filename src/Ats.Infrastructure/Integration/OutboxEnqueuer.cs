@@ -4,6 +4,7 @@ using Ats.Domain.Entities;
 using Ats.Domain.Enums;
 using Ats.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Ats.Infrastructure.Integration;
@@ -12,11 +13,13 @@ public sealed class OutboxEnqueuer : IOutboxEnqueuer
 {
     private readonly AtsDbContext _db;
     private readonly IntegrationOptions _opts;
+    private readonly ILogger<OutboxEnqueuer> _logger;
 
-    public OutboxEnqueuer(AtsDbContext db, IOptions<IntegrationOptions> opts)
+    public OutboxEnqueuer(AtsDbContext db, IOptions<IntegrationOptions> opts, ILogger<OutboxEnqueuer> logger)
     {
         _db = db;
         _opts = opts.Value;
+        _logger = logger;
     }
 
     public async Task StageAsync(int applicationId, int toStageId, CancellationToken ct = default)
@@ -38,13 +41,32 @@ public sealed class OutboxEnqueuer : IOutboxEnqueuer
         if (job is null || candidate is null || stage is null) return;
 
         var status = string.IsNullOrWhiteSpace(stage.ReferralStatusOverride) ? stage.Name : stage.ReferralStatusOverride!;
+        var code = app.SourceCode!.Trim();
+        var externalCandidateId = candidate.Key.ToString("D");
+        var identical = await _db.OutboxMessages
+            .Where(ReferralToolRules.SameCandidateStatus(code, job.ExternalRef, externalCandidateId, status))
+            .Select(m => new { m.Id, m.Status })
+            .ToListAsync(ct);
+        foreach (var earlier in identical)
+        {
+            var mayHaveBeenProcessed = earlier.Status == OutboxStatus.Failed
+                && await ReferralToolRules.PossiblyProcessedStatusUpdates(_db.WebhookDeliveries, earlier.Id).AnyAsync(ct);
+            if (!ReferralToolRules.BlocksIdenticalResend(earlier.Status, mayHaveBeenProcessed)) continue;
+
+            // Code and the candidate key are referral / personal data; they stay out of the log.
+            if (_logger.IsEnabled(LogLevel.Information))
+                _logger.LogInformation(
+                    "Not queuing ReferralTool status {CandidateStatus} for application {ApplicationId}: identical message {MessageId} is {MessageStatus}.",
+                    status, app.Id, earlier.Id, earlier.Status);
+            return;
+        }
 
         await _db.OutboxMessages.AddAsync(new OutboxMessage
         {
             ApplicationId = app.Id,
-            Code = app.SourceCode!.Trim(),
+            Code = code,
             ExternalVacancyId = job.ExternalRef,
-            ExternalCandidateId = candidate.Key.ToString("D"),
+            ExternalCandidateId = externalCandidateId,
             CandidateStatus = status,
             Status = OutboxStatus.Pending,
             Attempts = 0,

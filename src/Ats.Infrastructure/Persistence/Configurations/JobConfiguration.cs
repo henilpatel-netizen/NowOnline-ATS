@@ -13,8 +13,10 @@ public class JobConfiguration : IEntityTypeConfiguration<Job>
         b.Property(j => j.ExternalRef).IsRequired().HasMaxLength(36);
         b.HasIndex(j => new { j.TenantId, j.ExternalRef }).IsUnique();
         b.HasIndex(j => new { j.TenantId, j.Status });
-        b.HasOne(j => j.Department).WithMany().HasForeignKey(j => j.DepartmentId).OnDelete(DeleteBehavior.Restrict);
-        b.HasOne(j => j.Location).WithMany().HasForeignKey(j => j.LocationId).OnDelete(DeleteBehavior.Restrict);
+        // SetNull, not Restrict: the service already blocks deleting a lookup a live job uses, and the
+        // query filter hides soft-deleted jobs from that check, so the database clears their reference.
+        b.HasOne(j => j.Department).WithMany().HasForeignKey(j => j.DepartmentId).OnDelete(DeleteBehavior.SetNull);
+        b.HasOne(j => j.Location).WithMany().HasForeignKey(j => j.LocationId).OnDelete(DeleteBehavior.SetNull);
         b.HasOne<PipelineTemplate>().WithMany().HasForeignKey(j => j.PipelineTemplateId).OnDelete(DeleteBehavior.Restrict);
     }
 }

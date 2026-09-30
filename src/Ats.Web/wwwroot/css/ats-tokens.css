@@ -33,6 +33,11 @@
   --no-violet-soft:  #F0ECFB;  --no-violet-ink:  #5B3FBF;
   --no-slate-soft:   #EFF0F2;  --no-slate-ink:   #5A6472;
   --no-danger-row:   #FEF7F8;
+  /* Hairline borders for the tinted surfaces (outline buttons, alerts). */
+  --no-success-border: #D6EAE1;
+  --no-warning-border: #F3E0C8;
+  --no-danger-border:  #F0DDE2;
+  --no-info-border:    #CFE4F2;
 
   /* Stage ramp: Applied -> Screening -> Interview -> Offer -> Hired */
   --no-stage-1: #0C2340;
@@ -137,6 +142,38 @@
   --bs-emphasis-color: var(--ats-ink);
   --bs-secondary-color: var(--ats-ink-subtle);
   --bs-heading-color: var(--ats-ink);
+
+  /* Status colours. Bootstrap uses these for .text-*, .alert-*, .link-*, .border-* and form
+     feedback; unmapped they are its own palette (#dc3545 and friends). The *-ink shade is used,
+     not the raw brand colour, because .text-* is text: every ink is AA on white, the app background
+     and its own soft tint. The -rgb triples cannot read a custom property, so keep them in step
+     with the --no-*-ink hex above. */
+  --bs-danger: var(--no-danger-ink);
+  --bs-danger-rgb: 193, 0, 47;
+  --bs-danger-text-emphasis: var(--no-danger-ink);
+  --bs-danger-bg-subtle: var(--no-danger-soft);
+  --bs-danger-border-subtle: var(--no-danger-border);
+
+  --bs-success: var(--no-success-ink);
+  --bs-success-rgb: 0, 115, 77;
+  --bs-success-text-emphasis: var(--no-success-ink);
+  --bs-success-bg-subtle: var(--no-success-soft);
+  --bs-success-border-subtle: var(--no-success-border);
+
+  --bs-warning: var(--no-warning-ink);
+  --bs-warning-rgb: 168, 84, 0;
+  --bs-warning-text-emphasis: var(--no-warning-ink);
+  --bs-warning-bg-subtle: var(--no-warning-soft);
+  --bs-warning-border-subtle: var(--no-warning-border);
+
+  --bs-info: var(--no-info-ink);
+  --bs-info-rgb: 0, 103, 158;
+  --bs-info-text-emphasis: var(--no-info-ink);
+  --bs-info-bg-subtle: var(--no-info-soft);
+  --bs-info-border-subtle: var(--no-info-border);
+
+  --bs-form-valid-color: var(--no-success-ink);
+  --bs-form-valid-border-color: var(--no-success-ink);
 }
 
 /* Buttons: pill, Urbanist, no scale on press (design system interaction rules). */
@@ -192,26 +229,43 @@
 
 .btn-outline-success {
   --bs-btn-color: var(--no-success-ink);
-  --bs-btn-border-color: #D6EAE1;
+  --bs-btn-border-color: var(--no-success-border);
   --bs-btn-bg: var(--ats-surface);
   --bs-btn-hover-color: var(--no-success-ink);
   --bs-btn-hover-bg: var(--no-success-soft);
-  --bs-btn-hover-border-color: #D6EAE1;
+  --bs-btn-hover-border-color: var(--no-success-border);
   --bs-btn-active-color: var(--no-success-ink);
   --bs-btn-active-bg: var(--no-success-soft);
-  --bs-btn-active-border-color: #D6EAE1;
+  --bs-btn-active-border-color: var(--no-success-border);
 }
 
 .btn-outline-danger {
   --bs-btn-color: var(--no-danger-ink);
-  --bs-btn-border-color: #F0DDE2;
+  --bs-btn-border-color: var(--no-danger-border);
   --bs-btn-bg: var(--ats-surface);
   --bs-btn-hover-color: var(--no-danger-ink);
   --bs-btn-hover-bg: var(--no-danger-soft);
-  --bs-btn-hover-border-color: #F0DDE2;
+  --bs-btn-hover-border-color: var(--no-danger-border);
   --bs-btn-active-color: var(--no-danger-ink);
   --bs-btn-active-bg: var(--no-danger-soft);
-  --bs-btn-active-border-color: #F0DDE2;
+  --bs-btn-active-border-color: var(--no-danger-border);
+}
+
+/* Solid danger: the confirm button of a destructive confirm dialog. */
+.btn-danger {
+  --bs-btn-font-weight: 700;
+  --bs-btn-color: var(--no-white);
+  --bs-btn-bg: var(--no-danger-ink);
+  --bs-btn-border-color: var(--no-danger-ink);
+  --bs-btn-hover-color: var(--no-white);
+  --bs-btn-hover-bg: color-mix(in srgb, var(--no-danger-ink) 85%, var(--no-oxford-blue));
+  --bs-btn-hover-border-color: color-mix(in srgb, var(--no-danger-ink) 85%, var(--no-oxford-blue));
+  --bs-btn-active-color: var(--no-white);
+  --bs-btn-active-bg: color-mix(in srgb, var(--no-danger-ink) 85%, var(--no-oxford-blue));
+  --bs-btn-active-border-color: color-mix(in srgb, var(--no-danger-ink) 85%, var(--no-oxford-blue));
+  --bs-btn-disabled-color: var(--no-white);
+  --bs-btn-disabled-bg: var(--no-danger-ink);
+  --bs-btn-disabled-border-color: var(--no-danger-ink);
 }
 
 /* On a dark panel the ghost button has to read against Oxford Blue instead of white. */
@@ -232,6 +286,64 @@
   --bs-card-spacer-x: 1.375rem;
   --bs-card-spacer-y: 1.375rem;
   box-shadow: var(--no-shadow-xs);
+}
+
+.modal {
+  --bs-modal-width: 28rem;
+  --bs-modal-padding: 1.375rem;
+  --bs-modal-bg: var(--ats-surface);
+  --bs-modal-color: var(--ats-ink);
+  --bs-modal-border-color: var(--ats-border);
+  --bs-modal-border-radius: var(--no-radius-lg);
+  --bs-modal-inner-border-radius: calc(var(--no-radius-lg) - 1px);
+  --bs-modal-header-padding: 1.375rem 1.375rem 0;
+  --bs-modal-header-border-width: 0;
+  --bs-modal-footer-border-width: 0;
+  --bs-modal-footer-gap: .5rem;
+}
+
+.modal-content { box-shadow: var(--no-shadow-lg); }
+
+.modal-backdrop {
+  --bs-backdrop-bg: var(--no-oxford-blue);
+  --bs-backdrop-opacity: .32;
+}
+
+/* Row menus. Bootstrap's pressed/active item is a hard-coded #0d6efd, which also left red Delete
+   text unreadable on it. */
+.dropdown-menu {
+  --bs-dropdown-font-size: .875rem;
+  --bs-dropdown-color: var(--ats-ink);
+  --bs-dropdown-bg: var(--ats-surface);
+  --bs-dropdown-border-color: var(--ats-border);
+  --bs-dropdown-border-radius: var(--no-radius-md);
+  --bs-dropdown-box-shadow: var(--no-shadow-md);
+  --bs-dropdown-padding-x: .375rem;
+  --bs-dropdown-padding-y: .375rem;
+  --bs-dropdown-divider-bg: var(--ats-border);
+  --bs-dropdown-divider-margin-y: .375rem;
+  --bs-dropdown-item-padding-x: .75rem;
+  --bs-dropdown-item-padding-y: .4375rem;
+  --bs-dropdown-item-border-radius: var(--no-radius-sm);
+  --bs-dropdown-link-color: var(--ats-ink);
+  --bs-dropdown-link-hover-color: var(--ats-ink);
+  --bs-dropdown-link-hover-bg: var(--ats-bg);
+  --bs-dropdown-link-active-color: var(--ats-ink);
+  --bs-dropdown-link-active-bg: var(--no-slate-soft);
+  --bs-dropdown-link-disabled-color: var(--ats-ink-faint);
+  --bs-dropdown-header-color: var(--ats-ink-subtle);
+  box-shadow: var(--bs-dropdown-box-shadow);
+}
+
+/* .text-danger is !important, so the danger item restates its colour for every state. */
+.dropdown-item.text-danger {
+  color: var(--no-danger-ink) !important;
+}
+
+.dropdown-item.text-danger:hover,
+.dropdown-item.text-danger:focus,
+.dropdown-item.text-danger:active {
+  background-color: var(--no-danger-soft);
 }
 
 .card-header {
@@ -278,9 +390,54 @@
   margin-bottom: .375rem;
 }
 
+/* The "Choose file" part of a file input (career-site CV upload): Bootstrap paints it in its grey
+   tertiary background with body type. */
+.form-control::file-selector-button {
+  background-color: var(--ats-bg);
+  color: var(--ats-ink);
+  font-family: var(--no-font-display);
+  font-weight: 600;
+  border-color: var(--ats-border);
+}
+
+.form-control:hover:not(:disabled):not([readonly])::file-selector-button {
+  background-color: var(--no-slate-soft);
+}
+
+/* Field errors, from ats-validation.js and from server ModelState alike: Bootstrap's .invalid-feedback
+   look with its #dc3545 swapped for the brand danger ink. The asp-validation-for spans also carry
+   .text-danger, which is !important, so the colour has to be too. */
+:root {
+  --bs-form-invalid-color: var(--no-danger-ink);
+  --bs-form-invalid-border-color: var(--no-danger-ink);
+}
+
+.field-validation-error {
+  display: block;
+  margin-top: .25rem;
+  font-size: .875em;
+  color: var(--bs-form-invalid-color) !important;
+}
+
+.form-control[aria-invalid="true"],
+.form-select[aria-invalid="true"] {
+  border-color: var(--bs-form-invalid-border-color);
+}
+
+.form-control[aria-invalid="true"]:focus,
+.form-select[aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 .2rem color-mix(in srgb, var(--no-danger-ink) 18%, transparent);
+}
+
 .form-check-input:checked {
   background-color: var(--ats-accent);
   border-color: var(--ats-accent);
+}
+
+/* Bootstrap's checkbox focus glow is a hard-coded blue rgba(13, 110, 253, .25). */
+.form-check-input:focus {
+  border-color: var(--ats-accent);
+  box-shadow: 0 0 0 .2rem color-mix(in srgb, var(--ats-accent) 18%, transparent);
 }
 
 .table {

@@ -75,7 +75,7 @@
             <span class="ats-small ats-muted"><local-time utc="@j.PublishedAt" format="monthday" empty="—"></local-time></span>
             <span class="d-flex justify-content-end ats-row-actions">
                 <div class="dropdown">
-                    <button type="button" class="btn btn-sm btn-outline-secondary border-0 px-2" data-bs-toggle="dropdown" aria-label="Actions">
+                    <button type="button" class="btn btn-sm btn-outline-secondary border-0 px-2" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-label="Actions">
                         <span class="ms ms-sm">more_horiz</span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
@@ -85,7 +85,7 @@
                         {
                             <li>
                                 <form asp-action="Publish" asp-route-id="@j.Id" method="post"
-                                      hx-confirm="Publish this job? It becomes visible on the public career site.">
+                                      hx-confirm="Publish this job? It becomes visible on the public career site." data-confirm-title="Publish job" data-confirm-ok="Publish job">
                                     <button class="dropdown-item" type="submit">Publish</button>
                                 </form>
                             </li>
@@ -94,7 +94,7 @@
                         {
                             <li>
                                 <form asp-action="Close" asp-route-id="@j.Id" method="post"
-                                      hx-confirm="Close this job? It is removed from the public career site.">
+                                      hx-confirm="Close this job? It is removed from the public career site." data-confirm-title="Close job" data-confirm-ok="Close job">
                                     <button class="dropdown-item" type="submit">Close</button>
                                 </form>
                             </li>
@@ -102,7 +102,7 @@
                         <li><hr class="dropdown-divider"></li>
                         <li>
                             <form asp-action="Delete" asp-route-id="@j.Id" method="post"
-                                  hx-confirm="Delete this job?">
+                                  hx-confirm="Delete this job?" data-confirm-title="Delete job" data-confirm-ok="Delete job" data-confirm-variant="danger">
                                 <button class="dropdown-item text-danger" type="submit">Delete</button>
                             </form>
                         </li>

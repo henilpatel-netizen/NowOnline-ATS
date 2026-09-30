@@ -17,7 +17,13 @@
                 <div class="ats-trow ats-table--org">
                     <span class="ats-small">@d.Name</span>
                     <span class="ats-mono ats-xsmall ats-muted">@d.JobCount @(d.JobCount == 1 ? "job" : "jobs")</span>
-                    <a class="ms ms-sm ats-faint" asp-controller="Departments" asp-action="Edit" asp-route-id="@d.Id" aria-label="Edit @d.Name">edit</a>
+                    <span class="d-flex align-items-center gap-2">
+                        <a class="ms ms-sm ats-faint ats-icon-hit" asp-controller="Departments" asp-action="Edit" asp-route-id="@d.Id" aria-label="Edit @d.Name">edit</a>
+                        <form asp-controller="Departments" asp-action="Delete" asp-route-id="@d.Id" method="post" class="d-inline"
+                              hx-confirm="Delete this department?" data-confirm-title="Delete department" data-confirm-ok="Delete department" data-confirm-variant="danger">
+                            <button type="submit" class="ms ms-sm ats-icon-danger ats-icon-hit border-0 bg-transparent p-0" aria-label="Delete @d.Name">delete</button>
+                        </form>
+                    </span>
                 </div>
             }
             @if (Model.Overview.Departments.Count == 0)
@@ -40,7 +46,13 @@
                         @if (!string.IsNullOrEmpty(l.City)) { <span class="ats-xsmall ats-muted">@l.City</span> }
                     </span>
                     <span class="ats-mono ats-xsmall ats-muted">@l.JobCount @(l.JobCount == 1 ? "job" : "jobs")</span>
-                    <a class="ms ms-sm ats-faint" asp-controller="Locations" asp-action="Edit" asp-route-id="@l.Id" aria-label="Edit @l.Name">edit</a>
+                    <span class="d-flex align-items-center gap-2">
+                        <a class="ms ms-sm ats-faint ats-icon-hit" asp-controller="Locations" asp-action="Edit" asp-route-id="@l.Id" aria-label="Edit @l.Name">edit</a>
+                        <form asp-controller="Locations" asp-action="Delete" asp-route-id="@l.Id" method="post" class="d-inline"
+                              hx-confirm="Delete this location?" data-confirm-title="Delete location" data-confirm-ok="Delete location" data-confirm-variant="danger">
+                            <button type="submit" class="ms ms-sm ats-icon-danger ats-icon-hit border-0 bg-transparent p-0" aria-label="Delete @l.Name">delete</button>
+                        </form>
+                    </span>
                 </div>
             }
             @if (Model.Overview.Locations.Count == 0)

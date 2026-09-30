@@ -14,7 +14,8 @@ public class CandidateConfiguration : IEntityTypeConfiguration<Candidate>
         b.Property(c => c.LastName).IsRequired().HasMaxLength(100);
         b.Property(c => c.Email).IsRequired().HasMaxLength(256);
         b.Property(c => c.Phone).HasMaxLength(40);
-        b.HasIndex(c => new { c.TenantId, c.Email }).IsUnique();
+        // Filtered so a soft-deleted candidate's email can be used again.
+        b.HasIndex(c => new { c.TenantId, c.Email }).IsUnique().HasFilter("[IsDeleted] = 0");
         // Default candidate-list sort (LastName, FirstName).
         b.HasIndex(c => new { c.TenantId, c.LastName, c.FirstName });
     }

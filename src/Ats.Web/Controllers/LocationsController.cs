@@ -58,6 +58,6 @@ public class LocationsController : Controller
         var result = await _service.DeleteAsync(id);
         if (result.Succeeded) await _audit.LogAsync("LocationDeleted", "Location", id.ToString(), $"Deleted location {id}");
         this.SetResultMessage(result, "Location deleted.");
-        return RedirectToAction(nameof(Index));
+        return RedirectToAction("Index", "Organisation");
     }
 }

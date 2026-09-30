@@ -10,11 +10,11 @@
 
 <div class="ats-card-dark mb-3 d-flex align-items-center gap-4 flex-wrap">
     <div class="d-flex align-items-center gap-3 flex-grow-1" style="min-width:16rem">
-        <span style="width:44px;height:44px;border-radius:var(--no-radius-md);background:rgba(105,202,167,.18);color:var(--no-medium-aqua);display:inline-flex;align-items:center;justify-content:center"><span class="ms">cable</span></span>
+        <span class="ats-icon-tile-dark"><span class="ms">cable</span></span>
         <span class="ats-cell-stack">
             <span style="font-family:var(--no-font-display);font-weight:700;font-size:1.0625rem">ReferralTool</span>
             <span class="ats-small ats-on-dark-subtle">
-                <span class="ats-board-col-dot d-inline-block" style="background:@(Model.IntegrationEnabled ? "var(--no-medium-aqua)" : "var(--no-roman-silver)")"></span>
+                <span class="ats-board-col-dot d-inline-block @(Model.IntegrationEnabled ? "ats-dot--on" : "ats-dot--off")"></span>
                 @(Model.IntegrationEnabled ? "Connected" : "Disabled")
                 @if (Model.ReferralToolCustomerId is not null) { <text>· customer @Model.ReferralToolCustomerId</text> }
             </span>
@@ -39,7 +39,7 @@
             }
             <div><span class="ats-eyebrow">Connection:</span><h2 class="mt-1 mb-0">Where we push status updates.</h2></div>
             <div asp-validation-summary="All" class="text-danger small"></div>
-            <label class="d-flex align-items-center gap-3 p-3" style="background:var(--ats-bg);border-radius:var(--no-radius-md);cursor:pointer">
+            <label class="ats-check-panel d-flex align-items-center gap-3 p-3">
                 <input asp-for="IntegrationEnabled" class="form-check-input m-0" />
                 <span class="ats-cell-stack">
                     <span class="ats-small">Integration enabled</span>
@@ -64,7 +64,7 @@
                 <span class="ats-small">Published jobs</span><strong class="ats-stat-mini">@Model.PublishedJobCount</strong>
             </div>
             <form asp-action="SyncVacancies" method="post"
-                  hx-confirm="Send every published and closed job to ReferralTool now?">
+                  hx-confirm="Send every published and closed job to ReferralTool now?" data-confirm-title="Sync vacancies" data-confirm-ok="Sync now">
                 <button type="submit" class="btn btn-outline-secondary btn-sm"><span class="ms ms-sm">sync</span> Sync vacancies now</button>
             </form>
         </div>

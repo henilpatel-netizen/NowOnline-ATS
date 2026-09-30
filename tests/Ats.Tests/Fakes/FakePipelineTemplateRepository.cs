@@ -10,7 +10,10 @@ public sealed class FakePipelineTemplateRepository : IPipelineTemplateRepository
     public List<PipelineTemplate> RemovedTemplates { get; } = new();
 
     public bool ConcurrencyConflict { get; set; }
+    // Simulates the database refusing a stage delete (an application still points at it).
+    public bool StageInUse { get; set; }
     public bool UsedByJob { get; set; }
+    public bool RemoveBlocked { get; set; }
     public int SaveCount { get; private set; }
     public byte[]? ExpectedRowVersion { get; private set; }
     public bool AddCalled { get; private set; }
@@ -36,11 +39,13 @@ public sealed class FakePipelineTemplateRepository : IPipelineTemplateRepository
         return Task.CompletedTask;
     }
 
-    public Task RemoveAsync(PipelineTemplate template, CancellationToken ct = default)
+    public Task<bool> TryRemoveAsync(PipelineTemplate template, CancellationToken ct = default)
     {
+        if (RemoveBlocked) return Task.FromResult(false);
         RemovedTemplates.Add(template);
         Templates.Remove(template);
-        return Task.CompletedTask;
+        SaveCount++;
+        return Task.FromResult(true);
     }
 
     public Task<bool> IsUsedByJobAsync(int id, CancellationToken ct = default) => Task.FromResult(UsedByJob);
@@ -57,10 +62,11 @@ public sealed class FakePipelineTemplateRepository : IPipelineTemplateRepository
     public void SetExpectedRowVersion(PipelineTemplate template, byte[] rowVersion) =>
         ExpectedRowVersion = rowVersion;
 
-    public Task<bool> TrySaveChangesAsync(CancellationToken ct = default)
+    public Task<TemplateSaveOutcome> TrySaveChangesAsync(CancellationToken ct = default)
     {
-        if (ConcurrencyConflict) return Task.FromResult(false);
+        if (ConcurrencyConflict) return Task.FromResult(TemplateSaveOutcome.Conflict);
+        if (StageInUse) return Task.FromResult(TemplateSaveOutcome.StageInUse);
         SaveCount++;
-        return Task.FromResult(true);
+        return Task.FromResult(TemplateSaveOutcome.Saved);
     }
 }
