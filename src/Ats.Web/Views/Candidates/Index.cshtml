@@ -5,10 +5,14 @@
     ViewData["Title"] = "Candidates";
     ViewData["Eyebrow"] = $"{Model.Results.Total} people in your talent pool:";
     var now = DateTimeOffset.UtcNow;
+    var canManage = User.Can(AtsPermission.CandidatesManage);
 }
 
 @section PageActions {
-    <a class="btn btn-primary" asp-action="Create"><span class="ms ms-sm">person_add</span> Add candidate</a>
+    @if (canManage)
+    {
+        <a class="btn btn-primary" asp-action="Create"><span class="ms ms-sm">person_add</span> Add candidate</a>
+    }
 }
 
 <div class="ats-toolbar mb-3">
@@ -49,28 +53,31 @@
             </span>
             <span class="ats-small ats-muted">@(c.LastActivity is null ? "—" : RelativeTime.Long(c.LastActivity, now))</span>
             <span class="d-flex justify-content-end ats-row-actions">
-                <div class="dropdown">
-                    <button type="button" class="btn btn-sm btn-outline-secondary border-0 px-2" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-label="Actions">
-                        <span class="ms ms-sm">more_horiz</span>
-                    </button>
-                    <div class="dropdown-menu dropdown-menu-end p-2 @(Model.PublishedJobs.Count > 0 ? "ats-menu-wide" : "")">
-                        @if (Model.PublishedJobs.Count > 0)
-                        {
-                            <form asp-action="AddToJob" method="post" class="d-flex gap-1">
-                                <input type="hidden" name="candidateId" value="@c.Id" />
-                                <select name="jobId" class="form-select form-select-sm" aria-label="Add to job" asp-items="Model.PublishedJobs">
-                                    <option value="">Add to job…</option>
-                                </select>
-                                <button class="btn btn-sm btn-primary" type="submit">Add</button>
+                @if (canManage)
+                {
+                    <div class="dropdown">
+                        <button type="button" class="btn btn-sm btn-outline-secondary border-0 px-2" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-label="Actions">
+                            <span class="ms ms-sm">more_horiz</span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end p-2 @(Model.PublishedJobs.Count > 0 ? "ats-menu-wide" : "")">
+                            @if (Model.PublishedJobs.Count > 0)
+                            {
+                                <form asp-action="AddToJob" method="post" class="d-flex gap-1">
+                                    <input type="hidden" name="candidateId" value="@c.Id" />
+                                    <select name="jobId" class="form-select form-select-sm" aria-label="Add to job" asp-items="Model.PublishedJobs">
+                                        <option value="">Add to job…</option>
+                                    </select>
+                                    <button class="btn btn-sm btn-primary" type="submit">Add</button>
+                                </form>
+                                <hr class="dropdown-divider">
+                            }
+                            <form asp-action="Delete" asp-route-id="@c.Id" method="post"
+                                  hx-confirm="Delete this candidate and remove them from all jobs?" data-confirm-title="Delete candidate" data-confirm-ok="Delete candidate" data-confirm-variant="danger">
+                                <button class="dropdown-item text-danger" type="submit">Delete</button>
                             </form>
-                            <hr class="dropdown-divider">
-                        }
-                        <form asp-action="Delete" asp-route-id="@c.Id" method="post"
-                              hx-confirm="Delete this candidate and remove them from all jobs?" data-confirm-title="Delete candidate" data-confirm-ok="Delete candidate" data-confirm-variant="danger">
-                            <button class="dropdown-item text-danger" type="submit">Delete</button>
-                        </form>
+                        </div>
                     </div>
-                </div>
+                }
             </span>
         </div>
     }
@@ -86,7 +93,7 @@
     var pager = new Ats.Web.Models.PagerModel { Page = Model.Results.Page, TotalPages = Model.Results.TotalPages, Action = "Index", Query = cq };
 }
 <partial name="_Pager" model="pager" />
-@if (Model.PublishedJobs.Count == 0)
+@if (canManage && Model.PublishedJobs.Count == 0)
 {
     <p class="ats-muted ats-small mt-2">Publish a job to enable "Add to job" here.</p>
 }

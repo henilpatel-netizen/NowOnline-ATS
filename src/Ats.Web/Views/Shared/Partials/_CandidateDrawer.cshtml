@@ -10,6 +10,7 @@
         "Pending" => ("Delivery pending", PillTone.Warning),
         _ => null
     };
+    var canDownload = Model.ResumeFileName is not null && User.Can(AtsPermission.ResumesDownload);
 }
 <div class="ats-drawer-section">
     <div class="d-flex align-items-start gap-3">
@@ -23,24 +24,27 @@
         <button type="button" class="ats-icon-btn border-0" data-drawer-close aria-label="Close"><span class="ms ms-sm">close</span></button>
     </div>
     <div class="d-flex gap-2 flex-wrap">
-        @if (Model.NextStageName is not null && Model.Status == ApplicationStatus.Active)
+        @if (Model.NextStageName is not null && Model.Status == ApplicationStatus.Active && User.Can(AtsPermission.ApplicationsMove))
         {
             <button type="button" class="btn btn-primary btn-sm" disabled title="Use the board to move stages">
                 Move to @Model.NextStageName <span class="ms ms-sm">arrow_forward</span>
             </button>
         }
-        @if (Model.ResumeFileName is not null)
+        @if (canDownload)
         {
             <a class="btn btn-outline-secondary btn-sm" asp-controller="Resume" asp-action="Download" asp-route-applicationId="@Model.ApplicationId" hx-boost="false">Download CV</a>
         }
-        @* On the board the drawer sits outside #ats-content and inherits no boost config, so the
-           form carries it itself; without htmx, hx-confirm would not gate the post. *@
-        <form asp-controller="Applications" asp-action="Remove" asp-route-id="@Model.ApplicationId" method="post"
-              hx-boost="true" hx-target="#ats-content" hx-select="#ats-content"
-              hx-select-oob="#ats-sidebar,#ats-topbar" hx-swap="outerHTML" hx-indicator="#ats-nav-progress"
-              hx-confirm="Remove this candidate from the job? Their history on this job is hidden." data-confirm-title="Remove from job" data-confirm-ok="Remove from job" data-confirm-variant="danger">
-            <button type="submit" class="btn btn-outline-danger btn-sm"><span class="ms ms-sm">delete</span> Remove from job</button>
-        </form>
+        @if (User.Can(AtsPermission.CandidatesManage))
+        {
+            @* On the board the drawer sits outside #ats-content and inherits no boost config, so the
+               form carries it itself; without htmx, hx-confirm would not gate the post. *@
+            <form asp-controller="Applications" asp-action="Remove" asp-route-id="@Model.ApplicationId" method="post"
+                  hx-boost="true" hx-target="#ats-content" hx-select="#ats-content"
+                  hx-select-oob="#ats-sidebar,#ats-topbar" hx-swap="outerHTML" hx-indicator="#ats-nav-progress"
+                  hx-confirm="Remove this candidate from the job? Their history on this job is hidden." data-confirm-title="Remove from job" data-confirm-ok="Remove from job" data-confirm-variant="danger">
+                <button type="submit" class="btn btn-outline-danger btn-sm"><span class="ms ms-sm">delete</span> Remove from job</button>
+            </form>
+        }
     </div>
 </div>
 
@@ -81,7 +85,10 @@
                 <span class="ats-small">@Model.ResumeFileName</span>
                 <span class="ats-xsmall ats-muted">@Size(Model.ResumeSizeBytes)</span>
             </span>
-            <a class="ms ms-sm" asp-controller="Resume" asp-action="Download" asp-route-applicationId="@Model.ApplicationId" aria-label="Download" hx-boost="false">download</a>
+            @if (canDownload)
+            {
+                <a class="ms ms-sm" asp-controller="Resume" asp-action="Download" asp-route-applicationId="@Model.ApplicationId" aria-label="Download" hx-boost="false">download</a>
+            }
         </div>
     }
 </div>

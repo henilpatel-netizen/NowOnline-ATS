@@ -1,12 +1,13 @@
 using Ats.Application.Auditing;
 using Ats.Application.Departments;
+using Ats.Domain.Authorization;
 using Ats.Web.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Ats.Web.Controllers;
 
-[Authorize]
+[Authorize(Policy = AtsPermission.OrganisationManage)]
 public class DepartmentsController : Controller
 {
     private readonly IDepartmentService _service;

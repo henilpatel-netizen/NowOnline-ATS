@@ -1,13 +1,13 @@
 using Ats.Application.Search;
+using Ats.Domain.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Ats.Web.Controllers;
 
-// Authorization in this app is per-controller (see JobsController's [Authorize] and
-// IntegrationController's [Authorize(Roles = Owner)]). Search spans jobs, candidates and referral
-// codes, so it takes the bare [Authorize] with no role gate.
-[Authorize]
+// Search spans jobs and candidates, so it needs both view permissions. Phase 3 scopes results for HiringManager.
+[Authorize(Policy = AtsPermission.JobsView)]
+[Authorize(Policy = AtsPermission.CandidatesView)]
 public class SearchController : Controller
 {
     private readonly IGlobalSearchService _search;

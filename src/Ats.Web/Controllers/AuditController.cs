@@ -1,11 +1,11 @@
 using Ats.Application.Auditing;
-using Ats.Domain.Enums;
+using Ats.Domain.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Ats.Web.Controllers;
 
-[Authorize(Roles = AtsRole.Owner)]
+[Authorize(Policy = AtsPermission.AuditView)]
 public class AuditController : Controller
 {
     private readonly IAuditQuery _audit;

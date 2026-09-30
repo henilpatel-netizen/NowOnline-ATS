@@ -1,5 +1,6 @@
 using Ats.Application.Applications;
 using Ats.Application.Common;
+using Ats.Domain.Authorization;
 using Ats.Web.Models;
 using Ats.Web.ViewServices;
 using Microsoft.AspNetCore.Authorization;
@@ -7,7 +8,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Ats.Web.Controllers;
 
-[Authorize]
+[Authorize(Policy = AtsPermission.JobsView)]
+[Authorize(Policy = AtsPermission.CandidatesView)]
 public class BoardController : Controller
 {
     private readonly IApplicationService _service;
@@ -28,6 +30,7 @@ public class BoardController : Controller
     }
 
     [HttpPost]
+    [Authorize(Policy = AtsPermission.ApplicationsMove)]
     public async Task<IActionResult> Move(int jobId, int applicationId, int toStageId, string rowVersion)
     {
         byte[] rv;
@@ -46,6 +49,7 @@ public class BoardController : Controller
     }
 
     [HttpPost]
+    [Authorize(Policy = AtsPermission.CandidatesManage)]
     public async Task<IActionResult> AddCandidate(AddCandidateViewModel vm)
     {
         OperationResult result;

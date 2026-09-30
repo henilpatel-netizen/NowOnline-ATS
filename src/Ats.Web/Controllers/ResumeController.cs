@@ -1,12 +1,13 @@
 using Ats.Application.Abstractions;
 using Ats.Application.Applications;
 using Ats.Application.Candidates;
+using Ats.Domain.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Ats.Web.Controllers;
 
-[Authorize]
+[Authorize(Policy = AtsPermission.ResumesDownload)]
 public class ResumeController : Controller
 {
     private readonly IApplicationService _applications;

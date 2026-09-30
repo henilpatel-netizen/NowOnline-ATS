@@ -1,12 +1,13 @@
 using Ats.Application.Applications;
 using Ats.Application.Auditing;
+using Ats.Domain.Authorization;
 using Ats.Web.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Ats.Web.Controllers;
 
-[Authorize]
+[Authorize(Policy = AtsPermission.CandidatesView)]
 public class ApplicationsController : Controller
 {
     private readonly IApplicationService _service;
@@ -51,6 +52,7 @@ public class ApplicationsController : Controller
     }
 
     [HttpPost]
+    [Authorize(Policy = AtsPermission.CandidatesManage)]
     public async Task<IActionResult> Remove(int id)
     {
         var app = await _service.GetAsync(id);

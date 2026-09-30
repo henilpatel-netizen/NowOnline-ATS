@@ -1,12 +1,13 @@
 using Ats.Application.Auditing;
 using Ats.Application.Pipelines;
+using Ats.Domain.Authorization;
 using Ats.Web.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Ats.Web.Controllers;
 
-[Authorize]
+[Authorize(Policy = AtsPermission.PipelinesManage)]
 public class PipelinesController : Controller
 {
     private readonly IPipelineTemplateService _service;

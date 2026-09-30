@@ -1,11 +1,12 @@
 using Ats.Application.Organisation;
+using Ats.Domain.Authorization;
 using Ats.Web.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Ats.Web.Controllers;
 
-[Authorize]
+[Authorize(Policy = AtsPermission.OrganisationManage)]
 public class OrganisationController : Controller
 {
     private readonly IOrganisationReadService _org;

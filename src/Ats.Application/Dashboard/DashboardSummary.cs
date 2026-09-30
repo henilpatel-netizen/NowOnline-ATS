@@ -4,7 +4,8 @@ namespace Ats.Application.Dashboard;
 
 public sealed record StageCount(string Stage, int Count);
 public sealed record SourceSlice(ApplicationOrigin Origin, int Percent);
-public sealed record AttentionItem(string Icon, string Tone, string Headline, string Subline, string Url);
+// RequiredPermission is the permission the Url's page demands; the view hides items the user cannot open.
+public sealed record AttentionItem(string Icon, string Tone, string Headline, string Subline, string Url, string RequiredPermission);
 public sealed record ActivityItem(string Actor, string Text, DateTimeOffset OccurredAt);
 
 public sealed record IntegrationHealth(

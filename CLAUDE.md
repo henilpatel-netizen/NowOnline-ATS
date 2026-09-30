@@ -41,7 +41,7 @@ Solution: `Ats.slnx` (modern XML solution format, .NET 10 default; projects unde
 | `Ats.Infrastructure` | EF Core `AtsDbContext`, tenancy filters + interceptor, Identity impl, DI. |
 | `Ats.Web` | MVC back-office (root: `/Jobs`, `/Candidates`, `/Board`, ...) + public career site (`Careers` area, `/careers/{slug}`). |
 | `Ats.Worker` | Background host: outbox delivery, notifications. |
-| `Ats.Tests` | xUnit tests for pure Application-layer logic (no database). Under `tests/`. |
+| `Ats.Tests` | xUnit tests for pure Application-layer logic and the `Ats.Web` authorization wiring (policies, controller attributes); no database. Under `tests/`. |
 
 ## Build / run
 ```
@@ -121,6 +121,9 @@ four phases (`docs/plans/2026-07-30-ats-redesign-phase-{1..4}-*.md`).
   has no ASP.NET dependency. Details: architecture skill.
 - **Business rules need tests.** `tests/Ats.Tests` uses hand-rolled fakes (no database). Mutation-check
   a new suite that passes first time.
+- **Authorization is permission-based.** Gate actions with `[Authorize(Policy = AtsPermission.X)]` and
+  controls with `User.Can(AtsPermission.X)`; never role names. A fallback policy requires sign-in, so
+  public endpoints need `[AllowAnonymous]`. Details: authorization skill.
 
 ## Documentation maintenance (MANDATORY, after each phase)
 1. Refresh the skill-index table below and any changed conventions.
@@ -140,4 +143,5 @@ four phases (`docs/plans/2026-07-30-ats-redesign-phase-{1..4}-*.md`).
 | Career site | `.claude/skills/career-site/SKILL.md` | Careers area, slug tenancy, IFileStore, public apply |
 | Integration | `.claude/skills/integration/SKILL.md` | Vacancy push, outbox, worker, ReferralTool client, settings |
 | Audit | `.claude/skills/audit/SKILL.md` | Audit log, dashboard metrics, integration test tools |
+| Authorization | `.claude/skills/authorization/SKILL.md` | Permissions, role map, policies, fallback policy, gating actions and controls |
 | Orchestration | `.claude/skills/ats-ship/SKILL.md` | `/ats-ship`: implement, parallel review, done-gate, no git |

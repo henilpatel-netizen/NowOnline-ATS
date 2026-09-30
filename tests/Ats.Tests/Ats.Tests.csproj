@@ -18,6 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="../../src/Ats.Domain/Ats.Domain.csproj" />
     <ProjectReference Include="../../src/Ats.Application/Ats.Application.csproj" />
+    <ProjectReference Include="../../src/Ats.Web/Ats.Web.csproj" />
   </ItemGroup>
 
 </Project>

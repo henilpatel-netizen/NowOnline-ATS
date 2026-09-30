@@ -2,6 +2,7 @@ using Ats.Application.Applications;
 using Ats.Application.Auditing;
 using Ats.Application.Candidates;
 using Ats.Application.Jobs;
+using Ats.Domain.Authorization;
 using Ats.Domain.Enums;
 using Ats.Web.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -10,7 +11,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Ats.Web.Controllers;
 
-[Authorize]
+[Authorize(Policy = AtsPermission.CandidatesView)]
 public class CandidatesController : Controller
 {
     private readonly ICandidateService _service;
@@ -34,9 +35,12 @@ public class CandidatesController : Controller
         return View(new CandidatesIndexViewModel { Results = results, Q = q, PublishedJobs = jobs });
     }
 
-    [HttpGet] public IActionResult Create() => View("Form", new CandidateViewModel());
+    [HttpGet]
+    [Authorize(Policy = AtsPermission.CandidatesManage)]
+    public IActionResult Create() => View("Form", new CandidateViewModel());
 
     [HttpPost]
+    [Authorize(Policy = AtsPermission.CandidatesManage)]
     public async Task<IActionResult> Create(CandidateViewModel vm)
     {
         if (!ModelState.IsValid) return View("Form", vm);
@@ -56,6 +60,7 @@ public class CandidatesController : Controller
     }
 
     [HttpPost]
+    [Authorize(Policy = AtsPermission.CandidatesManage)]
     public async Task<IActionResult> Edit(CandidateViewModel vm)
     {
         if (!ModelState.IsValid) return View("Form", vm);
@@ -67,6 +72,7 @@ public class CandidatesController : Controller
     }
 
     [HttpPost]
+    [Authorize(Policy = AtsPermission.CandidatesManage)]
     public async Task<IActionResult> Delete(int id)
     {
         var name = (await _service.GetAsync(id))?.FullName;
@@ -77,6 +83,7 @@ public class CandidatesController : Controller
     }
 
     [HttpPost]
+    [Authorize(Policy = AtsPermission.CandidatesManage)]
     public async Task<IActionResult> AddToJob(int candidateId, int jobId)
     {
         if (jobId == 0) { TempData["Error"] = "Pick a job."; return RedirectToAction(nameof(Index)); }

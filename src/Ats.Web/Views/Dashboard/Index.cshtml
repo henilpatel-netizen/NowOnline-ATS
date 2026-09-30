@@ -5,6 +5,7 @@
     ViewData["Title"] = "Dashboard";
     ViewData["EyebrowUtc"] = DateTimeOffset.UtcNow;
     var maxStage = Model.ByStage.Count == 0 ? 1 : Math.Max(1, Model.ByStage.Max(s => s.Count));
+    var attention = Model.NeedsAttention.Where(i => User.Can(i.RequiredPermission)).ToList();
     string SourceLabel(ApplicationOrigin o) => o switch
     {
         ApplicationOrigin.CareerSite => "Career site",
@@ -60,14 +61,14 @@
         <div class="ats-card">
             <span class="ats-eyebrow">Needs you:</span>
             <h2 class="mt-1 mb-2">Open loops.</h2>
-            @if (Model.NeedsAttention.Count == 0)
+            @if (attention.Count == 0)
             {
                 <p class="ats-small ats-muted mb-0">Nothing needs you right now.</p>
             }
             else
             {
                 <div class="d-flex flex-column">
-                    @foreach (var item in Model.NeedsAttention)
+                    @foreach (var item in attention)
                     {
                         var tone = item.Tone switch { "danger" => "ats-pill--danger", "warning" => "ats-pill--warning", _ => "ats-pill--info" };
                         <a href="@item.Url" class="ats-attention-link d-flex align-items-center gap-3 py-2 px-1">
@@ -83,18 +84,21 @@
             }
         </div>
 
-        <div class="ats-card-dark">
-            <div class="d-flex align-items-center gap-2 mb-2">
-                <span class="ats-board-col-dot @(Model.Integration.Connected ? "ats-dot--on" : "ats-dot--off")"></span>
-                <span class="ats-eyebrow">ReferralTool · @(Model.Integration.Connected ? "connected" : "off")</span>
+        @if (User.Can(AtsPermission.IntegrationManage))
+        {
+            <div class="ats-card-dark">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="ats-board-col-dot @(Model.Integration.Connected ? "ats-dot--on" : "ats-dot--off")"></span>
+                    <span class="ats-eyebrow">ReferralTool · @(Model.Integration.Connected ? "connected" : "off")</span>
+                </div>
+                <p class="ats-small ats-on-dark-muted mb-3">
+                    @Model.Integration.Delivered24h delivered, @Model.Integration.Failed24h failed, @Model.Integration.Pending pending.
+                </p>
+                <a asp-controller="Integration" asp-action="Index" class="btn btn-outline-light btn-sm">
+                    Integration health <span class="ms ms-sm">arrow_forward</span>
+                </a>
             </div>
-            <p class="ats-small ats-on-dark-muted mb-3">
-                @Model.Integration.Delivered24h delivered, @Model.Integration.Failed24h failed, @Model.Integration.Pending pending.
-            </p>
-            <a asp-controller="Integration" asp-action="Index" class="btn btn-outline-light btn-sm">
-                Integration health <span class="ms ms-sm">arrow_forward</span>
-            </a>
-        </div>
+        }
     </div>
 </div>
 

@@ -3,10 +3,12 @@ using Ats.Application.Abstractions;
 using Ats.Application.Tenancy;
 using Ats.Web.Models;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Ats.Web.Controllers;
 
+[AllowAnonymous]
 public class AccountController : Controller
 {
     private readonly ITenantOnboardingService _onboarding;

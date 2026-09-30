@@ -3,6 +3,8 @@ using Ats.Application.Abstractions;
 using Ats.Application.Integration;
 using Ats.Infrastructure;
 using Ats.Infrastructure.Persistence;
+using Ats.Web.Identity;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
@@ -52,14 +54,20 @@ builder.Services.AddAuthentication("AtsCookie")
     .AddCookie("AtsCookie", o =>
     {
         o.LoginPath = "/Account/Login";
-        o.AccessDeniedPath = "/Account/Login";
+        // A signed-in user without the permission gets a 403, rendered by the status-code page
+        // (HomeController.Status), instead of being bounced to the login page.
+        o.Events.OnRedirectToAccessDenied = ctx =>
+        {
+            ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+            return Task.CompletedTask;
+        };
         o.Cookie.HttpOnly = true;
         o.Cookie.SecurePolicy = CookieSecurePolicy.Always;
         o.Cookie.SameSite = SameSiteMode.Lax;
         o.ExpireTimeSpan = TimeSpan.FromHours(8);
         o.SlidingExpiration = true;
     });
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(o => o.AddAtsPermissionPolicies());
 
 // Add services to the container. Antiforgery validation applied to all
 // non-GET requests (OWASP CSRF protection on the auth + back-office surface).
@@ -88,12 +96,12 @@ app.UseSerilogRequestLogging(opts =>
 app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
     Predicate = _ => false
-});
+}).AllowAnonymous();
 app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("ready")
-});
-app.MapHealthChecks("/health");   // default: all checks (kept for backwards compatibility)
+}).AllowAnonymous();
+app.MapHealthChecks("/health").AllowAnonymous();   // default: all checks (kept for backwards compatibility)
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -116,7 +124,7 @@ app.UseAuthorization();
 
 app.UseMiddleware<Ats.Web.Middleware.TenantResolutionMiddleware>();
 
-app.MapStaticAssets();
+app.MapStaticAssets().Add(b => b.Metadata.Add(new AllowAnonymousAttribute()));
 
 app.MapControllerRoute(
     name: "default",

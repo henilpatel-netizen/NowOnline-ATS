@@ -1,5 +1,6 @@
 using Ats.Application.Auditing;
 using Ats.Application.Integration;
+using Ats.Domain.Authorization;
 using Ats.Domain.Enums;
 using Ats.Web.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -7,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Ats.Web.Controllers;
 
-[Authorize(Roles = AtsRole.Owner)]
+[Authorize(Policy = AtsPermission.IntegrationManage)]
 public class IntegrationController : Controller
 {
     private readonly IIntegrationSettingsService _settings;

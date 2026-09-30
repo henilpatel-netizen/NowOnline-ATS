@@ -46,7 +46,7 @@ invalid falls back to the default.
 
 ## Shared components
 - `SidebarNavViewComponent` renders grouped nav (ungrouped Dashboard, then `Hiring:`, `Setup:`,
-  `Admin:`) from an in-code `NavItem[]`. A `NavItem` carries a `NavGroup`, an optional `RequiredRole`,
+  `Admin:`) from an in-code `NavItem[]`. A `NavItem` carries a `NavGroup`, an optional `RequiredPermission` (an `AtsPermission` constant),
   an optional `Count` selector (badge, e.g. open jobs) and an optional `Alert` selector (danger dot).
   Counts and the alert come from `IShellSummaryService` (one cached per-request query batch).
 - `TopBarViewComponent` renders the breadcrumb (from a controller->crumb map), the global search
@@ -105,7 +105,7 @@ Always validate on the server too: client constraints are a convenience.
 4. Header buttons: define a `@section PageActions { ... }`, or set the `TopBarAction*` `ViewData`
    keys for a topbar CTA.
 5. To surface in the sidebar, append a `NavItem` in `SidebarNavViewComponent` with its `NavGroup`
-   (and, if it should be role-gated, `RequiredRole`). Add a matching crumb in `TopBarViewComponent`.
+   (and, if it should be permission-gated, `RequiredPermission`). Add a matching crumb in `TopBarViewComponent`.
 6. For flash messages, set `TempData["Success"]` etc. in the action.
 
 ## Security

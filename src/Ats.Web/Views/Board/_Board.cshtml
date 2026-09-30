@@ -1,6 +1,7 @@
 ﻿@model Ats.Web.Models.BoardViewModel
 @using Ats.Web.Models.Shared
-<div id="board-container">
+@{ var canMove = User.Can(AtsPermission.ApplicationsMove); }
+<div id="board-container" data-can-move="@(canMove ? "true" : "false")">
     @if (!string.IsNullOrEmpty(Model.Error))
     {
         <div class="alert alert-warning d-flex align-items-center gap-2" role="alert">
@@ -56,12 +57,15 @@
                                     }
                                 </span>
                             </div>
-                            <select class="form-select form-select-sm move-select" aria-label="Move @card.CandidateName to stage">
-                                @foreach (var s in Model.Columns)
-                                {
-                                    <option value="@s.Stage.Id" selected="@(s.Stage.Id == col.Stage.Id)">@s.Stage.Name</option>
-                                }
-                            </select>
+                            @if (canMove)
+                            {
+                                <select class="form-select form-select-sm move-select" aria-label="Move @card.CandidateName to stage">
+                                    @foreach (var s in Model.Columns)
+                                    {
+                                        <option value="@s.Stage.Id" selected="@(s.Stage.Id == col.Stage.Id)">@s.Stage.Name</option>
+                                    }
+                                </select>
+                            }
                         </form>
                     }
                     @if (col.Cards.Count == 0)

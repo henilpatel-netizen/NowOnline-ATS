@@ -1,10 +1,11 @@
 using Ats.Application.Dashboard;
+using Ats.Domain.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Ats.Web.Controllers;
 
-[Authorize]
+[Authorize(Policy = AtsPermission.DashboardView)]
 public class DashboardController : Controller
 {
     private readonly IDashboardService _dashboard;

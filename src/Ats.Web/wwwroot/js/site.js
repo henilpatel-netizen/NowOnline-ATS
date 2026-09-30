@@ -254,6 +254,8 @@ window.Ats = window.Ats || {};
     document.body.addEventListener('htmx:responseError', function (evt) {
         if (!isBoosted(evt)) return;
         var xhr = evt.detail.xhr;
+        // A GET re-request of a POST-only action would 405, so a denial goes straight to the status page.
+        if (xhr.status === 403) { hardNavigate('/Home/Status?code=403'); return; }
         hardNavigate(xhr.responseURL || (evt.detail.pathInfo && evt.detail.pathInfo.requestPath));
     });
 

@@ -1,7 +1,8 @@
 using System.Security.Claims;
 using Ats.Application.Branding;
 using Ats.Application.Shell;
-using Ats.Domain.Enums;
+using Ats.Domain.Authorization;
+using Ats.Web.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Ats.Web.ViewComponents;
@@ -14,7 +15,7 @@ public record NavItem(
     string Controller,
     string Action,
     NavGroup Group = NavGroup.None,
-    string? RequiredRole = null,
+    string? RequiredPermission = null,
     Func<ShellSummary, int?>? Count = null,
     Func<ShellSummary, bool>? Alert = null);
 
@@ -36,13 +37,13 @@ public class SidebarNavViewComponent : ViewComponent
         new("Jobs", "work_outline", "Jobs", "Index", NavGroup.Hiring, Count: s => s.OpenJobs),
         new("Candidates", "group", "Candidates", "Index", NavGroup.Hiring, Count: s => s.Candidates),
 
-        new("Pipelines", "view_week", "Pipelines", "Index", NavGroup.Setup),
-        new("Organisation", "apartment", "Organisation", "Index", NavGroup.Setup),
+        new("Pipelines", "view_week", "Pipelines", "Index", NavGroup.Setup, AtsPermission.PipelinesManage),
+        new("Organisation", "apartment", "Organisation", "Index", NavGroup.Setup, AtsPermission.OrganisationManage),
         new("Career site", "public", "CareerSite", "Index", NavGroup.Setup),
 
-        new("Integrations", "cable", "Integration", "Index", NavGroup.Admin, AtsRole.Owner,
+        new("Integrations", "cable", "Integration", "Index", NavGroup.Admin, AtsPermission.IntegrationManage,
             Alert: s => s.IntegrationUnhealthy),
-        new("Audit log", "history", "Audit", "Index", NavGroup.Admin, AtsRole.Owner),
+        new("Audit log", "history", "Audit", "Index", NavGroup.Admin, AtsPermission.AuditView),
     };
 
     private readonly ITenantBrandingService _branding;
@@ -64,7 +65,7 @@ public class SidebarNavViewComponent : ViewComponent
         var summary = await _summary.GetAsync();
 
         var groups = Items
-            .Where(i => i.RequiredRole is null || string.Equals(i.RequiredRole, role, StringComparison.OrdinalIgnoreCase))
+            .Where(i => i.RequiredPermission is null || UserClaimsPrincipal.Can(i.RequiredPermission))
             .GroupBy(i => i.Group)
             .ToList();
 

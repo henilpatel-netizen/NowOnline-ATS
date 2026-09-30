@@ -18,10 +18,14 @@
         ("Draft", nameof(JobStatus.Draft)), ("Closed", nameof(JobStatus.Closed))
     };
     var current = Model.Status?.ToString();
+    var canManage = User.Can(AtsPermission.JobsManage);
 }
 
 @section PageActions {
-    <a class="btn btn-primary" asp-action="Create"><span class="ms ms-sm">add</span> New job</a>
+    @if (canManage)
+    {
+        <a class="btn btn-primary" asp-action="Create"><span class="ms ms-sm">add</span> New job</a>
+    }
 }
 
 <div class="ats-toolbar mb-3">
@@ -80,32 +84,35 @@
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><a class="dropdown-item" asp-controller="Board" asp-action="Index" asp-route-jobId="@j.Id">Open board</a></li>
-                        <li><a class="dropdown-item" asp-action="Edit" asp-route-id="@j.Id">Edit</a></li>
-                        @if (j.Status != JobStatus.Published)
+                        @if (canManage)
                         {
+                            <li><a class="dropdown-item" asp-action="Edit" asp-route-id="@j.Id">Edit</a></li>
+                            @if (j.Status != JobStatus.Published)
+                            {
+                                <li>
+                                    <form asp-action="Publish" asp-route-id="@j.Id" method="post"
+                                          hx-confirm="Publish this job? It becomes visible on the public career site." data-confirm-title="Publish job" data-confirm-ok="Publish job">
+                                        <button class="dropdown-item" type="submit">Publish</button>
+                                    </form>
+                                </li>
+                            }
+                            else
+                            {
+                                <li>
+                                    <form asp-action="Close" asp-route-id="@j.Id" method="post"
+                                          hx-confirm="Close this job? It is removed from the public career site." data-confirm-title="Close job" data-confirm-ok="Close job">
+                                        <button class="dropdown-item" type="submit">Close</button>
+                                    </form>
+                                </li>
+                            }
+                            <li><hr class="dropdown-divider"></li>
                             <li>
-                                <form asp-action="Publish" asp-route-id="@j.Id" method="post"
-                                      hx-confirm="Publish this job? It becomes visible on the public career site." data-confirm-title="Publish job" data-confirm-ok="Publish job">
-                                    <button class="dropdown-item" type="submit">Publish</button>
+                                <form asp-action="Delete" asp-route-id="@j.Id" method="post"
+                                      hx-confirm="Delete this job?" data-confirm-title="Delete job" data-confirm-ok="Delete job" data-confirm-variant="danger">
+                                    <button class="dropdown-item text-danger" type="submit">Delete</button>
                                 </form>
                             </li>
                         }
-                        else
-                        {
-                            <li>
-                                <form asp-action="Close" asp-route-id="@j.Id" method="post"
-                                      hx-confirm="Close this job? It is removed from the public career site." data-confirm-title="Close job" data-confirm-ok="Close job">
-                                    <button class="dropdown-item" type="submit">Close</button>
-                                </form>
-                            </li>
-                        }
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <form asp-action="Delete" asp-route-id="@j.Id" method="post"
-                                  hx-confirm="Delete this job?" data-confirm-title="Delete job" data-confirm-ok="Delete job" data-confirm-variant="danger">
-                                <button class="dropdown-item text-danger" type="submit">Delete</button>
-                            </form>
-                        </li>
                     </ul>
                 </div>
             </span>
@@ -113,7 +120,7 @@
     }
     @if (Model.Results.Items.Count == 0)
     {
-        <partial name="Partials/_EmptyState" model="@(new EmptyStateModel("work_outline", "No jobs match.", "Try clearing the filter, or create a new job."))" />
+        <partial name="Partials/_EmptyState" model="@(new EmptyStateModel("work_outline", "No jobs match.", canManage ? "Try clearing the filter, or create a new job." : "Try clearing the filter."))" />
     }
 </div>
 

@@ -1,5 +1,4 @@
-﻿@using Ats.Domain.Enums
-@model Ats.Application.Branding.TenantBranding
+﻿@model Ats.Application.Branding.TenantBranding
 @{
     ViewData["Title"] = "Career site";
     ViewData["Eyebrow"] = $"/careers/{Model.TenantSlug}:";
@@ -10,7 +9,7 @@
 }
 
 @section PageActions {
-    @if (User.IsInRole(AtsRole.Owner))
+    @if (User.Can(AtsPermission.CareerSiteManage))
     {
         <a class="btn btn-outline-secondary" asp-action="Branding"><span class="ms ms-sm">palette</span> Branding</a>
     }

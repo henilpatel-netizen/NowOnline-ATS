@@ -1,6 +1,7 @@
 using Ats.Application.Common;
 using Ats.Application.Dashboard;
 using Ats.Application.Integration;
+using Ats.Domain.Authorization;
 using Ats.Domain.Entities;
 using Ats.Domain.Enums;
 using Ats.Infrastructure.Persistence;
@@ -86,7 +87,7 @@ public sealed class DashboardService : IDashboardService
             .Select(a => _db.ApplicationEvents.Where(e => e.ApplicationId == a.Id).Max(e => (DateTimeOffset?)e.OccurredAt) ?? a.AppliedAt)
             .CountAsync(last => last < idleBefore, ct);
         if (idle > 0)
-            attention.Add(new AttentionItem("hourglass_top", "warning", $"{idle} applications idle over 7 days", "In process", "/Candidates"));
+            attention.Add(new AttentionItem("hourglass_top", "warning", $"{idle} applications idle over 7 days", "In process", "/Candidates", AtsPermission.CandidatesView));
         // One grouped query serves every outbox tile below (was four separate COUNTs).
         var outboxByStatus = await _db.OutboxMessages
             .GroupBy(m => m.Status)
@@ -96,10 +97,10 @@ public sealed class DashboardService : IDashboardService
 
         var failed = OutboxCount(OutboxStatus.Failed);
         if (failed > 0)
-            attention.Add(new AttentionItem("sync_problem", "danger", $"{failed} ReferralTool deliveries failed", "ReferralTool", "/Integration/Deliveries"));
+            attention.Add(new AttentionItem("sync_problem", "danger", $"{failed} ReferralTool deliveries failed", "ReferralTool", "/Integration/Deliveries", AtsPermission.IntegrationManage));
         var drafts = await _db.Jobs.CountAsync(j => j.Status == JobStatus.Draft, ct);
         if (drafts > 0)
-            attention.Add(new AttentionItem("edit_note", "info", $"{drafts} job(s) still in draft", "Not published", "/Jobs?status=Draft"));
+            attention.Add(new AttentionItem("edit_note", "info", $"{drafts} job(s) still in draft", "Not published", "/Jobs?status=Draft", AtsPermission.JobsView));
 
         // Integration health.
         var settings = await _db.TenantSettings.FirstOrDefaultAsync(ct);
@@ -107,7 +108,7 @@ public sealed class DashboardService : IDashboardService
             ? ReferralToolRules.BlockedReason(settings, await ShellSummaryService.LatestDeliveryStatusAsync(_db, ct), _allowInsecureUrl)
             : null;
         if (blockedReason is not null)
-            attention.Insert(0, new AttentionItem("sync_disabled", "danger", "ReferralTool integration is blocked", blockedReason, "/Integration"));
+            attention.Insert(0, new AttentionItem("sync_disabled", "danger", "ReferralTool integration is blocked", blockedReason, "/Integration", AtsPermission.IntegrationManage));
         var delivered = OutboxCount(OutboxStatus.Delivered);
         // Processing = claimed by a worker and in flight; still "pending" from the user's point of view.
         var pending = OutboxCount(OutboxStatus.Pending) + OutboxCount(OutboxStatus.Processing);

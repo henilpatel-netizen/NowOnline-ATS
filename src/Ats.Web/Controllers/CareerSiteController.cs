@@ -1,5 +1,5 @@
 using Ats.Application.Branding;
-using Ats.Domain.Enums;
+using Ats.Domain.Authorization;
 using Ats.Web.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,7 +8,7 @@ namespace Ats.Web.Controllers;
 
 // Named CareerSite (not Careers) so it cannot collide with the public site's attribute route
 // `careers/{slug}`; a literal route segment wins over a conventional one.
-[Authorize]
+[Authorize(Policy = AtsPermission.JobsView)]
 public class CareerSiteController : Controller
 {
     private readonly ITenantBrandingService _branding;
@@ -17,7 +17,7 @@ public class CareerSiteController : Controller
     public async Task<IActionResult> Index() => View(await _branding.GetAsync()); // model: TenantBranding
 
     [HttpGet]
-    [Authorize(Roles = AtsRole.Owner)]
+    [Authorize(Policy = AtsPermission.CareerSiteManage)]
     public async Task<IActionResult> Branding()
     {
         var b = await _branding.GetAsync();
@@ -34,7 +34,7 @@ public class CareerSiteController : Controller
     }
 
     [HttpPost]
-    [Authorize(Roles = AtsRole.Owner)]
+    [Authorize(Policy = AtsPermission.CareerSiteManage)]
     public async Task<IActionResult> Branding(BrandingEditViewModel vm)
     {
         if (!ModelState.IsValid) return View(vm);

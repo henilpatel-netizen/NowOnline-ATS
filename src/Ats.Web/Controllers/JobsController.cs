@@ -3,6 +3,7 @@ using Ats.Application.Departments;
 using Ats.Application.Jobs;
 using Ats.Application.Locations;
 using Ats.Application.Pipelines;
+using Ats.Domain.Authorization;
 using Ats.Web.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +11,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Ats.Web.Controllers;
 
-[Authorize]
+[Authorize(Policy = AtsPermission.JobsView)]
 public class JobsController : Controller
 {
     private readonly IJobService _jobs;
@@ -34,6 +35,7 @@ public class JobsController : Controller
     }
 
     [HttpGet]
+    [Authorize(Policy = AtsPermission.JobsManage)]
     public async Task<IActionResult> Create()
     {
         var vm = new JobEditViewModel();
@@ -42,6 +44,7 @@ public class JobsController : Controller
     }
 
     [HttpPost]
+    [Authorize(Policy = AtsPermission.JobsManage)]
     public async Task<IActionResult> Create(JobEditViewModel vm)
     {
         if (!ModelState.IsValid) { await PopulateLists(vm); return View("Form", vm); }
@@ -73,6 +76,7 @@ public class JobsController : Controller
     }
 
     [HttpPost]
+    [Authorize(Policy = AtsPermission.JobsManage)]
     public async Task<IActionResult> Edit(JobEditViewModel vm)
     {
         if (!ModelState.IsValid) { await PopulateLists(vm); return View("Form", vm); }
@@ -85,6 +89,7 @@ public class JobsController : Controller
     }
 
     [HttpPost]
+    [Authorize(Policy = AtsPermission.JobsManage)]
     public async Task<IActionResult> Publish(int id)
     {
         var result = await _jobs.PublishAsync(id);
@@ -94,6 +99,7 @@ public class JobsController : Controller
     }
 
     [HttpPost]
+    [Authorize(Policy = AtsPermission.JobsManage)]
     public async Task<IActionResult> Close(int id)
     {
         var result = await _jobs.CloseAsync(id);
@@ -103,6 +109,7 @@ public class JobsController : Controller
     }
 
     [HttpPost]
+    [Authorize(Policy = AtsPermission.JobsManage)]
     public async Task<IActionResult> Delete(int id)
     {
         var result = await _jobs.DeleteAsync(id);
