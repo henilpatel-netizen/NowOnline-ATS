@@ -2,7 +2,7 @@
 name: ats-implementer
 description: Implements ONE task from an Ats plan (docs/plans or a docs/review item) with TDD, keeping the build warning-clean and format-clean. Never commits. Dispatched by the /ats-ship skill, one at a time, in the main checkout.
 tools: Read, Edit, Write, Grep, Glob, Bash, PowerShell, LSP
-model: opus
+model: sonnet
 skills:
   - architecture
   - multitenancy

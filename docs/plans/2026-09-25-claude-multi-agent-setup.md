@@ -52,6 +52,9 @@ requested in prose.
 5. **Model tiering.** `opus` (Opus 5.5) for the lead, implementation and tenancy/security review;
    `sonnet` for convention review and e2e verification. `opus` is pinned rather than `inherit`, so an
    implementer stays on Opus even when a developer runs the lead session on a cheaper model.
+   **Updated 1 October 2026:** the implementer now defaults to `sonnet`; `/ats-ship` passes
+   `model: "opus"` per task for authentication, authorization, tenancy, entities/migrations, the Worker and
+   outbox/HTTP-client work (see `.claude/skills/ats-ship/SKILL.md`, step 1). `tenancy-guard` stays `opus`.
 
 ### 4.2 Roles
 

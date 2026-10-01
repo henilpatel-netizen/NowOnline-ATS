@@ -31,6 +31,10 @@ Task N: <title>
 Context: <where it fits, what earlier tasks changed, relevant files if known>
 Domain skill to read: .claude/skills/<domain>/SKILL.md
 ```
+Model: the agent defaults to `sonnet`. Pass `model: "opus"` on the Agent call when the task touches
+authentication or sessions, authorization policies, tenancy (query filter, interceptor, tenant context,
+any `IgnoreQueryFilters`), entities/configurations/migrations, `Ats.Worker`, or outbox/retry/HTTP-client
+code. When unsure, use `opus`. Keep the same model for that task's fix rounds.
 Handle the status it returns:
 - `NEEDS_CONTEXT`: answer from the codebase or plan if you can; otherwise ask the developer. Re-dispatch.
 - `BLOCKED`: if it is an architectural decision, ask the developer. Do not force a retry with the same input.
@@ -53,7 +57,7 @@ Give each reviewer the list of changed files and the task text; they read the di
 
 ## 4. Fix loop (maximum 2 rounds)
 Merge the findings. Drop any you can disprove by reading the code. Send the rest back to
-`ats-implementer` as one list with `path:line`, then re-run **only** the reviewers that failed. After
+`ats-implementer` (same model as the task's first run) as one list with `path:line`, then re-run **only** the reviewers that failed. After
 2 rounds still failing: stop and hand the open findings to the developer.
 
 ## 5. Definition of done (you run these yourself; never accept a report as evidence)
@@ -74,6 +78,7 @@ Task N: <title> - READY FOR DEVELOPER REVIEW
 Files: <list>
 Evidence: build <warnings>, tests <passed/total>, format clean, tenancy PASS, conventions PASS, e2e <PASS|n/a>
 Agent runs: <count> (implementer <n>, reviews <n>), review rounds: <n>
+Implementer model: <sonnet | opus> (<reason, e.g. "touches session validation">)
 Suggested commit: <type(scope): summary>
 Manual commands: <migration apply / anything the guard blocked, or "none">
 ```

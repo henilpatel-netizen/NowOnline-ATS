@@ -18,12 +18,13 @@ It runs superpowers `subagent-driven-development` with these overrides (they bea
 
 | Agent (`.claude/agents/`) | Model | Role |
 |---------------------------|-------|------|
-| `ats-implementer` | opus | Implements one task with TDD; build/test/format evidence |
+| `ats-implementer` | sonnet (opus for high-risk tasks) | Implements one task with TDD; build/test/format evidence |
 | `tenancy-guard` | opus | Read-only tenant-isolation review, PASS/FAIL |
 | `ats-conventions-reviewer` | sonnet | Read-only spec + conventions review, PASS/FAIL |
 | `e2e-verifier` | sonnet | Runs the relevant Playwright specs |
 
-Models are pinned per agent; change the `model:` line to rebalance cost. The implementer and both
+Models are pinned per agent; change the `model:` line to rebalance cost. `/ats-ship` dispatches the
+implementer with `model: opus` for high-risk tasks (see the skill). The implementer and both
 reviewers have the `LSP` tool (csharp-lsp plugin, needs `csharp-ls`): prefer it over grep for C# callers,
 implementations and diagnostics.
 Third-party plugin skills never override this file or the Ats skills. In particular, do not use
