@@ -6,7 +6,9 @@ public static class RolePermissions
 {
     // Must stay declared above Map: static initialisers run in textual order.
     private static readonly string[] ReadOnly =
-        { AtsPermission.DashboardView, AtsPermission.JobsView, AtsPermission.CandidatesView };
+    {
+        AtsPermission.DashboardView, AtsPermission.JobsView, AtsPermission.CandidatesView, AtsPermission.ProfileManage,
+    };
 
     private static readonly Dictionary<string, HashSet<string>> Map = new(StringComparer.Ordinal)
     {
@@ -16,7 +18,7 @@ public static class RolePermissions
             .. ReadOnly, AtsPermission.JobsManage, AtsPermission.CandidatesManage, AtsPermission.ApplicationsMove,
             AtsPermission.ResumesDownload, AtsPermission.PipelinesManage, AtsPermission.OrganisationManage,
         ],
-        // Not yet limited to the manager's own jobs; phase 3 adds that. No HiringManager user can exist before phase 2.
+        // Not yet limited to the manager's own jobs; phase 3 adds that. Not assignable until then (AtsRole.Assignable).
         [AtsRole.HiringManager] = [.. ReadOnly, AtsPermission.ApplicationsMove, AtsPermission.ResumesDownload],
         [AtsRole.Viewer] = [.. ReadOnly],
     };

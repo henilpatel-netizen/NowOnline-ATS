@@ -10,7 +10,7 @@ const VIEWPORTS = [
   { name: 'desktop', width: 1440, height: 900 },
 ];
 
-const PAGES = ['/', '/Jobs', '/Candidates', '/Pipelines', '/Integration', '/Audit'];
+const PAGES = ['/', '/Jobs', '/Candidates', '/Pipelines', '/Integration', '/Users', '/Audit'];
 
 for (const vp of VIEWPORTS) {
   for (const url of PAGES) {

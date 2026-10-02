@@ -65,6 +65,18 @@ Infrastructure wiring is centralised in `Ats.Infrastructure/DependencyInjection.
 - **One search path per screen.** The `*ListQuery` read models are it. The old
   `IJobService.SearchAsync` / `ICandidateService.SearchAsync` were unused *and* filtered differently
   from the queries actually rendering the screens; they are deleted. Do not reintroduce a second one.
+- **`Ats.Application.Common` also holds `Paging` and `LikePattern`.** Every list query pages with
+  `Paging.Clamp(page, total, pageSize)` (out-of-range pages land on the first or last real page) and
+  `Paging.Offset(page, pageSize)` (overflow-safe `Skip`), and builds every `LIKE` search from
+  `LikePattern.Contains(term)`, which bracket-escapes `%`, `_` and `[`. `LikePattern` is SQL Server
+  specific; a different provider needs its own escaping. Do not hand-roll `(page - 1) * pageSize` or
+  concatenate `%` around user input. Global search follows the same rule.
+- **`IUserListQuery` follows the `*ListQuery` convention** (`Ats.Application/Users`, impl
+  `Ats.Infrastructure/Users/UserListQuery`): the Users screen's one search path (status filter, name or email
+  search, paging), a projection that never selects the password hash. `UserService` handles writes only.
+  Its `UserListFilter` (`ApplyListFilter`, in `Ats.Application.Users`) is an `IQueryable` filter kept in
+  Application so it can be unit-tested without a database: an accepted exception to "list filters live in
+  Infrastructure".
 - **`ITenantContext` and `ICurrentUser` are registered by each HOST, never by Infrastructure.**
   Web = `HttpTenantContext` (tenant_id claim, or slug via `HttpContext.Items`) + `CurrentUser`;
   Worker = `WorkerTenantContext` + `AnonymousCurrentUser`. A new host must register both or the

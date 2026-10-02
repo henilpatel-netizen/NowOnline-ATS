@@ -14,6 +14,19 @@ create/update, integration settings save, "Sync vacancies now" (`VacancySyncQueu
 live in `ApplicationEvent` (application Details) and outbound deliveries in `WebhookDelivery` (Integration
 delivery log). The Owner-only `AuditController` shows recent entries via `IAuditQuery`.
 
+### User and account entries
+All have `EntityType` "User" and `EntityRef` = the user id. Summaries never contain a password.
+
+| Action | Written by | Summary |
+|---|---|---|
+| `UserCreated` | `UsersController.Create` | `Added '<email>' as <role>` |
+| `UserUpdated` | `UsersController.Edit` | built by `UserAuditSummary.Updated` from the stored record before and after, listing only what changed (email, role, name) |
+| `UserPasswordReset` | `UsersController.ResetPassword` | `Reset password for '<email>'` |
+| `UserDeactivated` / `UserReactivated` | `UsersController.Deactivate` / `Reactivate` | `Deactivated '<email>'` / `Reactivated '<email>'` |
+| `PasswordChanged` | `ProfileController.ChangePassword` | `Changed own password` |
+
+A no-op update ("No changes to save.") and a `SetActiveAsync` that changes nothing write no entry.
+
 ## Dashboard
 `IDashboardService.GetAsync` returns a `DashboardSummary` (published jobs, candidates, active
 applications, active-by-stage counts, recent applications), all tenant-scoped. `DashboardController`
@@ -36,7 +49,9 @@ acceptance currently uses a documented proxy denominator (applications that prog
 ## Audit screen (redesign)
 `IAuditQuery.SearchAsync` (filtered by free text / action / date-from, paged) backs the rebuilt audit
 screen; `RecentAsync` still backs the dashboard feed. `DistinctActionsAsync` populates the action
-filter. Gotcha: the controller's action-filter parameter binds from the query key `act`, NOT
+filter. Free text matches the user name, summary, entity ref, action and entity type (so "User" finds user
+entries). The pattern comes from `LikePattern.Contains`, which bracket-escapes `%`, `_` and `[` so they match
+literally; the page is clamped with `Paging.Clamp`. Gotcha: the controller's action-filter parameter binds from the query key `act`, NOT
 `action` — `action` is a reserved MVC route token and would bind to the current action name, silently
 filtering out every row. Keep it named `act`.
 

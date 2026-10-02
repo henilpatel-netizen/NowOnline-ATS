@@ -22,7 +22,12 @@ help_outline
 history
 hourglass_top
 info
+key
+lock
+lock_reset
 logout
+manage_accounts
+menu
 more_horiz
 move
 note
@@ -33,6 +38,8 @@ password
 pending
 person
 person_add
+person_check
+person_off
 picture_as_pdf
 pill
 place

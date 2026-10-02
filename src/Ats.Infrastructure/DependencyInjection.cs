@@ -14,6 +14,7 @@ using Ats.Application.Pipelines;
 using Ats.Application.Search;
 using Ats.Application.Shell;
 using Ats.Application.Tenancy;
+using Ats.Application.Users;
 using Ats.Infrastructure.Applications;
 using Ats.Infrastructure.Auditing;
 using Ats.Infrastructure.Branding;
@@ -29,6 +30,7 @@ using Ats.Infrastructure.Persistence.Repositories;
 using Ats.Infrastructure.Search;
 using Ats.Infrastructure.Shell;
 using Ats.Infrastructure.Tenancy;
+using Ats.Infrastructure.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -61,6 +63,8 @@ public static class DependencyInjection
 
         services.AddScoped<IDepartmentRepository, DepartmentRepository>();
         services.AddScoped<IDepartmentService, DepartmentService>();
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IUserService, UserService>();
         services.AddScoped<ILocationRepository, LocationRepository>();
         services.AddScoped<ILocationService, LocationService>();
         services.AddScoped<IPipelineTemplateRepository, PipelineTemplateRepository>();
@@ -89,6 +93,7 @@ public static class DependencyInjection
         // Screen read-model projections (Phase 2).
         services.AddScoped<IJobListQuery, JobListQuery>();
         services.AddScoped<ICandidateListQuery, CandidateListQuery>();
+        services.AddScoped<IUserListQuery, UserListQuery>();
         services.AddScoped<IApplicationCardQuery, ApplicationCardQuery>();
         services.AddScoped<IOrganisationReadService, OrganisationReadService>();
 

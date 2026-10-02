@@ -19,17 +19,20 @@ public sealed class AuditQuery : IAuditQuery
         var query = _db.AuditEntries.AsQueryable();
         if (!string.IsNullOrWhiteSpace(q))
         {
-            var s = q.Trim();
-            query = query.Where(a => EF.Functions.Like(a.UserName, $"%{s}%")
-                                  || EF.Functions.Like(a.Summary, $"%{s}%")
-                                  || (a.EntityRef != null && EF.Functions.Like(a.EntityRef, $"%{s}%")));
+            var pattern = LikePattern.Contains(q.Trim());
+            query = query.Where(a => EF.Functions.Like(a.UserName, pattern)
+                                  || EF.Functions.Like(a.Summary, pattern)
+                                  || EF.Functions.Like(a.Action, pattern)
+                                  || EF.Functions.Like(a.EntityType, pattern)
+                                  || (a.EntityRef != null && EF.Functions.Like(a.EntityRef, pattern)));
         }
         if (!string.IsNullOrWhiteSpace(action)) query = query.Where(a => a.Action == action);
         if (from is not null) query = query.Where(a => a.OccurredAt >= from);
 
         var total = await query.CountAsync(ct);
+        page = Paging.Clamp(page, total, pageSize);
         var items = await query.OrderByDescending(a => a.Id)
-            .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
+            .Skip(Paging.Offset(page, pageSize)).Take(pageSize).ToListAsync(ct);
         return new PagedResult<AuditEntry>(items, page, pageSize, total);
     }
 

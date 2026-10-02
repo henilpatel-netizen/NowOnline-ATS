@@ -19,11 +19,12 @@ public static class AtsPermission
     public const string IntegrationManage = "integration.manage";
     public const string AuditView = "audit.view";
     public const string UsersManage = "users.manage";
+    public const string ProfileManage = "profile.manage";
 
     public static readonly string[] All =
     {
         DashboardView, JobsView, JobsManage, CandidatesView, CandidatesManage, ApplicationsMove,
         ResumesDownload, PipelinesManage, OrganisationManage, CareerSiteManage, IntegrationManage,
-        AuditView, UsersManage,
+        AuditView, UsersManage, ProfileManage,
     };
 }

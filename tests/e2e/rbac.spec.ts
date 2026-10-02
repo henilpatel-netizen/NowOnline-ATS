@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 
-// Non-Owner roles cannot be signed in until phase 2 adds user management; their matrix is covered by
-// tests/Ats.Tests/Authorization. This spec proves the Owner keeps full access and that the
-// require-authenticated fallback policy did not break the public surface.
+// Non-Owner coverage (viewer, recruiter, forced password change, deactivation) lives in users.spec.ts;
+// the role matrix is also covered by tests/Ats.Tests/Authorization. This spec proves the Owner keeps
+// full access and that the require-authenticated fallback policy did not break the public surface.
 
 test.describe('owner', () => {
   test('sees admin navigation', async ({ page }) => {

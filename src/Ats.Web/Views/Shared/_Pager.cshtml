@@ -1,4 +1,8 @@
 @model Ats.Web.Models.PagerModel
+@{
+    // asp-all-route-data replaces the route values an asp-route-page beside it sets, so the page goes in the same dictionary.
+    Dictionary<string, string> To(int page) => new(Model.Query) { ["page"] = page.ToString(System.Globalization.CultureInfo.InvariantCulture) };
+}
 @if (Model.TotalPages > 1)
 {
     <nav class="d-flex align-items-center justify-content-between mt-3" aria-label="Pagination">
@@ -6,8 +10,8 @@
         <div class="ats-pager">
             @if (Model.Page > 1)
             {
-                <a class="ats-pager-btn" asp-action="@Model.Action" asp-route-page="@(Model.Page - 1)"
-                   asp-all-route-data="Model.Query" aria-label="Previous page"><span class="ms ms-sm">chevron_left</span></a>
+                <a class="ats-pager-btn" asp-action="@Model.Action"
+                   asp-all-route-data="To(Model.Page - 1)" aria-label="Previous page"><span class="ms ms-sm">chevron_left</span></a>
             }
             else
             {
@@ -18,8 +22,8 @@
 
             @if (Model.Page < Model.TotalPages)
             {
-                <a class="ats-pager-btn" asp-action="@Model.Action" asp-route-page="@(Model.Page + 1)"
-                   asp-all-route-data="Model.Query" aria-label="Next page"><span class="ms ms-sm">chevron_right</span></a>
+                <a class="ats-pager-btn" asp-action="@Model.Action"
+                   asp-all-route-data="To(Model.Page + 1)" aria-label="Next page"><span class="ms ms-sm">chevron_right</span></a>
             }
             else
             {

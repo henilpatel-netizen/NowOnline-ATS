@@ -29,7 +29,6 @@ public class JobsController : Controller
 
     public async Task<IActionResult> Index(string? q, Ats.Domain.Enums.JobStatus? status, int page = 1)
     {
-        if (page < 1) page = 1;
         var results = await _jobList.SearchAsync(status, q, page, 20);
         return View(new JobsIndexViewModel { Results = results, Q = q, Status = status });
     }

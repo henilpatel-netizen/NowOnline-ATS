@@ -17,22 +17,22 @@
             <label asp-for="Description" class="form-label">Description</label>
             <textarea asp-for="Description" class="form-control" rows="5"></textarea>
         </div>
-        <div class="row">
-            <div class="col-md-6 mb-3">
+        <div class="ats-form-grid">
+            <div class="mb-3">
                 <label asp-for="DepartmentId" class="form-label">Department</label>
                 <select asp-for="DepartmentId" asp-items="Model.Departments" class="form-select"><option value="">(none)</option></select>
             </div>
-            <div class="col-md-6 mb-3">
+            <div class="mb-3">
                 <label asp-for="LocationId" class="form-label">Location</label>
                 <select asp-for="LocationId" asp-items="Model.Locations" class="form-select"><option value="">(none)</option></select>
             </div>
         </div>
-        <div class="row">
-            <div class="col-md-6 mb-3">
+        <div class="ats-form-grid">
+            <div class="mb-3">
                 <label asp-for="EmploymentType" class="form-label">Employment type</label>
                 <select asp-for="EmploymentType" asp-items="Html.GetEnumSelectList<EmploymentType>()" class="form-select"></select>
             </div>
-            <div class="col-md-6 mb-3">
+            <div class="mb-3">
                 <label asp-for="PipelineTemplateId" class="form-label">Pipeline</label>
                 <select asp-for="PipelineTemplateId" asp-items="Model.Pipelines" class="form-select"><option value="">Select a pipeline</option></select>
                 <span asp-validation-for="PipelineTemplateId" class="text-danger small"></span>

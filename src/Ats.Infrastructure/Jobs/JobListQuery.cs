@@ -19,15 +19,16 @@ public sealed class JobListQuery : IJobListQuery
         if (status is not null) q = q.Where(j => j.Status == status);
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var s = search.Trim();
-            q = q.Where(j => EF.Functions.Like(j.Title, $"%{s}%") || EF.Functions.Like(j.ExternalRef, $"%{s}%"));
+            var pattern = LikePattern.Contains(search.Trim());
+            q = q.Where(j => EF.Functions.Like(j.Title, pattern) || EF.Functions.Like(j.ExternalRef, pattern));
         }
 
         var total = await q.CountAsync(ct);
+        page = Paging.Clamp(page, total, pageSize);
 
         var jobs = await q
             .OrderByDescending(j => j.PublishedAt).ThenByDescending(j => j.Id)
-            .Skip((page - 1) * pageSize).Take(pageSize)
+            .Skip(Paging.Offset(page, pageSize)).Take(pageSize)
             .Select(j => new
             {
                 j.Id,

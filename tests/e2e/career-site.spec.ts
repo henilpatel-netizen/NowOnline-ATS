@@ -81,3 +81,41 @@ test.describe('public career site', () => {
     expect(violations.map(v => `${v.impact}:${v.id}`)).toEqual([]);
   });
 });
+
+test.describe('career site for a signed-in back-office user', () => {
+  // Default storage state: signed in as the Owner. The slug, not the cookie, decides the tenant.
+
+  test('an unknown slug returns 404 even when signed in', async ({ page }) => {
+    const response = await page.goto(`/careers/no-such-tenant-${Date.now()}`);
+    expect(response?.status()).toBe(404);
+  });
+
+  test("another tenant's career site shows that tenant, not the signed-in one", async ({ page, browser }) => {
+    // Each run adds a throwaway tenant (and its owner) to the local dev database.
+    const stamp = Date.now();
+    const otherSlug = `e2e-${stamp}`;
+    const otherName = `E2E Other ${stamp}`;
+    const anon = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    const reg = await anon.newPage();
+    await reg.goto('/Account/Register');
+    await reg.locator('#CompanyName').fill(otherName);
+    await reg.locator('#Slug').fill(otherSlug);
+    await reg.locator('#OwnerName').fill('E2E Owner');
+    await reg.locator('#OwnerEmail').fill(`owner-${stamp}@example.test`);
+    await reg.locator('#Password').fill(`E2e!${stamp}Aa`);
+    await reg.getByRole('button', { name: /create account/i }).click();
+    await expect(reg).not.toHaveURL(/\/Account\/Register/i);
+    await anon.close();
+
+    await page.goto(`/careers/${slug}`);
+    const tenantName = page.locator('.careers-nav-inner span').nth(1);
+    const ownName = (await tenantName.innerText()).trim();
+
+    const response = await page.goto(`/careers/${otherSlug}`);
+    expect(response?.status()).toBe(200);
+    await expect(tenantName).toHaveText(otherName);
+    expect(ownName).not.toBe(otherName);
+    // The new tenant has no published jobs; the Owner's jobs must not show under its slug.
+    await expect(page.locator('a[href*="/jobs/"]')).toHaveCount(0);
+  });
+});

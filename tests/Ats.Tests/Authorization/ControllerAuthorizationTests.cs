@@ -75,6 +75,14 @@ public class ControllerAuthorizationTests
     [InlineData(typeof(CareerSiteController), "Branding", true, AtsPermission.CareerSiteManage)]
     [InlineData(typeof(PipelinesController), "Save", true, AtsPermission.PipelinesManage)]
     [InlineData(typeof(DepartmentsController), "Delete", true, AtsPermission.OrganisationManage)]
+    [InlineData(typeof(ProfileController), "ChangePassword", true, AtsPermission.ProfileManage)]
+    [InlineData(typeof(UsersController), "Index", false, AtsPermission.UsersManage)]
+    [InlineData(typeof(UsersController), "Create", true, AtsPermission.UsersManage)]
+    [InlineData(typeof(UsersController), "Edit", false, AtsPermission.UsersManage)]
+    [InlineData(typeof(UsersController), "Edit", true, AtsPermission.UsersManage)]
+    [InlineData(typeof(UsersController), "ResetPassword", true, AtsPermission.UsersManage)]
+    [InlineData(typeof(UsersController), "Deactivate", true, AtsPermission.UsersManage)]
+    [InlineData(typeof(UsersController), "Reactivate", true, AtsPermission.UsersManage)]
     public void Action_requires_policy(Type controller, string action, bool post, string policy)
     {
         var method = Actions(controller).Single(m => m.Name == action &&

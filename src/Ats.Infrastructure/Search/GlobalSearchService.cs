@@ -1,3 +1,4 @@
+using Ats.Application.Common;
 using Ats.Application.Search;
 using Ats.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -20,7 +21,7 @@ public sealed class GlobalSearchService : IGlobalSearchService
 
         // The pattern travels as a parameter, so it cannot be injected into SQL. LIKE
         // metacharacters are escaped so a user typing % gets a literal match, not a full scan.
-        var pattern = $"%{Escape(trimmed)}%";
+        var pattern = LikePattern.Contains(trimmed);
 
         var jobs = await _db.Jobs
             .Where(j => EF.Functions.Like(j.Title, pattern) || EF.Functions.Like(j.ExternalRef, pattern))
@@ -51,9 +52,4 @@ public sealed class GlobalSearchService : IGlobalSearchService
 
         return new SearchResults(jobs, candidates, applications);
     }
-
-    private static string Escape(string term) => term
-        .Replace("[", "[[]")
-        .Replace("%", "[%]")
-        .Replace("_", "[_]");
 }

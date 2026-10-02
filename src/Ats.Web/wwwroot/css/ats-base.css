@@ -142,7 +142,7 @@ strong, .fw-semibold, .fw-bold { font-weight: 500; }
   left: -9999px;
   top: 0;
   z-index: 2200;
-  padding: .625rem 1rem;
+  padding: .75rem 1rem;
   background: var(--ats-surface);
   color: var(--ats-ink);
   border-radius: 0 0 var(--no-radius-md) 0;

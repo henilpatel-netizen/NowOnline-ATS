@@ -16,7 +16,6 @@ public class AuditController : Controller
     // every row.
     public async Task<IActionResult> Index(string? q, [FromQuery(Name = "act")] string? actionFilter, string? range, int page = 1)
     {
-        if (page < 1) page = 1;
         DateTimeOffset? from = range switch
         {
             "7" => DateTimeOffset.UtcNow.AddDays(-7),

@@ -9,15 +9,25 @@
     };
 }
 <aside id="ats-sidebar" class="ats-sidebar">
-    <div class="ats-brand">
-        <span class="ats-brand-mark">A</span>
-        <span class="d-flex flex-column" style="line-height:1.1">
-            <span class="ats-brand-name">ATS</span>
-            <span class="ats-brand-sub">recruitment suite</span>
-        </span>
+    @* Phones: this row is the app bar, and the menu button opens #ats-nav-panel. From 768px up the
+       row and the panel wrapper are display: contents, so the sidebar lays out as before. *@
+    <div class="ats-sidebar-bar">
+        <div class="ats-brand">
+            <span class="ats-brand-mark">A</span>
+            <span class="d-flex flex-column" style="line-height:1.1;min-width:0">
+                <span class="ats-brand-name">ATS</span>
+                <span class="ats-brand-sub d-none d-md-inline">recruitment suite</span>
+                <span class="ats-brand-tenant d-md-none">@Model.Branding.TenantName</span>
+            </span>
+        </div>
+        <button type="button" class="ats-sidebar-icon-btn ats-menu-btn d-md-none"
+                data-bs-toggle="offcanvas" data-bs-target="#ats-nav-panel"
+                aria-controls="ats-nav-panel" aria-expanded="false" aria-label="Open navigation">
+            <span class="ms">menu</span>
+        </button>
     </div>
 
-    <div class="ats-tenant-chip">
+    <div class="ats-tenant-chip d-none d-md-flex">
         <span class="ats-tenant-chip-mark">@AvatarPalette.Initials(Model.Branding.TenantName)</span>
         <span class="d-flex flex-column flex-grow-1" style="min-width:0">
             <span class="ats-tenant-chip-name">@Model.Branding.TenantName</span>
@@ -30,56 +40,79 @@
        #ats-content, so the shell, CSS, fonts and global scripts are never re-fetched or re-executed;
        #ats-sidebar is re-sent out-of-band to keep the active item and counts server-authoritative.
        With JS off, or on a hard refresh, these remain ordinary links. *@
-    <nav class="ats-nav"
-         hx-boost="true"
-         hx-target="#ats-content"
-         hx-select="#ats-content"
-         hx-select-oob="#ats-sidebar,#ats-topbar"
-         hx-swap="outerHTML"
-         hx-indicator="#ats-nav-progress">
-        @foreach (var group in Model.Groups)
-        {
-            <div class="ats-nav-group">
-                @if (labels.TryGetValue(group.Key, out var label))
-                {
-                    <div class="ats-nav-label">@label</div>
-                }
-                @foreach (var item in group)
-                {
-                    var active = string.Equals(item.Controller, Model.CurrentController, StringComparison.OrdinalIgnoreCase) ? "active" : "";
-                    var count = item.Count?.Invoke(Model.Summary);
-                    var alert = item.Alert?.Invoke(Model.Summary) ?? false;
-                    <a class="@active" asp-controller="@item.Controller" asp-action="@item.Action">
-                        <span class="ms">@item.Icon</span>
-                        <span>@item.Text</span>
-                        @if (alert)
-                        {
-                            <span class="ats-nav-alert" title="Needs attention"></span>
-                        }
-                        else if (count is > 0)
-                        {
-                            <span class="ats-nav-count">@count</span>
-                        }
-                    </a>
-                }
-            </div>
-        }
-    </nav>
-
-    <div class="ats-sidebar-user">
-        <partial name="Partials/_Avatar" model="new Ats.Web.Models.Shared.AvatarModel(Model.UserName, 1.875)" />
-        <span class="d-flex flex-column flex-grow-1" style="min-width:0">
-            <span class="ats-sidebar-user-name">@Model.UserName</span>
-            @if (!string.IsNullOrEmpty(Model.Role))
-            {
-                <span class="ats-sidebar-user-role">@Model.Role</span>
-            }
-        </span>
-        @* Not boosted: the response is the login page, a different layout. *@
-        <form asp-controller="Account" asp-action="Logout" method="post" class="m-0" hx-boost="false">
-            <button type="submit" class="ats-sidebar-signout" title="Sign out" aria-label="Sign out">
-                <span class="ms ms-sm">logout</span>
+    @* Below 768px a Bootstrap offcanvas (focus trap, Escape, backdrop, scroll lock); site.js closes it
+       when a boosted navigation or Back/Forward replaces the sidebar. *@
+    <div id="ats-nav-panel" class="offcanvas-md offcanvas-start ats-nav-panel" tabindex="-1"
+         aria-labelledby="ats-nav-panel-title">
+        <div class="offcanvas-header ats-nav-panel-head">
+            <span id="ats-nav-panel-title" class="ats-nav-panel-title">Menu</span>
+            <button type="button" class="ats-sidebar-icon-btn" data-bs-dismiss="offcanvas" data-bs-target="#ats-nav-panel"
+                    aria-label="Close navigation">
+                <span class="ms">close</span>
             </button>
-        </form>
+        </div>
+        <div class="offcanvas-body">
+            @if (Model.Groups.Count > 0)
+            {
+                <nav class="ats-nav"
+                     hx-boost="true"
+                     hx-target="#ats-content"
+                     hx-select="#ats-content"
+                     hx-select-oob="#ats-sidebar,#ats-topbar"
+                     hx-swap="outerHTML"
+                     hx-indicator="#ats-nav-progress">
+                    @foreach (var group in Model.Groups)
+                    {
+                        <div class="ats-nav-group">
+                            @if (labels.TryGetValue(group.Key, out var label))
+                            {
+                                <div class="ats-nav-label">@label</div>
+                            }
+                            @foreach (var item in group)
+                            {
+                                var active = string.Equals(item.Controller, Model.CurrentController, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+                                var count = item.Count?.Invoke(Model.Summary);
+                                var alert = item.Alert?.Invoke(Model.Summary) ?? false;
+                                <a class="@active" asp-controller="@item.Controller" asp-action="@item.Action">
+                                    <span class="ms">@item.Icon</span>
+                                    <span>@item.Text</span>
+                                    @if (alert)
+                                    {
+                                        <span class="ats-nav-alert" title="Needs attention"></span>
+                                    }
+                                    else if (count is > 0)
+                                    {
+                                        <span class="ats-nav-count">@count</span>
+                                    }
+                                </a>
+                            }
+                        </div>
+                    }
+                </nav>
+            }
+
+            <div class="ats-sidebar-user">
+                <partial name="Partials/_Avatar" model="new Ats.Web.Models.Shared.AvatarModel(Model.UserName, 1.875)" />
+                <span class="d-flex flex-column flex-grow-1" style="min-width:0">
+                    <span class="ats-sidebar-user-name">@Model.UserName</span>
+                    @if (!string.IsNullOrEmpty(Model.Role))
+                    {
+                        <span class="ats-sidebar-user-role">@Model.Role</span>
+                    }
+                </span>
+                <a asp-controller="Profile" asp-action="ChangePassword" class="ats-sidebar-icon-btn text-decoration-none"
+                   title="Change password" aria-label="Change password"
+                   hx-boost="true" hx-target="#ats-content" hx-select="#ats-content"
+                   hx-select-oob="#ats-sidebar,#ats-topbar" hx-swap="outerHTML" hx-indicator="#ats-nav-progress">
+                    <span class="ms ms-sm">key</span>
+                </a>
+                @* Not boosted: the response is the login page, a different layout. *@
+                <form asp-controller="Account" asp-action="Logout" method="post" class="m-0" hx-boost="false">
+                    <button type="submit" class="ats-sidebar-icon-btn" title="Sign out" aria-label="Sign out">
+                        <span class="ms ms-sm">logout</span>
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
 </aside>

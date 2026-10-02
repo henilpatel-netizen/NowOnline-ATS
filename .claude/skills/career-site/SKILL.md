@@ -14,9 +14,11 @@ conventional route.
 
 ## Tenant resolution
 `TenantResolutionMiddleware` (registered after `UseAuthorization`) reads the `{slug}` route value on
-unauthenticated requests, looks up an Active tenant, and sets `HttpContext.Items["TenantId"]`.
-`HttpTenantContext` reads the `tenant_id` claim first, then that item. Unknown or suspended slug returns
-404. The global query filter then scopes every public query. This is a documented tenant-resolution
+every request, signed in or not, looks up an Active tenant, and sets `HttpContext.Items["TenantId"]`.
+In `HttpTenantContext` that item takes precedence over the `tenant_id` claim, so a signed-in back-office
+user of tenant A opening `/careers/{slugOfB}` sees B, and an application posted there is stored in B.
+Unknown or suspended slug returns 404 for everyone. The global query filter then scopes every public
+query. The career site never reads the signed-in user (`User`, `ICurrentUser`). This is a documented tenant-resolution
 source (see `.claude/rules/multi-tenancy.md`).
 
 ## File storage
@@ -64,4 +66,4 @@ so public CTAs use the tenant accent — this required adding `@addTagHelper *, 
 NowOnline defaults) and applies the signature outlined-second-line treatment. Department filtering is
 client-side over the loaded cards (`data-dept`). Styling-only file: `wwwroot/css/ats-careers.css`.
 The apply POST, referral-code cookie capture (`?<codeparam>=` → `SourceCode`), resume validation,
-antiforgery and slug tenancy (unknown/suspended slug 404 for anonymous visitors) are all unchanged.
+antiforgery and slug tenancy (unknown/suspended slug 404 for everyone) are all unchanged.

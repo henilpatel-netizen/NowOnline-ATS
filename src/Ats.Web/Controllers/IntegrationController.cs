@@ -90,7 +90,6 @@ public class IntegrationController : Controller
     [HttpGet]
     public async Task<IActionResult> Deliveries(OutboxStatus? status, int page = 1)
     {
-        if (page < 1) page = 1;
         var results = await _log.SearchAsync(status, page, 20);
         return View(new DeliveryLogViewModel { Results = results, Status = status });
     }

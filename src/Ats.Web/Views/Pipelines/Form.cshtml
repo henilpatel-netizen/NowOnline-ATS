@@ -33,8 +33,8 @@
                            aria-label="Stage order" />
                 </td>
                 <td><input asp-for="Stages[i].Name" class="form-control form-control-sm" aria-label="Stage name" /></td>
-                <td class="text-center"><input asp-for="Stages[i].IsTerminal" class="form-check-input" type="checkbox"
-                                                 aria-label="Stage is terminal" /></td>
+                <td class="text-center"><label class="ats-check-hit"><input asp-for="Stages[i].IsTerminal" class="form-check-input m-0" type="checkbox"
+                                                 aria-label="Stage is terminal" /></label></td>
                 <td>
                     <select asp-for="Stages[i].TerminalOutcome" asp-items="Html.GetEnumSelectList<StageOutcome>()"
                             class="form-select form-select-sm" aria-label="Terminal outcome"></select>
@@ -48,10 +48,10 @@
     </table>
     </div>
     <button type="button" class="btn btn-outline-secondary btn-sm mb-3" id="add-stage"><span class="ms ms-sm">add</span> Add stage</button>
-    <div class="d-flex align-items-center gap-2 border-top pt-3">
+    <div class="d-flex align-items-center flex-wrap gap-2 border-top pt-3">
         <button type="submit" class="btn btn-primary">Save pipeline</button>
         <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a>
-        <span class="ms-auto ats-xsmall ats-muted">Changes apply to every job using this pipeline. A stage that still has candidates, including removed ones, cannot be deleted.</span>
+        <span class="ats-form-foot-note ats-xsmall ats-muted">Changes apply to every job using this pipeline. A stage that still has candidates, including removed ones, cannot be deleted.</span>
     </div>
 </form>
 

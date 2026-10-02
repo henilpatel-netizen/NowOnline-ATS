@@ -22,9 +22,9 @@
     <div class="col-sm-6 col-xl-3"><partial name="Partials/_StatTile" model="@(new StatTileModel("Offer acceptance:", Model.OfferAcceptanceRate?.ToString() ?? "—", Model.OfferAcceptanceRate is null ? null : "%"))" /></div>
 </div>
 
-<div class="row g-3 align-items-start">
+<div class="row g-3">
     <div class="col-lg-7">
-        <div class="ats-card">
+        <div class="ats-card d-flex flex-column">
             <span class="ats-eyebrow">Across all open jobs:</span>
             <h2 class="mt-1 mb-3">Pipeline right now.</h2>
             @if (Model.ByStage.Count == 0)
@@ -33,7 +33,7 @@
             }
             else
             {
-                <div class="d-flex flex-column gap-2">
+                <div class="d-flex flex-column gap-2 mb-3">
                     @for (var i = 0; i < Model.ByStage.Count; i++)
                     {
                         var s = Model.ByStage[i];
@@ -47,7 +47,7 @@
             }
             @if (Model.Sources.Count > 0)
             {
-                <div class="ats-stat-strip ats-divider-top mt-3 pt-3">
+                <div class="ats-stat-strip ats-divider-top mt-auto pt-3">
                     @foreach (var src in Model.Sources)
                     {
                         <span><span class="ats-eyebrow">@SourceLabel(src.Origin)</span><span class="ats-stat-mini">@src.Percent%</span></span>

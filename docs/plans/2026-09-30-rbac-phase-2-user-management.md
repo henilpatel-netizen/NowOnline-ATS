@@ -39,14 +39,17 @@ replace it when email is integrated; `MustChangePassword` stays useful for that 
 | Inactive users cannot sign in | `IdentityService.ValidateCredentialsAsync` |
 | Every admin action is audited; passwords never appear in audit text or logs | `UsersController`, `ProfileController` |
 
+> Superseded 1 October 2026: passwords have no minimum length for now (required, max 128). See
+> `docs/plans/2026-10-01-users-edit-page-and-ux-fixes.md`, Task 1.
+
 ## Out of scope
 - HiringManager assignment and "own jobs" scoping: phase 3.
 - Email invites / forgotten-password email: when email is integrated.
 - Minimum password length on tenant sign-up (`Register`): today it has none. Worth a separate fix;
   not changed here to keep this phase focused.
 - Deleting users: deactivate only (keeps audit history and `ApplicationEvent` authorship intact).
-- Last-Owner race: two Owners demoting each other at the same instant could both pass the check.
-  Accepted; a serialisable transaction can be added if it is ever seen.
+- Last-Owner race: prevented by a serialisable transaction around the check and save (see
+  `UserRepository.InTransactionAsync`) and the `Users(TenantId, Role, IsActive)` index.
 - Localised (NL/EN) strings: the codebase has no localisation yet; strings follow the existing inline
   English convention.
 
@@ -90,7 +93,7 @@ After deployment every existing session is signed out once (old cookies carry no
 Every signed-in user needs to change their own password. The controller-coverage test requires a
 named permission on every non-anonymous action, so this is an explicit permission every role holds.
 
-- [ ] **Step 1: Update the tests first**
+- [x] **Step 1: Update the tests first**
 
 In `RolePermissionsTests.cs`, the shared `ReadOnly` set gains `AtsPermission.ProfileManage` (every
 role's expected set then includes it), and add:
@@ -107,12 +110,12 @@ public void HiringManager_is_not_assignable_until_it_is_scoped()
 }
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `dotnet test Ats.slnx --filter FullyQualifiedName~Ats.Tests.Authorization`
 Expected: build FAIL (`ProfileManage`, `Assignable` do not exist).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `AtsPermission.cs`: add `public const string ProfileManage = "profile.manage";` and add it to `All`.
 `RolePermissions.cs`: add `AtsPermission.ProfileManage` to the shared `ReadOnly` baseline (Owner already
@@ -124,12 +127,12 @@ gets it through `All`).
 public static readonly string[] Assignable = { Owner, Recruiter, Viewer };
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `dotnet test Ats.slnx`. Expected: all green (the policy test in `PermissionPolicyTests` picks up
 the new permission automatically).
 
-- [ ] **Step 5: Hygiene**
+- [x] **Step 5: Hygiene**
 
 Mutation: remove `ProfileManage` from `ReadOnly`, confirm `Every_role_can_manage_its_own_profile`
 fails, restore. `dotnet build Ats.slnx` warning-clean, `dotnet format Ats.slnx --verify-no-changes`.
@@ -143,7 +146,7 @@ fails, restore. `dotnet build Ats.slnx` warning-clean, `dotnet format Ats.slnx -
 - Modify: `src/Ats.Infrastructure/Persistence/Configurations/AppUserConfiguration.cs`
 - Create (generated): `src/Ats.Infrastructure/Migrations/<timestamp>_AddUserManagement.cs` + Designer + snapshot update
 
-- [ ] **Step 1: Entity**
+- [x] **Step 1: Entity**
 
 `AppUser.cs`, after `Role`:
 ```csharp
@@ -154,7 +157,7 @@ public bool MustChangePassword { get; set; }
 public Guid SecurityStamp { get; set; } = Guid.NewGuid();
 ```
 
-- [ ] **Step 2: Configuration**
+- [x] **Step 2: Configuration**
 
 `AppUserConfiguration.cs`, add:
 ```csharp
@@ -168,7 +171,7 @@ b.Property(u => u.SecurityStamp).HasDefaultValueSql("NEWID()");
 existing rows. The build must stay warning-clean; if EF still reports a default-value warning, report it
 rather than suppressing it.
 
-- [ ] **Step 3: Create the migration file (allowed; applying it is not)**
+- [x] **Step 3: Create the migration file (allowed; applying it is not)**
 
 Run:
 ```
@@ -177,12 +180,12 @@ dotnet ef migrations add AddUserManagement --project src/Ats.Infrastructure --st
 Inspect the generated `Up`: three `AddColumn` calls on `Users` with `defaultValue: true`,
 `defaultValue: false` and `defaultValueSql: "NEWID()"`, and nothing else. `Down` drops the three columns.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 `dotnet build Ats.slnx` (no warnings), `dotnet test Ats.slnx`, `dotnet format Ats.slnx --verify-no-changes`.
 Do NOT run `dotnet ef database update`. Report the migration file name.
 
-- [ ] **Step 5: MANUAL GATE (lead)**
+- [x] **Step 5: MANUAL GATE (lead)**
 
 Lead prints the `database update` command from "Manual gate" above and waits for the developer to
 confirm it has been applied before dispatching Task 3.
@@ -202,7 +205,7 @@ Read `.claude/skills/multitenancy/SKILL.md` first: this task extends a documente
 - Modify: `tests/Ats.Tests/Tenancy/TenantOnboardingServiceTests.cs` (its `FakeIdentity`)
 - Test: `tests/Ats.Tests/Authorization/SessionValidatorTests.cs`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `tests/Ats.Tests/Authorization/SessionValidatorTests.cs`:
 ```csharp
@@ -242,12 +245,12 @@ public class SessionValidatorTests
 }
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `dotnet test Ats.slnx --filter FullyQualifiedName~SessionValidatorTests`
 Expected: build FAIL (`UserSession`, `SessionValidator` do not exist).
 
-- [ ] **Step 3: Abstractions**
+- [x] **Step 3: Abstractions**
 
 `IIdentityService.cs`:
 ```csharp
@@ -272,7 +275,7 @@ public interface IIdentityService
 Update the `FakeIdentity` in `TenantOnboardingServiceTests.cs` with
 `public Task<UserSession?> GetSessionAsync(int userId, int tenantId, CancellationToken ct = default) => Task.FromResult<UserSession?>(null);`.
 
-- [ ] **Step 4: IdentityService**
+- [x] **Step 4: IdentityService**
 
 In `ValidateCredentialsAsync`, after the password check and before the tenant check:
 ```csharp
@@ -301,7 +304,7 @@ public async Task<UserSession?> GetSessionAsync(int userId, int tenantId, Cancel
 If EF cannot translate the positional record constructor in `Select`, project to an anonymous type and
 build the record after the query; keep it one round trip.
 
-- [ ] **Step 5: Shared sign-in helper**
+- [x] **Step 5: Shared sign-in helper**
 
 `src/Ats.Web/Identity/AtsSignIn.cs`:
 ```csharp
@@ -343,7 +346,7 @@ public static class AtsSignIn
   helper, so the new Owner's cookie carries their stamp. If that unexpectedly fails, redirect to `Login`.
 - Delete the private `SignInAsync` method.
 
-- [ ] **Step 6: Session validator**
+- [x] **Step 6: Session validator**
 
 `src/Ats.Web/Identity/SessionValidator.cs`:
 ```csharp
@@ -399,7 +402,7 @@ o.Events.OnValidatePrincipal = SessionValidator.ValidateAsync;
 ```
 Replace the `"AtsCookie"` literals in `Program.cs` with `AtsSignIn.Scheme`.
 
-- [ ] **Step 7: Verify**
+- [x] **Step 7: Verify**
 
 `dotnet test Ats.slnx` (SessionValidatorTests 7 cases green), build warning-clean, format clean.
 Mutation: make `IsCurrent` ignore the stamp comparison, confirm `Rotated_stamp_is_rejected` fails, restore.
@@ -418,7 +421,7 @@ Then `npx playwright test` (requires the Task 2 migration applied). The first ru
 - Create: `tests/Ats.Tests/Fakes/FakeUserRepository.cs`
 - Test: `tests/Ats.Tests/Users/UserServiceTests.cs`
 
-- [ ] **Step 1: Abstractions**
+- [x] **Step 1: Abstractions**
 
 `src/Ats.Application/Users/IUserRepository.cs`:
 ```csharp
@@ -439,7 +442,7 @@ public interface IUserRepository
 }
 ```
 
-- [ ] **Step 2: Fake and failing tests**
+- [x] **Step 2: Fake and failing tests**
 
 `tests/Ats.Tests/Fakes/FakeUserRepository.cs`:
 ```csharp
@@ -714,12 +717,12 @@ public class UserServiceTests
 }
 ```
 
-- [ ] **Step 3: Run to verify failure**
+- [x] **Step 3: Run to verify failure**
 
 Run: `dotnet test Ats.slnx --filter FullyQualifiedName~UserServiceTests`
 Expected: build FAIL (`UserService`, `CreateUserInput` missing).
 
-- [ ] **Step 4: Implement the service**
+- [x] **Step 4: Implement the service**
 
 `src/Ats.Application/Users/UserService.cs`:
 ```csharp
@@ -867,7 +870,7 @@ public sealed class UserService : IUserService
 }
 ```
 
-- [ ] **Step 5: Repository and DI**
+- [x] **Step 5: Repository and DI**
 
 `src/Ats.Infrastructure/Persistence/Repositories/UserRepository.cs` (tenant-filtered; no bypass, no
 hand-set `TenantId`: the interceptor stamps inserts):
@@ -910,7 +913,7 @@ services.AddScoped<IUserRepository, UserRepository>();
 services.AddScoped<IUserService, UserService>();
 ```
 
-- [ ] **Step 6: Verify**
+- [x] **Step 6: Verify**
 
 `dotnet test Ats.slnx` green. Mutation checks (restore each): remove the `IsLastActiveOwnerAsync` guard
 in `SetActiveAsync` (expect `The_last_active_Owner_cannot_be_deactivated` to fail); remove the stamp
@@ -930,7 +933,7 @@ rotation in `ChangeRoleAsync` (expect `Changing_a_role_rotates_the_stamp` to fai
 - Modify: `src/Ats.Web/ViewComponents/TopBarViewComponent.cs`: crumb `["Profile"] = ("Account", "Change password")`
 - Test: `tests/Ats.Tests/Authorization/ControllerAuthorizationTests.cs` (spot check)
 
-- [ ] **Step 1: Test first**
+- [x] **Step 1: Test first**
 
 Add to `Action_requires_policy`:
 ```csharp
@@ -938,7 +941,7 @@ Add to `Action_requires_policy`:
 ```
 Run: build FAIL (`ProfileController` missing).
 
-- [ ] **Step 2: View model**
+- [x] **Step 2: View model**
 
 ```csharp
 using System.ComponentModel.DataAnnotations;
@@ -961,7 +964,7 @@ public class ChangePasswordViewModel
 }
 ```
 
-- [ ] **Step 3: Controller**
+- [x] **Step 3: Controller**
 
 ```csharp
 using Ats.Application.Abstractions;
@@ -1017,7 +1020,7 @@ public class ProfileController : Controller
 }
 ```
 
-- [ ] **Step 4: View**
+- [x] **Step 4: View**
 
 `Views/Profile/ChangePassword.cshtml` (back-office layout; follow the UI skill's form pattern, as in
 `Candidates/Form.cshtml`):
@@ -1052,7 +1055,7 @@ public class ProfileController : Controller
 </form>
 ```
 
-- [ ] **Step 5: Forced-change filter**
+- [x] **Step 5: Forced-change filter**
 
 `src/Ats.Web/Identity/RequirePasswordChangeFilter.cs`:
 ```csharp
@@ -1088,13 +1091,13 @@ builder.Services.AddControllersWithViews(o =>
 Check `RouteData.Values.ContainsKey("area")` against how the Careers area routes (it may carry an empty
 `area` value on non-area routes; if so, test for a non-empty value instead).
 
-- [ ] **Step 6: Sidebar link and crumb**
+- [x] **Step 6: Sidebar link and crumb**
 
 In the sidebar user block (where the name and role render, near sign-out), add a
 `<a asp-controller="Profile" asp-action="ChangePassword">Change password</a>` styled like the adjacent
 sign-out control (UI skill; no inline hex, Material Symbols icon `key`). Add the TopBar crumb.
 
-- [ ] **Step 7: Verify**
+- [x] **Step 7: Verify**
 
 `dotnet test Ats.slnx`, build, format. `npx playwright test` (Owner unaffected: the flag is false for
 existing users). Manual check is covered in Task 7's e2e.
@@ -1114,7 +1117,7 @@ for table, row menu, confirm and flash patterns.
 - Modify: `src/Ats.Web/wwwroot/css/ats-components.css`
 - Test: `tests/Ats.Tests/Authorization/ControllerAuthorizationTests.cs`
 
-- [ ] **Step 1: Tests first**
+- [x] **Step 1: Tests first**
 
 Add to `Action_requires_policy`:
 ```csharp
@@ -1125,7 +1128,7 @@ Add to `Action_requires_policy`:
 ```
 Run: build FAIL (`UsersController` missing).
 
-- [ ] **Step 2: View models**
+- [x] **Step 2: View models**
 
 `src/Ats.Web/Models/UserViewModels.cs`:
 ```csharp
@@ -1172,7 +1175,7 @@ public class UserResetPasswordViewModel
 }
 ```
 
-- [ ] **Step 3: Controller**
+- [x] **Step 3: Controller**
 
 ```csharp
 using System.Globalization;
@@ -1232,7 +1235,7 @@ public class UsersController : Controller
         var result = await _users.ChangeRoleAsync(vm.Id, vm.Role, Me);
         if (!result.Succeeded) { ModelState.AddModelError(string.Empty, result.Error!); return View(vm); }
         await _audit.LogAsync("UserRoleChanged", "User", Ref(vm.Id), $"Changed role of '{vm.Email}' to {vm.Role}");
-        TempData["Success"] = "Role updated. The change applies on their next click.";
+        TempData["Success"] = "Role updated. They are signed out and get the new role when they sign in again.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -1280,7 +1283,7 @@ public class UsersController : Controller
 Check the flash key the layout renders for errors (see how `DepartmentsController.Delete` reports a
 failure) and use the same key. Audit summaries must never contain a password.
 
-- [ ] **Step 4: Views**
+- [x] **Step 4: Views**
 
 `Views/Users/Index.cshtml`:
 ```cshtml
@@ -1368,7 +1371,7 @@ and `DisplayName`, submit "Reset password" with `hx-confirm="Reset the password 
 and the same `data-confirm-*` attributes as other destructive actions.
 All three render `asp-validation-summary="ModelOnly"` for service errors.
 
-- [ ] **Step 5: Nav, crumbs, CSS**
+- [x] **Step 5: Nav, crumbs, CSS**
 
 Sidebar (Admin group, before Audit log):
 ```csharp
@@ -1382,7 +1385,7 @@ TopBar crumbs: `["Users"] = ("Admin", "Users")`.
 and add `.ats-thead.ats-table--users` to the phone `display: none` list and `.ats-table--users` to the
 phone single-column list in the existing `@media (max-width: 767.98px)` block.
 
-- [ ] **Step 6: Verify**
+- [x] **Step 6: Verify**
 
 `dotnet test Ats.slnx` (new spot checks green, coverage test green), build, format.
 `npx playwright test` (existing suite; `boosted-nav`, `a11y` and `layout-audit` include every sidebar
@@ -1398,7 +1401,7 @@ Now that non-Owner users can exist, prove the phase 1 matrix and phase 2 flows i
 - Create: `tests/e2e/users.spec.ts`
 - Modify: `tests/e2e/rbac.spec.ts` (top comment: non-Owner coverage now lives in `users.spec.ts`)
 
-- [ ] **Step 1: Write the spec**
+- [x] **Step 1: Write the spec**
 
 `tests/e2e/users.spec.ts`:
 ```ts
@@ -1527,7 +1530,7 @@ test.afterAll(async ({ browser }) => {
 Adjust selectors to the real markup (the themed confirm modal: see `tests/e2e/confirm.ts`, which
 likely already has a helper; use it). Keep every assertion.
 
-- [ ] **Step 2: Run**
+- [x] **Step 2: Run**
 
 Run: `npx playwright test tests/e2e/users.spec.ts` then the full suite `npx playwright test`.
 Expected: all pass. If a 403 assertion fails because the response is the re-executed status page with
@@ -1544,7 +1547,7 @@ a different code, report it rather than weakening the assertion.
 - Modify: `CLAUDE.md`
 - Modify: `.claude/skills/ui/SKILL.md` (only if it lists sidebar entries or crumbs explicitly)
 
-- [ ] **Step 1: Multi-tenancy bypass list**
+- [x] **Step 1: Multi-tenancy bypass list**
 
 In both multi-tenancy files, the `IdentityService` bullet becomes:
 `IdentityService.ValidateCredentialsAsync` (sign-in: no tenant claim yet; matches the unique email) and
@@ -1554,7 +1557,7 @@ Keep the count of documented places accurate (it stays five places; the Identity
 two methods). In `CLAUDE.md`, the multi-tenancy line "Bypass the filter only with `IgnoreQueryFilters()`
 at sign-in/onboarding" becomes "at sign-in, session validation and onboarding".
 
-- [ ] **Step 2: Authorization skill**
+- [x] **Step 2: Authorization skill**
 
 Add a "Users and sessions" section: `UserService` rules (the table at the top of this plan, condensed),
 `AtsRole.Assignable`, `SecurityStamp` rotation and `SessionValidator` (skips `[AllowAnonymous]`
@@ -1563,19 +1566,19 @@ issue the cookie, and `profile.manage`. Remove the known limit "A role change ap
 next sign-in"; keep the HiringManager limit, reworded: "not assignable (`AtsRole.Assignable`) until
 phase 3".
 
-- [ ] **Step 3: Spec**
+- [x] **Step 3: Spec**
 
 In `docs/specs/2026-09-30-rbac-design.md`: add `profile.manage` (all roles) to the matrix; mark phase 2
-done with the temporary-password decision and "email invites later"; record the accepted last-Owner
-race and that deactivation (not deletion) is the only removal.
+done with the temporary-password decision and "email invites later"; record how the last-Owner
+race is prevented (serialisable transaction, tenant-leading index) and that deactivation (not deletion) is the only removal.
 
-- [ ] **Step 4: CLAUDE.md**
+- [x] **Step 4: CLAUDE.md**
 
 Skill index row for Authorization: add "users, sessions". Under Conventions, extend the authorization
 bullet: "Sign-in cookies are issued only through `AtsSignIn`; any change to a user's access rotates
 `SecurityStamp` (see `UserService`)."
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 `dotnet format Ats.slnx --verify-no-changes` clean.
 

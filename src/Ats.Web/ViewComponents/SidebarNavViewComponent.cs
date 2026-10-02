@@ -43,6 +43,7 @@ public class SidebarNavViewComponent : ViewComponent
 
         new("Integrations", "cable", "Integration", "Index", NavGroup.Admin, AtsPermission.IntegrationManage,
             Alert: s => s.IntegrationUnhealthy),
+        new("Users", "manage_accounts", "Users", "Index", NavGroup.Admin, AtsPermission.UsersManage),
         new("Audit log", "history", "Audit", "Index", NavGroup.Admin, AtsPermission.AuditView),
     };
 
@@ -64,7 +65,9 @@ public class SidebarNavViewComponent : ViewComponent
         var branding = await _branding.GetAsync();
         var summary = await _summary.GetAsync();
 
-        var groups = Items
+        // A user held on Change password gets no nav: every link would bounce back to that page.
+        var held = UserClaimsPrincipal.FindFirst(AtsSignIn.MustChangePasswordClaim) is not null;
+        var groups = held ? [] : Items
             .Where(i => i.RequiredPermission is null || UserClaimsPrincipal.Can(i.RequiredPermission))
             .GroupBy(i => i.Group)
             .ToList();

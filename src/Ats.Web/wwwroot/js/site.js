@@ -37,19 +37,35 @@ window.Ats = window.Ats || {};
     });
 })();
 
-// Ctrl/Cmd+K focuses global search; Escape clears the result list.
+// Ctrl/Cmd+K focuses global search; Escape clears the result list. On phones the field is folded
+// into a collapse: open it, and the shown.bs.collapse handler below focuses the input.
 (function () {
+    function isShown(el) {
+        return typeof el.checkVisibility === 'function' ? el.checkVisibility() : el.offsetParent !== null;
+    }
     document.addEventListener('keydown', function (e) {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             var input = document.getElementById('ats-global-search');
             if (!input) return;
             e.preventDefault();
+            if (!isShown(input) && window.bootstrap) {
+                bootstrap.Collapse.getOrCreateInstance('#ats-topbar-search', { toggle: false }).show();
+                return;
+            }
             input.focus();
             input.select();
         }
         if (e.key === 'Escape') {
             var results = document.getElementById('ats-search-results');
             if (results) results.innerHTML = '';
+            // Phones: Escape folds the opened search row and hands focus back to its toggle.
+            var row = document.getElementById('ats-topbar-search');
+            var toggle = document.querySelector('.ats-topbar-search-toggle');
+            if (row && toggle && window.bootstrap && row.classList.contains('show')
+                && row.contains(e.target) && isShown(toggle)) {
+                bootstrap.Collapse.getOrCreateInstance(row, { toggle: false }).hide();
+                toggle.focus();
+            }
         }
     });
     // Clicking away closes the result list.
@@ -440,5 +456,73 @@ window.Ats = window.Ats || {};
         if (!isBoardMove(evt)) return;
         toast('Connection lost, so the move was not saved. The board has been refreshed.', 'danger');
         reconcileBoard();
+    });
+})();
+
+// ---------------------------------------------------------------------------------------------
+// Phone navigation panel (#ats-nav-panel, a Bootstrap .offcanvas-md) and the phone search toggle.
+// Bootstrap opens and closes the panel, traps focus and locks scrolling. What it cannot know:
+// #ats-sidebar is re-rendered out of band on every boosted navigation, and Back/Forward restores a
+// snapshot of the shell, so an open panel is replaced while its body scroll lock and focus trap
+// stay behind. Hiding the replaced instance clears them. Offcanvas also leaves aria-expanded on
+// its toggle alone.
+// ---------------------------------------------------------------------------------------------
+(function () {
+    if (!window.bootstrap) return;
+    var PANEL_ID = 'ats-nav-panel';
+    var shown = null;   // { el, instance } while the panel is open
+
+    function setExpanded(value) {
+        document.querySelectorAll('[aria-controls="' + PANEL_ID + '"]').forEach(function (b) {
+            b.setAttribute('aria-expanded', value);
+        });
+    }
+
+    document.addEventListener('show.bs.offcanvas', function (e) {
+        if (e.target.id !== PANEL_ID) return;
+        shown = { el: e.target, instance: bootstrap.Offcanvas.getOrCreateInstance(e.target) };
+        setExpanded('true');
+    });
+    document.addEventListener('hide.bs.offcanvas', function (e) {
+        if (e.target.id !== PANEL_ID) return;
+        shown = null;
+        setExpanded('false');
+    });
+
+    // The link that was used has gone with the old panel, so focus goes to the new page's heading.
+    function releaseReplaced() {
+        if (!shown || document.contains(shown.el)) return;
+        var instance = shown.instance;
+        shown = null;
+        instance.hide();
+        var main = document.getElementById('ats-content');
+        var target = (main && main.querySelector('h1')) || main;
+        if (!target) return;
+        if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+        target.focus();
+    }
+
+    document.body.addEventListener('htmx:afterSwap', function (e) {
+        if (e.target && e.target.id === 'ats-content') releaseReplaced();
+    });
+
+    // A snapshot taken while the panel was open would come back open, with no Bootstrap behind it.
+    // Its backdrop comes back too: Bootstrap appends it to the panel's parent, inside the shell.
+    document.body.addEventListener('htmx:historyRestore', function () {
+        var panel = document.getElementById(PANEL_ID);
+        if (panel) {
+            panel.classList.remove('show', 'showing', 'hiding');
+            panel.removeAttribute('aria-modal');
+            panel.removeAttribute('role');
+        }
+        document.querySelectorAll('.offcanvas-backdrop').forEach(function (b) { b.remove(); });
+        setExpanded('false');
+        releaseReplaced();
+    });
+
+    document.addEventListener('shown.bs.collapse', function (e) {
+        if (e.target.id !== 'ats-topbar-search') return;
+        var input = document.getElementById('ats-global-search');
+        if (input) input.focus();
     });
 })();

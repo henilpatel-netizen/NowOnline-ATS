@@ -18,17 +18,26 @@ implement `ITenantEntity`.
   `ITenantContext`, and throws if none is resolved. Also stamps `CreatedAt`/`UpdatedAt`.
 
 ## Tenant resolution
-`HttpTenantContext.CurrentTenantId` reads the `tenant_id` claim first (back-office), then
-`HttpContext.Items["TenantId"]`. The item is set only by `TenantResolutionMiddleware`, for public
-career-site requests (`/careers/{slug}` -> tenant id). In the `Ats.Worker`, `ITenantContext` is a
+`HttpTenantContext.CurrentTenantId` reads `HttpContext.Items["TenantId"]` first, then the `tenant_id`
+claim (back office). The item is set only by `TenantResolutionMiddleware`, for career-site requests
+(`/careers/{slug}` -> tenant id), so it takes precedence over the claim: career-site requests resolve
+from the slug for everyone, including a signed-in user of another tenant. Only the Careers area carries
+a `slug` route value. In the `Ats.Worker`, `ITenantContext` is a
 settable `WorkerTenantContext` the `OutboxProcessor` sets per message.
 
 ## Documented bypasses (the complete list)
-- `IdentityService.ValidateCredentialsAsync` — `IgnoreQueryFilters()` at sign-in (no claim yet).
+- `IdentityService.ValidateCredentialsAsync` (`IgnoreQueryFilters()` at sign-in, no claim yet; matches the
+  unique email) and `IdentityService.GetSessionAsync` (cookie validation and cookie re-issue: per-request
+  validation runs before `HttpContext.User`, so before the tenant context, and `ProfileController`
+  re-issues the cookie after a password change; both are scoped by the same cookie values, filtered
+  explicitly by the cookie's `tenant_id` AND the user id). One place, two methods.
 - `OnboardingStore.CreateTenantGraphAsync` — creates the tenant graph and sets `TenantId` by hand on
   settings/template/stages/owner before a claim exists, inside one transaction.
 - `OnboardingStore.SlugExistsAsync` / `EmailExistsAsync`: sign-up uniqueness checks with
   `IgnoreQueryFilters()` before a claim exists (email is globally unique across tenants).
+  `EmailExistsAsync` is also called by the back-office `UserService.CreateAsync` / `UpdateAsync` for the same
+  global uniqueness check. It returns only a boolean, so an Owner can learn that an address is registered
+  somewhere; accepted, because the `IX_Users_Email` unique index implies it. No new bypass spot.
 - `TenantResolutionMiddleware` — resolves `{slug}` -> Active tenant and sets `Items["TenantId"]`
   (career site). Unknown/suspended slug returns 404.
 - `OutboxClaimStore.ClaimDueAsync` (`Ats.Worker`): claims due outbox messages across all tenants

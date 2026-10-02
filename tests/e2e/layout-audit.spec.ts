@@ -1,4 +1,6 @@
 import { test } from '@playwright/test';
+import { writeFileSync } from 'node:fs';
+import { ownEditUrl } from './users';
 
 /**
  * Diagnostic sweep, not a pass/fail gate. It reports measurable layout defects across every screen
@@ -9,7 +11,7 @@ import { test } from '@playwright/test';
 const ROUTES = [
   '/', '/Jobs', '/Jobs/Create', '/Candidates', '/Candidates/Create',
   '/Pipelines', '/Pipelines/Create', '/Organisation', '/Departments', '/Locations',
-  '/Integration', '/Integration/Deliveries', '/CareerSite', '/CareerSite/Branding', '/Audit',
+  '/Integration', '/Integration/Deliveries', '/CareerSite', '/CareerSite/Branding', '/Users', '/Users/Create', '/Audit',
 ];
 
 const VIEWPORTS = [
@@ -21,7 +23,7 @@ const VIEWPORTS = [
 type Finding = { route: string; viewport: string; kind: string; detail: string };
 const findings: Finding[] = [];
 
-const audit = () => {
+const audit = (minTarget: number) => {
   const out: { kind: string; detail: string }[] = [];
   const vis = (el: Element) => {
     const s = getComputedStyle(el);
@@ -71,16 +73,17 @@ const audit = () => {
     if (Math.max(...heights) - Math.min(...heights) > 8) {
       out.push({ kind: 'uneven-columns', detail: `.row children heights ${heights.join(' vs ')}` });
     }
-    cols.forEach((c, i) => {
-      const card = c.querySelector<HTMLElement>('.ats-card, .ats-card-flush, .ats-card-dark');
-      if (!card) return;
-      const h = Math.round(card.getBoundingClientRect().height);
-      const other = cols.map(o => o.querySelector<HTMLElement>('.ats-card, .ats-card-flush, .ats-card-dark'))
-        .filter(Boolean).map(o => Math.round(o!.getBoundingClientRect().height));
-      if (i === 0 && other.length > 1 && Math.max(...other) - Math.min(...other) > 8) {
-        out.push({ kind: 'uneven-cards', detail: `sibling card heights ${other.join(' vs ')}` });
-      }
-    });
+    // A column holding several stacked cards counts as one block: from its first card's top to its last card's bottom.
+    const blocks = cols.map(c => {
+      const cards = Array.from(c.querySelectorAll<HTMLElement>('.ats-card, .ats-card-flush, .ats-card-dark'))
+        .filter(card => card.parentElement === c || card.parentElement?.parentElement === c);
+      if (cards.length === 0) return null;
+      const rects = cards.map(card => card.getBoundingClientRect());
+      return Math.round(Math.max(...rects.map(r => r.bottom)) - Math.min(...rects.map(r => r.top)));
+    }).filter((h): h is number => h !== null);
+    if (blocks.length > 1 && Math.max(...blocks) - Math.min(...blocks) > 8) {
+      out.push({ kind: 'uneven-cards', detail: `sibling card heights ${blocks.join(' vs ')}` });
+    }
   });
 
   // 4. Wasted horizontal space: the widest thing in the content area vs the space available.
@@ -98,12 +101,13 @@ const audit = () => {
     }
   }
 
-  // 5. Interactive targets below the WCAG 2.2 minimum (24x24).
+  // 5. Interactive targets below the minimum: WCAG 2.2 AA 24x24, and 44x44 on phones.
   const seen = new Set<string>();
   document.querySelectorAll<HTMLElement>('a, button, input[type=checkbox], input[type=radio], [role=button]').forEach(el => {
     if (!vis(el)) return;
-    const r = el.getBoundingClientRect();
-    if (r.width >= 24 && r.height >= 24) return;
+    // A checkbox or radio inside a label is operated through the label, so the label is the target.
+    const r = (el.matches('input') ? el.closest('label') ?? el : el).getBoundingClientRect();
+    if (r.width >= minTarget && r.height >= minTarget) return;
     const k = label(el);
     if (seen.has(k)) return;
     seen.add(k);
@@ -111,7 +115,7 @@ const audit = () => {
   });
 
   // 6. Spacing values that are not on the 4px scale the design system uses.
-  const offScale = new Map<string, number>();
+  const offScale = new Map<string, { n: number; ex: string }>();
   document.querySelectorAll<HTMLElement>('main *').forEach(el => {
     if (!vis(el)) return;
     const s = getComputedStyle(el);
@@ -121,11 +125,12 @@ const audit = () => {
         if (!v || v % 1 !== 0) return;          // ignore rem-derived fractions
         if (v % 4 === 0) return;
         const k = `${prop}:${v}px`;
-        offScale.set(k, (offScale.get(k) ?? 0) + 1);
+        const cur = offScale.get(k);
+        offScale.set(k, { n: (cur?.n ?? 0) + 1, ex: cur?.ex ?? label(el).replace(/ ".*"$/, '') });
       });
   });
-  Array.from(offScale.entries()).sort((a, b) => b[1] - a[1]).slice(0, 4)
-    .forEach(([k, n]) => out.push({ kind: 'off-scale-spacing', detail: `${k} used ${n}x` }));
+  Array.from(offScale.entries()).sort((a, b) => b[1].n - a[1].n).slice(0, 12)
+    .forEach(([k, v]) => out.push({ kind: 'off-scale-spacing', detail: `${k} e.g. ${v.ex}` }));
 
   return out;
 };
@@ -134,30 +139,31 @@ for (const vp of VIEWPORTS) {
   test(`layout audit @ ${vp.name}`, async ({ page }) => {
     test.setTimeout(180_000);
     await page.setViewportSize({ width: vp.width, height: vp.height });
-    for (const route of ROUTES) {
+    for (const route of [...ROUTES, await ownEditUrl(page)]) {
       await page.goto(route);
       await page.waitForLoadState('networkidle');
-      const found = await page.evaluate(audit);
+      const found = await page.evaluate(audit, vp.width < 768 ? 44 : 24);
       found.forEach(f => findings.push({ route, viewport: vp.name, ...f }));
     }
   });
 }
 
 test.afterAll(() => {
+  if (process.env.AUDIT_JSON) writeFileSync(process.env.AUDIT_JSON, JSON.stringify(findings, null, 1));
   const byKind = new Map<string, Finding[]>();
   findings.forEach(f => byKind.set(f.kind, [...(byKind.get(f.kind) ?? []), f]));
 
   const lines: string[] = ['', '=== LAYOUT AUDIT ================================================='];
   for (const [kind, items] of [...byKind.entries()].sort((a, b) => b[1].length - a[1].length)) {
     lines.push('', `## ${kind} (${items.length})`);
-    const seen = new Set<string>();
+    // Collapse the quoted text so 50 identical row links read as one line with a count.
+    const groups = new Map<string, number>();
     for (const i of items) {
-      const key = `${i.route}|${i.detail}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      if (seen.size > 12) { lines.push(`  ... ${items.length - 12} more`); break; }
-      lines.push(`  [${i.viewport}] ${i.route} -> ${i.detail}`);
+      const key = `[${i.viewport}] ${i.route} -> ${i.detail.replace(/ "[^"]*"/, '').replace(/ (overflows|by) \d+px/, '')}`;
+      groups.set(key, (groups.get(key) ?? 0) + 1);
     }
+    for (const [key, n] of [...groups.entries()].slice(0, 40)) lines.push(`  ${n}x ${key}`);
+    if (groups.size > 40) lines.push(`  ... ${groups.size - 40} more groups`);
   }
   lines.push('', `total findings: ${findings.length}`, '==================================================================', '');
   console.log(lines.join('\n'));

@@ -28,7 +28,8 @@ LIST = ROOT / "tools" / "material-symbols.icons.txt"
 # in a view or an icon-producing C# file. Over-collection is safe (non-ligature words add nothing).
 # Icon text inside any element carrying the .ms class (allow other attributes between class and >).
 MS_SPAN = re.compile(r'class="ms[ a-z-]*"[^>]*>\s*([a-z][a-z_]+?)\s*<')
-QUOTED = re.compile(r'"([a-z][a-z_]{2,})"')
+# A quoted word followed by ":" is a JSON key in an attribute (data-bs-popper-config), never an icon.
+QUOTED = re.compile(r'"([a-z][a-z_]{2,})"(?!\s*:)')
 
 def collect():
     tokens = set()

@@ -1,6 +1,6 @@
 # Ats Role-Based Access Control (RBAC) Design
 
-Date: 30 September 2026. Status: phase 1 implemented.
+Date: 30 September 2026. Status: phases 1 and 2 implemented.
 
 ## Permission matrix
 
@@ -19,6 +19,7 @@ Date: 30 September 2026. Status: phase 1 implemented.
 | `integration.manage` | `IntegrationManage` | yes | no | no | no |
 | `audit.view` | `AuditView` | yes | no | no | no |
 | `users.manage` | `UsersManage` | yes | no | no | no |
+| `profile.manage` | `ProfileManage` | yes | yes | yes | yes |
 
 ## Roles
 - **Owner:** tenant admin (users, integration, career site, audit, all data). Multiple Owners are allowed; there is no separate Admin role.
@@ -38,12 +39,39 @@ Date: 30 September 2026. Status: phase 1 implemented.
 
 ## Phases
 1. **Permission enforcement** (done, this spec). No migration.
-2. **User management:** invite, change role, deactivate, last-Owner guard, `SecurityStamp` session
-   revocation, audit entries. Must NOT allow assigning HiringManager before phase 3.
+2. **User management** (done, 30 September 2026): add user, change role, reset password, deactivate and
+   reactivate, last-Owner guard, `SecurityStamp` session revocation, audit entries. HiringManager is not
+   assignable before phase 3 (`AtsRole.Assignable`).
+   - Decision (30 September 2026): an Owner sets a temporary password and the user must change it at first
+     sign-in. Email invites follow when email is integrated.
+   - Passwords (temporary and own): required, maximum 128 characters (hashing very long inputs is a
+     denial-of-service risk). Decision (1 October 2026): the 12-character minimum is removed for now, to
+     be reinstated later.
+   - Last-Owner race: prevented by a serialisable transaction around the check and save, plus the
+     `Users(TenantId, Role, IsActive)` index so range locks stay inside one tenant.
+   - Accepted: an Owner can reset another Owner's password, and so sign in as them; the reset is audited
+     (`UserPasswordReset`).
+   - Deactivation (not deletion) is the only removal; it keeps audit history and authorship intact.
+   - Out of scope: minimum password length on tenant sign-up (`Register`), throttling wrong
+     current-password attempts.
 3. **HiringManager scoping:** `Job.HiringManagerUserId`; scope jobs, candidates, board, CVs, search and dashboard.
 4. **`Ats.Api` host** with JWT, reusing the policies. Pending decisions:
    - API purpose: front end/mobile, or machine-to-machine API clients with scoped, hashed keys.
    - Token issuer: self-issued JWT behind `IIdentityService`, or Entra External ID.
+
+## Addendum: phase 2 user editing (1 October 2026)
+Plan: `docs/plans/2026-10-01-users-edit-page-and-ux-fixes.md`. Decisions by the developer:
+- No password minimum for now (required, maximum 128 characters); to be reinstated later.
+- An Owner can edit another user's name, email and role on one Edit page, which also holds reset password,
+  deactivate and reactivate. The row menu and the separate Change role and Reset password pages are gone.
+- On their own record an Owner can change the name only. Email and role changes on yourself are refused by
+  `UserService`, not just hidden; the own password stays on Change password.
+- Changing a user's email or role rotates their `SecurityStamp`, so they are signed out and sign in again
+  (with the new email, if it changed). A name-only change does not.
+- Email stays globally unique; the check runs only when the email changed, plus the unique-index violation
+  on save.
+- The audit action `UserRoleChanged` is replaced by `UserUpdated`, which lists what changed.
+- The Users list gained search (name or email), an Active (default) / Deactivated / All filter and paging.
 
 ## Decisions
 - A single role per user (`AppUser.Role`) replaces the `UserRole` table mentioned in

@@ -1,6 +1,6 @@
-using System.Security.Claims;
 using Ats.Application.Abstractions;
 using Ats.Application.Tenancy;
+using Ats.Web.Identity;
 using Ats.Web.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -36,7 +36,11 @@ public class AccountController : Controller
             return View(vm);
         }
 
-        await SignInAsync(result.OwnerUserId, result.TenantId, "Owner", vm.OwnerName.Trim());
+        var signIn = await _identity.ValidateCredentialsAsync(vm.OwnerEmail, vm.Password);
+        if (!signIn.Succeeded) return RedirectToAction("Login");
+
+        await AtsSignIn.SignInAsync(HttpContext, signIn.UserId!.Value, signIn.TenantId!.Value, signIn.Role!,
+            signIn.DisplayName ?? "", signIn.SecurityStamp!.Value, signIn.MustChangePassword);
         return RedirectToAction("Index", "Dashboard");
     }
 
@@ -54,27 +58,15 @@ public class AccountController : Controller
             return View(vm);
         }
 
-        await SignInAsync(result.UserId!.Value, result.TenantId!.Value, result.Role!, result.DisplayName ?? "");
+        await AtsSignIn.SignInAsync(HttpContext, result.UserId!.Value, result.TenantId!.Value, result.Role!,
+            result.DisplayName ?? "", result.SecurityStamp!.Value, result.MustChangePassword);
         return RedirectToAction("Index", "Dashboard");
     }
 
     [HttpPost]
     public async Task<IActionResult> Logout()
     {
-        await HttpContext.SignOutAsync("AtsCookie");
+        await HttpContext.SignOutAsync(AtsSignIn.Scheme);
         return RedirectToAction("Login");
-    }
-
-    private async Task SignInAsync(int userId, int tenantId, string role, string displayName)
-    {
-        var claims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, userId.ToString()),
-            new(ClaimTypes.Name, displayName),
-            new(ClaimTypes.Role, role),
-            new("tenant_id", tenantId.ToString())
-        };
-        var identity = new ClaimsIdentity(claims, "AtsCookie");
-        await HttpContext.SignInAsync("AtsCookie", new ClaimsPrincipal(identity));
     }
 }

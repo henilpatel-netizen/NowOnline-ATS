@@ -11,37 +11,48 @@
         <span class="ats-crumbs-leaf">@Model.CrumbLeaf</span>
     </div>
 
-    <div class="ats-topbar-search">
-        <label class="ats-search" for="ats-global-search">
-            <span class="ms ms-sm ats-muted">search</span>
-            <input id="ats-global-search" name="q" type="search" autocomplete="off"
-                   placeholder="Search candidates, jobs, refs…"
-                   aria-label="Search candidates, jobs and referral codes"
-                   hx-get="@Url.Action("Index", "Search")"
-                   hx-trigger="keyup changed delay:250ms, search"
-                   hx-target="#ats-search-results"
-                   hx-swap="innerHTML"
-                   hx-indicator="#ats-search-spinner" />
-            @* Sits in the search box, so a slow query no longer looks like nothing happened. *@
-            <span id="ats-search-spinner" class="ats-spinner ats-spinner--inline" role="status" aria-hidden="true"></span>
-            <span class="ats-kbd">Ctrl K</span>
-        </label>
-        @* No role="listbox": the panel holds plain links with no option semantics or arrow-key
-       navigation, and claiming the role misleads assistive tech. aria-live announces results as they
-       arrive; a full combobox pattern would be a feature in its own right. *@
-        <div id="ats-search-results" class="ats-topbar-results" role="region"
-             aria-label="Search results" aria-live="polite"></div>
-    </div>
+    @* Held on Change password: search and notifications would only lead back to it. *@
+    @if (!Model.PasswordChangeRequired)
+    {
+        @* Phones keep the bar to one row: the search field opens below it (Bootstrap collapse). From
+           768px up the field is always shown and this button is hidden. *@
+        <button type="button" class="ats-icon-btn ats-topbar-search-toggle d-md-none"
+                data-bs-toggle="collapse" data-bs-target="#ats-topbar-search"
+                aria-controls="ats-topbar-search" aria-expanded="false" aria-label="Search">
+            <span class="ms ms-sm">search</span>
+        </button>
+        <div id="ats-topbar-search" class="ats-topbar-search collapse">
+            <label class="ats-search" for="ats-global-search">
+                <span class="ms ms-sm ats-muted">search</span>
+                <input id="ats-global-search" name="q" type="search" autocomplete="off"
+                       placeholder="Search candidates, jobs, refs…"
+                       aria-label="Search candidates, jobs and referral codes"
+                       hx-get="@Url.Action("Index", "Search")"
+                       hx-trigger="keyup changed delay:250ms, search"
+                       hx-target="#ats-search-results"
+                       hx-swap="innerHTML"
+                       hx-indicator="#ats-search-spinner" />
+                @* Sits in the search box, so a slow query no longer looks like nothing happened. *@
+                <span id="ats-search-spinner" class="ats-spinner ats-spinner--inline" role="status" aria-hidden="true"></span>
+                <span class="ats-kbd">Ctrl K</span>
+            </label>
+            @* No role="listbox": the panel holds plain links with no option semantics or arrow-key
+           navigation, and claiming the role misleads assistive tech. aria-live announces results as they
+           arrive; a full combobox pattern would be a feature in its own right. *@
+            <div id="ats-search-results" class="ats-topbar-results" role="region"
+                 aria-label="Search results" aria-live="polite"></div>
+        </div>
 
-    <button type="button" class="ats-icon-btn" id="ats-bell"
-            title="@(Model.Summary.HasAttention ? $"{Model.Summary.AttentionCount} items need attention" : "Nothing needs attention")"
-            aria-label="Notifications">
-        <span class="ms ms-sm">notifications</span>
-        @if (Model.Summary.HasAttention)
-        {
-            <span class="ats-icon-btn-dot"></span>
-        }
-    </button>
+        <button type="button" class="ats-icon-btn" id="ats-bell"
+                title="@(Model.Summary.HasAttention ? $"{Model.Summary.AttentionCount} items need attention" : "Nothing needs attention")"
+                aria-label="Notifications">
+            <span class="ms ms-sm">notifications</span>
+            @if (Model.Summary.HasAttention)
+            {
+                <span class="ats-icon-btn-dot"></span>
+            }
+        </button>
+    }
 
     @if (ViewData["TopBarActionText"] is string actionText && ViewData["TopBarActionController"] is string ac)
     {

@@ -17,16 +17,17 @@ public sealed class CandidateListQuery : ICandidateListQuery
         var q = _db.Candidates.AsQueryable();
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var s = search.Trim();
-            q = q.Where(c => EF.Functions.Like(c.FirstName, $"%{s}%")
-                          || EF.Functions.Like(c.LastName, $"%{s}%")
-                          || EF.Functions.Like(c.Email, $"%{s}%"));
+            var pattern = LikePattern.Contains(search.Trim());
+            q = q.Where(c => EF.Functions.Like(c.FirstName, pattern)
+                          || EF.Functions.Like(c.LastName, pattern)
+                          || EF.Functions.Like(c.Email, pattern));
         }
 
         var total = await q.CountAsync(ct);
+        page = Paging.Clamp(page, total, pageSize);
         var candidates = await q
             .OrderBy(c => c.LastName).ThenBy(c => c.FirstName)
-            .Skip((page - 1) * pageSize).Take(pageSize)
+            .Skip(Paging.Offset(page, pageSize)).Take(pageSize)
             .Select(c => new { c.Id, c.FirstName, c.LastName, c.Email, c.Phone })
             .ToListAsync(ct);
 

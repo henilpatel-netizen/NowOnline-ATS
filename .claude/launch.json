@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ats-web",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "src/Ats.Web", "--launch-profile", "https"],
+      "port": 7044,
+      "url": "https://localhost:7044"
+    }
+  ]
+}

@@ -29,7 +29,7 @@
 }
 
 <div class="ats-toolbar mb-3">
-    <form asp-action="Index" method="get" class="ats-search" style="width:280px" role="search">
+    <form asp-action="Index" method="get" class="ats-search ats-search--md" role="search">
         @if (Model.Status is not null) { <input type="hidden" name="status" value="@Model.Status" /> }
         <span class="ms ms-sm ats-muted">search</span>
         <input name="q" value="@Model.Q" placeholder="Title or reference" aria-label="Search jobs" />
@@ -63,29 +63,32 @@
                     @if (j.Location is not null) { <text>· @j.Location</text> }
                 </span>
             </span>
-            <span><partial name="Partials/_StatusPill" model="new StatusPillModel(j.Status.ToString(), Tone(j.Status))" /></span>
-            <span class="ats-cell-stack">
-                <partial name="Partials/_PipelineBar" model="new PipelineBarModel(segments, true)" />
+            <span class="ats-meta">
+                <span><partial name="Partials/_StatusPill" model="new StatusPillModel(j.Status.ToString(), Tone(j.Status))" /></span>
+                <span class="ats-cell-stack ats-meta-full">
+                    <partial name="Partials/_PipelineBar" model="new PipelineBarModel(segments, true)" />
+                </span>
+                <span class="ats-avatar-stack @(j.TotalApplications == 0 ? "ats-meta-empty" : null)">
+                    @foreach (var name in j.TopApplicantNames)
+                    {
+                        <partial name="Partials/_Avatar" model="new AvatarModel(name, 1.625, true)" />
+                    }
+                    @{ var extra = j.TotalApplications - j.TopApplicantNames.Count; }
+                    @if (extra > 0) { <span class="ats-avatar-stack-more">+@extra</span> }
+                    @if (j.TotalApplications == 0) { <span class="ats-faint ats-small">—</span> }
+                </span>
+                <span class="ats-small ats-muted @(j.PublishedAt is null ? "ats-meta-empty" : null)"><local-time utc="@j.PublishedAt" format="monthday" empty="—"></local-time></span>
             </span>
-            <span class="ats-avatar-stack">
-                @foreach (var name in j.TopApplicantNames)
-                {
-                    <partial name="Partials/_Avatar" model="new AvatarModel(name, 1.625, true)" />
-                }
-                @{ var extra = j.TotalApplications - j.TopApplicantNames.Count; }
-                @if (extra > 0) { <span class="ats-avatar-stack-more">+@extra</span> }
-                @if (j.TotalApplications == 0) { <span class="ats-faint ats-small">—</span> }
-            </span>
-            <span class="ats-small ats-muted"><local-time utc="@j.PublishedAt" format="monthday" empty="—"></local-time></span>
             <span class="d-flex justify-content-end ats-row-actions">
-                <div class="dropdown">
-                    <button type="button" class="btn btn-sm btn-outline-secondary border-0 px-2" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-label="Actions">
-                        <span class="ms ms-sm">more_horiz</span>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" asp-controller="Board" asp-action="Index" asp-route-jobId="@j.Id">Open board</a></li>
-                        @if (canManage)
-                        {
+                @* Without jobs.manage the only item would be Open board, which the title link already does. *@
+                @if (canManage)
+                {
+                    <div class="dropdown">
+                        <button type="button" class="btn btn-sm btn-outline-secondary border-0 px-2" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-label="Actions">
+                            <span class="ms ms-sm">more_horiz</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" asp-controller="Board" asp-action="Index" asp-route-jobId="@j.Id">Open board</a></li>
                             <li><a class="dropdown-item" asp-action="Edit" asp-route-id="@j.Id">Edit</a></li>
                             @if (j.Status != JobStatus.Published)
                             {
@@ -112,9 +115,9 @@
                                     <button class="dropdown-item text-danger" type="submit">Delete</button>
                                 </form>
                             </li>
-                        }
-                    </ul>
-                </div>
+                        </ul>
+                    </div>
+                }
             </span>
         </div>
     }

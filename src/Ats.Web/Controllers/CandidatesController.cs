@@ -27,7 +27,6 @@ public class CandidatesController : Controller
 
     public async Task<IActionResult> Index(string? q, int page = 1)
     {
-        if (page < 1) page = 1;
         var results = await _candidateList.SearchAsync(q, page, 20);
         var jobs = (await _jobs.ListAsync())
             .Where(j => j.Status == JobStatus.Published)

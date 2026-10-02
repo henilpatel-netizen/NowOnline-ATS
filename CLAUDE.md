@@ -84,7 +84,7 @@ Controllers -> Application services -> repositories -> EF Core (Infrastructure).
 Shared DB + `TenantId` discriminator. Every tenant entity extends `TenantEntity` / implements
 `ITenantEntity`. Isolation is enforced automatically by the global query filter + `SaveChanges`
 interceptor in `AtsDbContext`; do NOT hand-set `TenantId` except in the documented onboarding path.
-Bypass the filter only with `IgnoreQueryFilters()` at sign-in/onboarding (documented). Full rule:
+Bypass the filter only with `IgnoreQueryFilters()` at sign-in, session validation and onboarding (documented). Full rule:
 `.claude/rules/multi-tenancy.md`.
 
 ## Database migrations
@@ -124,7 +124,8 @@ four phases (`docs/plans/2026-07-30-ats-redesign-phase-{1..4}-*.md`).
   a new suite that passes first time.
 - **Authorization is permission-based.** Gate actions with `[Authorize(Policy = AtsPermission.X)]` and
   controls with `User.Can(AtsPermission.X)`; never role names. A fallback policy requires sign-in, so
-  public endpoints need `[AllowAnonymous]`. Details: authorization skill.
+  public endpoints need `[AllowAnonymous]`. Sign-in cookies are issued only through `AtsSignIn`; any change
+  to a user's access rotates `SecurityStamp` (see `UserService`). Details: authorization skill.
 
 ## Documentation maintenance (MANDATORY, after each phase)
 1. Refresh the skill-index table below and any changed conventions.
@@ -136,13 +137,13 @@ four phases (`docs/plans/2026-07-30-ats-redesign-phase-{1..4}-*.md`).
 ## Skill files — read BEFORE exploring code
 | Domain | Skill file | Covers |
 |--------|-----------|--------|
-| Architecture | `.claude/skills/architecture/SKILL.md` | Solution layout, layering, DI, where code goes |
+| Architecture | `.claude/skills/architecture/SKILL.md` | Solution layout, layering, DI, where code goes, `Paging`/`LikePattern` list helpers |
 | Multi-tenancy | `.claude/skills/multitenancy/SKILL.md` | `TenantEntity`, query filter, interceptor, onboarding stamping |
-| UI | `.claude/skills/ui/SKILL.md` | Layouts, design tokens, shared components, how to add a page |
+| UI | `.claude/skills/ui/SKILL.md` | Layouts, design tokens, shared components, how to add a page, phone navigation, layout gates, Edit-page pattern |
 | Entities | `.claude/skills/entities/SKILL.md` | Job/Candidate/JobApplication/Event, soft delete, ExternalRef |
 | Pipeline | `.claude/skills/pipeline/SKILL.md` | Templates, stages, board moves, history, concurrency |
 | Career site | `.claude/skills/career-site/SKILL.md` | Careers area, slug tenancy, IFileStore, public apply |
 | Integration | `.claude/skills/integration/SKILL.md` | Vacancy push, outbox, worker, ReferralTool client, settings |
-| Audit | `.claude/skills/audit/SKILL.md` | Audit log, dashboard metrics, integration test tools |
-| Authorization | `.claude/skills/authorization/SKILL.md` | Permissions, role map, policies, fallback policy, gating actions and controls |
+| Audit | `.claude/skills/audit/SKILL.md` | Audit log (user and account entries, search), dashboard metrics, integration test tools |
+| Authorization | `.claude/skills/authorization/SKILL.md` | Permissions, role map, policies, fallback policy, gating actions and controls, users (list, Edit page, update rules), sessions |
 | Orchestration | `.claude/skills/ats-ship/SKILL.md` | `/ats-ship`: implement, parallel review, done-gate, no git |

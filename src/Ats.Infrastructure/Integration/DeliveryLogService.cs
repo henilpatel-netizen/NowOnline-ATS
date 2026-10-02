@@ -28,8 +28,9 @@ public sealed class DeliveryLogService : IDeliveryLogService
         }
 
         var total = await query.CountAsync(ct);
+        page = Paging.Clamp(page, total, pageSize);
         var messages = await query.OrderByDescending(m => m.Id)
-            .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
+            .Skip(Paging.Offset(page, pageSize)).Take(pageSize).ToListAsync(ct);
 
         var ids = messages.Select(m => m.Id).ToList();
         var deliveries = await _db.WebhookDeliveries.AsNoTracking()

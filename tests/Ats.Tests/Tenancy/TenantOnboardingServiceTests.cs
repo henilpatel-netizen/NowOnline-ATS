@@ -90,8 +90,8 @@ public class TenantOnboardingServiceTests
 
     private sealed class FakeIdentity : IIdentityService
     {
-        public Task<int> CreateUserAsync(int tenantId, string email, string displayName, string password, string role, CancellationToken ct = default) => Task.FromResult(1);
         public Task<SignInResult> ValidateCredentialsAsync(string email, string password, CancellationToken ct = default) => Task.FromResult(new SignInResult(true, 1, 1, "Owner", "Owner", null));
+        public Task<UserSession?> GetSessionAsync(int userId, int tenantId, CancellationToken ct = default) => Task.FromResult<UserSession?>(null);
         public string HashPassword(string password) => "hash:" + password;
         public bool VerifyPassword(string hash, string password) => hash == "hash:" + password;
     }

@@ -50,10 +50,11 @@ builder.Services.AddScoped<ICurrentUser, Ats.Web.Identity.CurrentUser>();
 // Presentation read services, so controllers stay thin (QUAL-3).
 builder.Services.AddScoped<Ats.Web.ViewServices.IBoardViewService, Ats.Web.ViewServices.BoardViewService>();
 
-builder.Services.AddAuthentication("AtsCookie")
-    .AddCookie("AtsCookie", o =>
+builder.Services.AddAuthentication(AtsSignIn.Scheme)
+    .AddCookie(AtsSignIn.Scheme, o =>
     {
         o.LoginPath = "/Account/Login";
+        o.Events.OnValidatePrincipal = SessionValidator.ValidateAsync;
         // A signed-in user without the permission gets a 403, rendered by the status-code page
         // (HomeController.Status), instead of being bounced to the login page.
         o.Events.OnRedirectToAccessDenied = ctx =>
@@ -72,7 +73,10 @@ builder.Services.AddAuthorization(o => o.AddAtsPermissionPolicies());
 // Add services to the container. Antiforgery validation applied to all
 // non-GET requests (OWASP CSRF protection on the auth + back-office surface).
 builder.Services.AddControllersWithViews(o =>
-    o.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()));
+{
+    o.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
+    o.Filters.Add<RequirePasswordChangeFilter>();
+});
 
 var app = builder.Build();
 
@@ -84,7 +88,7 @@ app.UseSerilogRequestLogging(opts =>
         var user = http.User;
         if (user?.Identity?.IsAuthenticated == true)
         {
-            var tenantId = user.FindFirst("tenant_id")?.Value;
+            var tenantId = user.FindFirst(AtsSignIn.TenantClaim)?.Value;
             if (!string.IsNullOrEmpty(tenantId)) diag.Set("TenantId", tenantId);
             var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!string.IsNullOrEmpty(userId)) diag.Set("UserId", userId);

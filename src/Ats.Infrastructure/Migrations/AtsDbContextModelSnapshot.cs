@@ -43,8 +43,16 @@ namespace Ats.Infrastructure.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
                     b.Property<Guid>("Key")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("bit");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
@@ -55,6 +63,11 @@ namespace Ats.Infrastructure.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("nvarchar(40)");
 
+                    b.Property<Guid>("SecurityStamp")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
+
                     b.Property<int>("TenantId")
                         .HasColumnType("int");
 
@@ -63,6 +76,9 @@ namespace Ats.Infrastructure.Migrations
                     b.HasIndex("Email")
                         .IsUnique()
                         .HasDatabaseName("IX_Users_Email");
+
+                    b.HasIndex("TenantId", "Role", "IsActive")
+                        .HasDatabaseName("IX_Users_TenantId_Role_IsActive");
 
                     b.ToTable("Users");
                 });

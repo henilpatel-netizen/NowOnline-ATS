@@ -1,6 +1,7 @@
 import { type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect, acceptConfirm } from './confirm';
+import { otherEditUrl, ownEditUrl } from './users';
 
 // Closes the Phase 6 exit criterion that could not be verified without a scanner.
 const SCREENS = [
@@ -14,6 +15,7 @@ const SCREENS = [
   '/Locations',
   '/Integration',
   '/Integration/Deliveries',
+  '/Users',
   '/Audit',
 ];
 
@@ -43,6 +45,20 @@ for (const url of SCREENS) {
     await page.goto(url);
     await page.waitForLoadState('networkidle');
     await expectNoViolations(page, url);
+  });
+}
+
+test('a11y: own /Users/Edit page', async ({ page }) => {
+  await page.goto(await ownEditUrl(page));
+  await page.waitForLoadState('networkidle');
+  await expectNoViolations(page, 'own /Users/Edit');
+});
+
+for (const state of ['active', 'deactivated'] as const) {
+  test(`a11y: /Users/Edit page of another ${state} user`, async ({ page }) => {
+    await page.goto(await otherEditUrl(page, state));
+    await page.waitForLoadState('networkidle');
+    await expectNoViolations(page, `${state} /Users/Edit`);
   });
 }
 

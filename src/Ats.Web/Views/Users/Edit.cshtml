@@ -1,0 +1,137 @@
+@model Ats.Web.Models.UserEditPageViewModel
+@using Ats.Web.Models.Shared
+@{
+    ViewData["Title"] = "Edit user";
+    var u = Model.User;
+    var status = new StatusPillModel(u.IsActive ? "Active" : "Deactivated", u.IsActive ? PillTone.Success : PillTone.Neutral);
+}
+
+<section class="ats-card ats-user-head mb-3" aria-label="User summary">
+    <partial name="Partials/_Avatar" model="new AvatarModel(u.DisplayName, 3.5)" />
+    <div class="ats-cell-stack">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span class="ats-user-head-name">@u.DisplayName</span>
+            @if (Model.IsMe) { <span class="ats-chip ats-chip--neutral">You</span> }
+        </div>
+        <span class="ats-small ats-muted text-break">@u.Email</span>
+        <div class="d-flex align-items-center gap-2 flex-wrap mt-1">
+            <partial name="Partials/_StatusPill" model="status" />
+            <span class="ats-chip ats-chip--info">@u.Role</span>
+            <span class="ats-xsmall ats-muted">Added <local-time utc="@u.CreatedAt" format="date"></local-time></span>
+        </div>
+    </div>
+</section>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <section class="ats-card" aria-labelledby="user-details-title">
+            <span class="ats-eyebrow">Profile:</span>
+            <h2 class="mt-1 mb-3" id="user-details-title">Details.</h2>
+            <form asp-action="Edit" asp-route-id="@u.Id" method="post">
+                <div asp-validation-summary="ModelOnly" role="alert" class="text-danger small mb-2"></div>
+                <div class="mb-3"><label asp-for="Details.DisplayName" class="form-label"></label>
+                    <input asp-for="Details.DisplayName" class="form-control" autocomplete="off" />
+                    <span asp-validation-for="Details.DisplayName" class="text-danger small"></span></div>
+                @if (Model.IsMe)
+                {
+                    <dl class="ats-field-list">
+                        <dt class="form-label">Email</dt>
+                        <dd class="text-break">@u.Email</dd>
+                        <dt class="form-label">Role</dt>
+                        <dd>@u.Role</dd>
+                    </dl>
+                    <p class="form-text d-flex align-items-center gap-1 mb-3"><span class="ms ms-sm">lock</span> Your role and email can only be changed by another Owner.</p>
+                }
+                else
+                {
+                    <div class="mb-3"><label asp-for="Details.Email" class="form-label"></label>
+                        <input asp-for="Details.Email" class="form-control" autocomplete="off" />
+                        <span asp-validation-for="Details.Email" class="text-danger small"></span></div>
+                    <div class="mb-3"><label asp-for="Details.Role" class="form-label"></label>
+                        <select asp-for="Details.Role" asp-items="RoleOptions.For(Model.Details.Role)" class="form-select"></select>
+                        @if (!RoleOptions.IsAssignable(Model.Details.Role))
+                        {
+                            <div class="form-text">Their current role cannot be assigned from this screen. Choose one of these roles to change it.</div>
+                        }
+                        <span asp-validation-for="Details.Role" class="text-danger small"></span></div>
+                    <p class="form-text d-flex align-items-center gap-1 mb-3"><span class="ms ms-sm">info</span> Changing the email or role signs the user out.</p>
+                }
+                <div class="d-flex align-items-center gap-2 border-top pt-3">
+                    <button type="submit" class="btn btn-primary">Save changes</button>
+                    <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    @if (Model.IsMe)
+    {
+        <div class="col-lg-5">
+            <section class="ats-card" aria-labelledby="user-security-title">
+                <span class="ats-eyebrow">Access:</span>
+                <h2 class="mt-1 mb-0" id="user-security-title">Security.</h2>
+                <div class="ats-action-item">
+                    <div class="ats-cell-stack">
+                        <h3 class="ats-action-title">Password</h3>
+                        <p class="ats-small ats-muted mb-0">Change the password you sign in with. Your other sessions are signed out.</p>
+                    </div>
+                    <a class="btn btn-outline-secondary" asp-controller="Profile" asp-action="ChangePassword"><span class="ms ms-sm">key</span> Change password</a>
+                </div>
+            </section>
+        </div>
+    }
+    else
+    {
+        <div class="col-lg-5">
+            <section class="ats-card @(u.IsActive ? "ats-danger-zone" : "")" aria-labelledby="user-actions-title">
+                <span class="ats-eyebrow">Access:</span>
+                <h2 class="mt-1 mb-0" id="user-actions-title">@(u.IsActive ? "Danger zone." : "Account access.")</h2>
+                @if (u.IsActive)
+                {
+                    <div class="ats-action-item">
+                        <div class="ats-cell-stack">
+                            <h3 class="ats-action-title">Reset password</h3>
+                            <p class="ats-small ats-muted mb-0">Sets a temporary password and signs them out at once.</p>
+                        </div>
+                        <form asp-action="ResetPassword" asp-route-id="@u.Id" method="post" class="ats-action-form"
+                              hx-confirm="Reset the password for @u.DisplayName? They are signed out at once."
+                              data-confirm-title="Reset password" data-confirm-ok="Reset password" data-confirm-variant="danger">
+                            <label asp-for="Reset.TemporaryPassword" class="form-label"></label>
+                            <div class="input-group">
+                                <input asp-for="Reset.TemporaryPassword" class="form-control" autocomplete="new-password" aria-describedby="reset-password-help" />
+                                <button type="submit" class="btn btn-outline-danger">Reset password</button>
+                            </div>
+                            <div class="form-text" id="reset-password-help">Share it securely; they must change it at their next sign-in.</div>
+                            <span asp-validation-for="Reset.TemporaryPassword" class="text-danger small"></span>
+                        </form>
+                    </div>
+                    <div class="ats-action-item">
+                        <div class="ats-cell-stack">
+                            <h3 class="ats-action-title">Deactivate user</h3>
+                            <p class="ats-small ats-muted mb-0">They are signed out at once and cannot sign in until reactivated.</p>
+                        </div>
+                        <form asp-action="Deactivate" asp-route-id="@u.Id" method="post"
+                              hx-confirm="Deactivate @u.DisplayName? They are signed out at once and cannot sign in until reactivated."
+                              data-confirm-title="Deactivate user" data-confirm-ok="Deactivate" data-confirm-variant="danger">
+                            <button type="submit" class="btn btn-outline-danger"><span class="ms ms-sm">person_off</span> Deactivate</button>
+                        </form>
+                    </div>
+                }
+                else
+                {
+                    <div class="ats-action-item">
+                        <div class="ats-cell-stack">
+                            <h3 class="ats-action-title">Reactivate user</h3>
+                            <p class="ats-small ats-muted mb-0">They can sign in again with their existing password.</p>
+                        </div>
+                        <form asp-action="Reactivate" asp-route-id="@u.Id" method="post"
+                              hx-confirm="Reactivate @u.DisplayName? They can sign in again with their existing password."
+                              data-confirm-title="Reactivate user" data-confirm-ok="Reactivate">
+                            <button type="submit" class="btn btn-outline-secondary"><span class="ms ms-sm">person_check</span> Reactivate</button>
+                        </form>
+                    </div>
+                }
+            </section>
+        </div>
+    }
+</div>

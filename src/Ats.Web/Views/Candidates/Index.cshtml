@@ -16,7 +16,7 @@
 }
 
 <div class="ats-toolbar mb-3">
-    <form asp-action="Index" method="get" class="ats-search" style="width:300px" role="search">
+    <form asp-action="Index" method="get" class="ats-search ats-search--md" role="search">
         <span class="ms ms-sm ats-muted">search</span>
         <input name="q" value="@Model.Q" placeholder="Name or email" aria-label="Search candidates" />
     </form>
@@ -31,27 +31,29 @@
     {
         @* A11Y-1: see Jobs/Index — the name below is the row's real link. *@
         <div class="ats-trow ats-trow--link ats-table--candidates">
-            <span class="d-flex align-items-center gap-2" style="min-width:0">
+            <span class="d-flex align-items-center gap-2 ats-min-w-0">
                 <partial name="Partials/_Avatar" model="new AvatarModel(c.FullName, 2.125)" />
                 <span class="ats-cell-stack">
                     <a class="ats-cell-title ats-row-link" asp-action="Edit" asp-route-id="@c.Id">@c.FullName</a>
                     @if (c.LatestJobTitle is not null) { <span class="ats-cell-sub">@c.LatestJobTitle</span> }
                 </span>
             </span>
-            <span class="ats-cell-stack ats-small">
-                <span>@c.Email</span>
+            <span class="ats-cell-stack ats-small ats-card-line">
+                <span class="ats-truncate" title="@c.Email">@c.Email</span>
                 <span class="ats-muted">@(string.IsNullOrEmpty(c.Phone) ? "No phone" : c.Phone)</span>
             </span>
-            <span><partial name="Partials/_SourceChip" model="new SourceChipModel(c.LatestOrigin)" /></span>
-            <span class="ats-cell-stack">
-                @if (c.LatestStageName is not null)
-                {
-                    <span class="ats-small">@c.LatestStageName</span>
-                    @if (c.ApplicationCount > 1) { <span class="ats-faint ats-xsmall">+@(c.ApplicationCount - 1) more</span> }
-                }
-                else { <span class="ats-faint ats-small">No applications</span> }
+            <span class="ats-meta">
+                <span><partial name="Partials/_SourceChip" model="new SourceChipModel(c.LatestOrigin)" /></span>
+                <span class="ats-cell-stack">
+                    @if (c.LatestStageName is not null)
+                    {
+                        <span class="ats-small">@c.LatestStageName</span>
+                        @if (c.ApplicationCount > 1) { <span class="ats-faint ats-xsmall">+@(c.ApplicationCount - 1) more</span> }
+                    }
+                    else { <span class="ats-faint ats-small">No applications</span> }
+                </span>
+                <span class="ats-small ats-muted @(c.LastActivity is null ? "ats-meta-empty" : null)">@(c.LastActivity is null ? "—" : RelativeTime.Long(c.LastActivity, now))</span>
             </span>
-            <span class="ats-small ats-muted">@(c.LastActivity is null ? "—" : RelativeTime.Long(c.LastActivity, now))</span>
             <span class="d-flex justify-content-end ats-row-actions">
                 @if (canManage)
                 {

@@ -118,6 +118,12 @@ The auth cookie is `HttpOnly` + `Secure`, so test over https.
   Jobs, Candidates, and the delivery log follow this with a GET search/filter form (page size 20). Build
   the `PagerModel` in a `@{ }` block and pass it as `model`; Razor cannot parse an object initializer
   inline in a tag-helper attribute.
+- `_Pager` builds each link with `asp-all-route-data` from `Query` plus the target `page`. Do not put
+  `asp-route-page` beside it: `asp-all-route-data` replaces the route values set next to it, which once
+  dropped the page number on every paged screen. Controllers clamp with `Paging.Clamp` (see architecture), so
+  the pager never shows a page outside 1..TotalPages.
+- A list with search and a status filter (Jobs, Users) renders `.ats-search.ats-search--md` plus filter chips
+  that keep `q` across chips; the default chip is not written into the URL.
 - Error pages: `app.UseStatusCodePagesWithReExecute("/Home/Status/{0}")` renders `HomeController.Status`
   (`Views/Home/Status.cshtml`, neutral `_AuthLayout`) for 404/403; `UseExceptionHandler` renders
   `Views/Shared/Error.cshtml` for 500. The neutral layout serves both back-office and careers visitors.
@@ -155,7 +161,8 @@ to the fixed axes the `.ms` class renders at and containing only the ~50 icons t
 **After adding a new icon, regenerate the subset:** `py tools/subset-material-symbols.py`. That script
 scans every view + the icon-name literals in `SidebarNavViewComponent` and `DashboardService`,
 intersects with the ligatures the full font defines, rewrites the subset + `tools/material-symbols.icons.txt`,
-and fails if any used icon would be missing. LibMan still restores the full `material-symbols-outlined.woff2`
+and fails if any used icon would be missing. A quoted word followed by a colon (a JSON key, e.g. in
+`data-bs-popper-config`) is ignored by the scan, never treated as an icon. LibMan still restores the full `material-symbols-outlined.woff2`
 as the re-subset source (not served at runtime).
 
 ## Timestamps (Phase 3, DATA-4)
@@ -242,6 +249,39 @@ downloads; the sign-out form, whose response is the login page on `_AuthLayout`)
 falls back to a real navigation for any non-HTML response, any page lacking `#ats-content`, and any
 non-2xx or network error — so a boosted click can never silently do nothing.
 
+## Phone navigation (< 768px) — enforced by `tests/e2e/mobile-nav.spec.ts`
+Phones get a compact app bar instead of a screen of links before the content; tablet and desktop are
+unchanged.
+- **App bar** = `.ats-sidebar-bar` in `Components/SidebarNav`: brand mark, "ATS" and the tenant name
+  (`.ats-brand-tenant`; the tenant chip is `d-none d-md-flex`), and the menu button `.ats-menu-btn`
+  (`aria-label="Open navigation"`, `aria-controls="ats-nav-panel"`, `aria-expanded`).
+- **Panel** = `#ats-nav-panel`, a Bootstrap `.offcanvas-md offcanvas-start` wrapping the nav and the user
+  block (name, role, Change password, Sign out) plus a header with a close button. Bootstrap does the
+  focus move, focus trap, Escape, backdrop click, body scroll lock, focus return to the menu button and
+  reduced motion. No custom modal code. The close button needs `data-bs-target="#ats-nav-panel"`:
+  Bootstrap's dismiss lookup only finds `.offcanvas`, not `.offcanvas-md`.
+- **From 768px** `.ats-sidebar-bar`, the panel and its `.offcanvas-body` are `display: contents`, so
+  their children lay out in the sidebar exactly as before. The tablet row-wrap rules are scoped to
+  `768px-991.98px`, so on phones the panel shows the desktop column nav.
+- **htmx:** `#ats-sidebar` is re-rendered out of band on every boosted navigation and restored from a
+  snapshot on Back/Forward. An open panel is then replaced while Bootstrap's scroll lock and focus trap
+  stay behind, and its backdrop (appended to the panel's parent, so inside `.ats-shell`) comes back with
+  a snapshot. `site.js` hides the replaced instance after the swap or restore, strips `show`/`role`/
+  `aria-modal` from a restored panel, removes restored backdrops, keeps `aria-expanded` in step (Bootstrap
+  offcanvas does not) and moves focus to the new page's `h1`. Keep the panel inside `#ats-sidebar`; do
+  not move the backdrop or add a second off-canvas system.
+- **Forced password change:** the panel holds only the user block (no `nav`), and the menu button stays,
+  so Sign out is one tap away on every page.
+- **Top bar on phones** is one row (breadcrumb, search button, bell): the search field is a Bootstrap
+  `.collapse` (`#ats-topbar-search`) opened by `.ats-topbar-search-toggle`, which `site.js` focuses on
+  open; from 768px it is always shown. `Ctrl/Cmd+K` opens the collapse when the field is folded (the same
+  `shown.bs.collapse` handler then focuses it). `Escape` folds the open search row and returns focus to the
+  toggle. Together this puts `#ats-content` about 120px from the top at 375px.
+- **Sidebar icon buttons** (menu, close, Change password, Sign out) share `.ats-sidebar-icon-btn`
+  (44x44px on phones).
+- **Resizing** across 768px with the panel open: Bootstrap hides the `.offcanvas-md` itself (backdrop and
+  scroll lock go), so the desktop sidebar comes back clean; the spec locks it.
+
 ## Confirm dialog — enforced by `tests/e2e/confirm-modal.spec.ts`
 One Bootstrap modal, `#ats-confirm` in `_Layout` (outside `#ats-content`, so a swap never removes
 it), serves every `hx-confirm`. `site.js` handles `htmx:confirm`: only when `evt.detail.question` is
@@ -290,11 +330,51 @@ returns to the trigger on close (a hidden dropdown item hands it to its menu tog
   fix on the Pipelines page. Truncate with ellipsis and a `title`, never by letting text run under
   a neighbour.
 - **A grid that cannot collapse scrolls in its own container** (`.table-responsive`), never the page.
+- **Phone tap targets are 44x44px** (WCAG 2.2 AA minimum 24px elsewhere), set in the "Touch targets"
+  blocks at the end of `ats-components.css` and `ats-shell.css` under `max-width: 767.98px`; desktop
+  density is untouched. A new shared control (button, chip, icon link, pager) joins those blocks.
+  `.ats-row-link` grows its box with padding cancelled by a negative margin, so rows do not get taller.
+  A standalone arrow link takes `.ats-link-hit`; a lone checkbox in a cell is wrapped in `.ats-check-hit`.
+- **Values that must not wrap (emails) use `.ats-truncate` plus a `title`; names wrap** (`.ats-cell-title`
+  has `overflow-wrap: anywhere`). Pick by cell type, never leave text overflowing its box.
+- **Never put a Bootstrap `.row` inside a form that is not a column**: its negative margins poke 12px out.
+  Use `.ats-form-grid` for two-up field rows.
+- **List-page search boxes** are `.ats-search.ats-search--md` (full width on phones), never an inline width.
+- **Spacing is on a 4px scale** (`.5rem`, `.75rem`, `1rem`, `1.5rem`). Remaining off-scale padding and
+  margins in the audit are Bootstrap's own (`.form-control` 6px padding, `.form-control-color`) and
+  browser defaults. The audit does not measure `gap`: older shared rules (`.ats-toolbar`, the sidebar
+  brand and nav) still use `.625rem` gaps. Use a Bootstrap `gap-*` utility in a view, never an inline `gap`.
+- `tests/e2e/layout-gates.spec.ts` locks clipped text, escaping rows, phone tap targets and the dashboard
+  card columns; `layout-audit.spec.ts` stays the diagnostic sweep (`AUDIT_JSON=<file>` dumps every finding).
+  The tap-target gate covers content controls (`.ats-row-link`, `.btn`, filter chips, pager, `.ats-icon-hit`,
+  `.ats-check-hit`, `.ats-link-hit`, all inside `main`), the shell (top-bar icon buttons, crumb link, menu
+  button), and with the phone panel open every link and button in it, on five pages. Each of the three
+  groups must measure at least one control per page, so shell controls cannot carry a page with none.
+
+## Edit page with a danger zone (Users/Edit is the reference)
+A record that has several actions gets one Edit page instead of a row menu and a page per action:
+- **List row:** one Edit icon link (`ms` `edit`, `aria-label="Edit <name>"`, `.ats-icon-hit`) on every row;
+  the name stays the row link. A row menu is only worth it with two or more items, and is rendered only when
+  the user holds the permission for them (Jobs: `jobs.manage`), otherwise the actions cell is empty.
+- **Header card** (`.ats-user-head`): avatar, name, "You" chip when it is your own record, status pill, role,
+  added date.
+- **Details card:** the editable form, with the Save button and Cancel. Fields a user may not change on their
+  own record are shown read-only in a `<dl class="ats-field-list">` with a one-line reason.
+- **Danger zone** (`.ats-card.ats-danger-zone`, one `.ats-action-item` per action): destructive actions,
+  each a form with `hx-confirm`, `data-confirm-title`, `data-confirm-ok` and `data-confirm-variant="danger"`.
+  The reversible counterpart (Reactivate) sits in a plain "Account access" card. On your own record the
+  card is replaced by a "Security" card (link to Change password).
+- **PRG everywhere:** every POST redirects back to Edit with a flash that names the record; an error goes in
+  `TempData["Error"]`, never a secret. A validation error on the main form redisplays the page.
+- **Forced password change shell:** a user held on Change password (`must_change_password` claim) gets no
+  nav links, no global search and no notifications; the sidebar and top bar view components decide, not each
+  view. Locked by `tests/e2e/users.spec.ts`.
 
 ## Breadcrumbs (Phase 9)
 `TopBarViewComponent` maps controller -> (group, page). On any action other than `Index` it also
 emits a **link back to that section**, so a sub-page has a way out that is not the browser Back
-button. A section index emits no link to itself.
+button. A section index emits no link to itself. Sections with no Index page (Applications, Profile) get no
+back link (`NoIndex` in `TopBarViewComponent`). Users sits under `Admin`; Profile uses the `Account` crumb.
 
 ## Tables (Phase 5, UX-1)
 Column templates are CSS classes (`.ats-table--jobs`, `--candidates`, `--deliveries`, `--org`) applied
@@ -302,6 +382,22 @@ to both the `.ats-thead` and each `.ats-trow`. **Never set `grid-template-column
 style beats every media query, which is what made the tables impossible to make responsive. Under
 768px the templates collapse to a single column and the header row is hidden. Adding a screen means
 adding one class next to the others, not a `style=` attribute.
+
+**Compact phone cards** (`--jobs`, `--candidates`, `--users`, under 768px): the row becomes a wrapping flex
+row, built from **classes, not column positions** (no `nth-child`). Line 1 is the row's first cell (avatar +
+name + sub line) with its last cell (row actions) on the right. Below it:
+- `.ats-card-line`: a cell that keeps one unwrapped line of its own (Candidates email · phone).
+- `.ats-meta`: wraps the fact cells into one wrapping line. It is `display: contents` from 768px up, so
+  its children stay grid columns and desktop/tablet are unchanged; it can only wrap *adjacent* columns.
+  The middle dot (`content: "·" / ""`, not announced) is drawn **after** a fact that has a visible fact
+  following it, so a wrapped line never starts with a dot.
+- `.ats-meta-empty` on a fact with no value (the "—"): kept on desktop for column alignment, hidden on
+  phones together with its dot.
+- `.ats-meta-full` on a fact that needs its own full-width line at the end (Jobs pipeline bar); it gets
+  no dot.
+A new column goes inside `.ats-meta` (or between the first and last cell with one of these classes); a
+table joining the pattern adds its class to the block in `ats-components.css`. Locked by
+`tests/e2e/layout-gates.spec.ts` (no line starts with a separator, no empty value shown on phones).
 
 **Row menus.** A `.dropdown` inside an `.ats-trow--link` row must set
 `data-bs-popper-config='{"strategy":"fixed"}'` on its toggle, or `.ats-card-flush`'s overflow clips

@@ -161,6 +161,7 @@
 }
 
 .ats-sidebar-user {
+  margin-top: auto; /* stays at the bottom when the nav is hidden (forced password change) */
   border-top: 1px solid var(--ats-sidebar-border);
   padding-top: .75rem;
   display: flex;
@@ -177,7 +178,7 @@
   color: var(--ats-sidebar-muted);
 }
 
-.ats-sidebar-signout {
+.ats-sidebar-icon-btn {
   background: transparent;
   border: 0;
   color: var(--ats-sidebar-muted);
@@ -186,7 +187,7 @@
   display: inline-flex;
 }
 
-.ats-sidebar-signout:hover { background: var(--ats-sidebar-hover); color: var(--ats-sidebar-fg); }
+.ats-sidebar-icon-btn:hover { background: var(--ats-sidebar-hover); color: var(--ats-sidebar-fg); }
 
 /* ---------- Main column ---------- */
 
@@ -332,14 +333,6 @@
     border-bottom: 1px solid var(--ats-sidebar-border);
   }
 
-  .ats-nav { flex-direction: row; flex-wrap: wrap; gap: .5rem; overflow: visible; }
-  .ats-nav-group { flex-direction: row; flex-wrap: wrap; gap: .25rem; }
-  .ats-nav-label { display: none; }
-  .ats-nav a.active::before { display: none; }
-
-  .ats-tenant-chip { width: auto; flex: 1 1 12rem; }
-  .ats-sidebar-user { border-top: 0; padding-top: 0; }
-
   /* Overriding the token keeps the top bar and the content in step at narrow widths too. */
   :root { --ats-gutter: 1rem; }
 
@@ -348,6 +341,81 @@
 
   .ats-content { padding: 1rem var(--ats-gutter) 3rem; }
   .ats-drawer { width: 100%; }
+}
+
+/* Tablets: the sidebar wraps into a horizontal bar of links. */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .ats-nav { flex-direction: row; flex-wrap: wrap; gap: .5rem; overflow: visible; }
+  .ats-nav-group { flex-direction: row; flex-wrap: wrap; gap: .25rem; }
+  .ats-nav-label { display: none; }
+  .ats-nav a.active::before { display: none; }
+
+  .ats-tenant-chip { width: auto; flex: 1 1 12rem; }
+  .ats-sidebar-user { border-top: 0; padding-top: 0; }
+}
+
+/* From 768px the phone app bar row and the nav panel wrapper are invisible to layout, so their
+   children sit in the sidebar exactly as before. The search field is always shown. */
+@media (min-width: 768px) {
+  .ats-sidebar-bar,
+  .ats-sidebar .ats-nav-panel,
+  .ats-sidebar .ats-nav-panel > .offcanvas-body { display: contents; }
+
+  .ats-topbar .ats-topbar-search.collapse:not(.show) { display: block; }
+}
+
+/* ---------- Phones: app bar + navigation panel ----------
+   The sidebar shrinks to an app bar (brand, tenant, menu button). The nav and the user block live in
+   #ats-nav-panel, a Bootstrap .offcanvas-md that slides in from the left; Bootstrap supplies the
+   focus trap, Escape, backdrop and scroll lock, and drops the transition for reduced motion. */
+@media (max-width: 767.98px) {
+  .ats-sidebar { flex-wrap: nowrap; padding: .5rem var(--ats-gutter); }
+
+  .ats-sidebar-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .ats-brand { padding: 0; min-width: 0; }
+
+  .ats-brand-tenant {
+    font-size: .75rem;
+    color: var(--ats-sidebar-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ats-menu-btn { color: var(--ats-sidebar-fg); flex: none; }
+
+  .ats-nav-panel {
+    --bs-offcanvas-width: min(20rem, 85vw);
+    --bs-offcanvas-bg: var(--ats-sidebar-bg);
+    --bs-offcanvas-color: var(--ats-sidebar-fg);
+    --bs-offcanvas-border-color: var(--ats-sidebar-border);
+    --bs-offcanvas-padding-x: .75rem;
+    --bs-offcanvas-padding-y: .75rem;
+  }
+
+  .ats-nav-panel-head { justify-content: space-between; border-bottom: 1px solid var(--ats-sidebar-border); }
+
+  .ats-nav-panel-title {
+    padding-left: .5rem;
+    font-family: var(--no-font-display);
+    font-weight: 800;
+    font-size: 1rem;
+    color: var(--ats-sidebar-fg);
+  }
+
+  .ats-nav-panel > .offcanvas-body { display: flex; flex-direction: column; gap: 1.25rem; }
+
+  /* One row: breadcrumb, search toggle, bell. The search field opens on a second row. */
+  .ats-topbar { gap: .5rem; padding: .5rem var(--ats-gutter); }
+  .ats-crumbs { flex: 1 1 auto; }
 }
 
 /* Boosted-navigation progress bar (NAV-1 / UX-2). htmx puts .htmx-request on the hx-indicator
@@ -404,3 +472,11 @@
 }
 
 .ats-crumbs a:hover { background: var(--ats-bg); }
+
+/* Phones: the shell's own controls reach 44x44px (nav links, sign-out, bell, breadcrumb parent). */
+@media (max-width: 767.98px) {
+  .ats-nav a { min-height: 2.75rem; }
+  .ats-sidebar-icon-btn { min-width: 2.75rem; min-height: 2.75rem; align-items: center; justify-content: center; }
+  .ats-icon-btn { width: 2.75rem; height: 2.75rem; flex-basis: 2.75rem; }
+  .ats-crumbs a { min-width: 2.75rem; min-height: 2.75rem; justify-content: center; }
+}

@@ -1,0 +1,21 @@
+@model Ats.Web.Models.UserCreateViewModel
+@{
+    ViewData["Title"] = "Add user";
+}
+<form asp-action="Create" method="post" class="col-md-6">
+    <div asp-validation-summary="ModelOnly" role="alert" class="text-danger small mb-2"></div>
+    <div class="mb-3"><label asp-for="DisplayName" class="form-label"></label>
+        <input asp-for="DisplayName" class="form-control" autocomplete="off" /><span asp-validation-for="DisplayName" class="text-danger small"></span></div>
+    <div class="mb-3"><label asp-for="Email" class="form-label"></label>
+        <input asp-for="Email" class="form-control" autocomplete="off" /><span asp-validation-for="Email" class="text-danger small"></span></div>
+    <div class="mb-3"><label asp-for="Role" class="form-label"></label>
+        <select asp-for="Role" asp-items="RoleOptions.For(Model.Role)" class="form-select"></select><span asp-validation-for="Role" class="text-danger small"></span></div>
+    <div class="mb-3"><label asp-for="TemporaryPassword" class="form-label"></label>
+        <input asp-for="TemporaryPassword" class="form-control" autocomplete="new-password" />
+        <div class="form-text">Share it securely; the user must change it when they first sign in.</div>
+        <span asp-validation-for="TemporaryPassword" class="text-danger small"></span></div>
+    <div class="d-flex align-items-center gap-2 border-top pt-3">
+        <button type="submit" class="btn btn-primary">Add user</button>
+        <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a>
+    </div>
+</form>

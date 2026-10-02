@@ -3,6 +3,10 @@
 - Date: 2026-06-29
 - Status: Proposed (awaiting review)
 - Author: Henil Patel (with Claude)
+- Update 1 October 2026: tenant resolution order changed. The slug middleware now runs for signed-in
+  users too, and `Items["TenantId"]` (set only by that middleware) wins over the `tenant_id` claim, so
+  career-site pages always serve the slug tenant. The resolution order described below is historical;
+  see `.claude/rules/multi-tenancy.md`.
 - Related: `2026-06-26-ats-product-design.md` (Sections 5, 9, 11, 12 Phase 2; Appendix C),
   `2026-06-26-ats-phase-1-core-ats-design.md` (entities and ApplicationService reused).
 

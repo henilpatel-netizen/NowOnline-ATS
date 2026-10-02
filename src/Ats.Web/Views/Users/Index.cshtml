@@ -1,0 +1,80 @@
+@model Ats.Web.Models.UsersIndexViewModel
+@using Ats.Application.Users
+@using Ats.Web.Models.Shared
+@{
+    ViewData["Title"] = "Users";
+    ViewData["Eyebrow"] = $"{Model.ActiveCount} active:";
+
+    // Active is the default, so its chip carries no status and the URL stays clean.
+    (string Text, UserStatusFilter Val)[] filters =
+    {
+        ("Active", UserStatusFilter.Active), ("Deactivated", UserStatusFilter.Deactivated), ("All", UserStatusFilter.All)
+    };
+    string? StatusParam(UserStatusFilter f) => f == UserStatusFilter.Active ? null : f.ToString();
+    var total = Model.Results.Total;
+}
+
+@section PageActions {
+    <a class="btn btn-primary" asp-action="Create"><span class="ms ms-sm">person_add</span> Add user</a>
+}
+
+<div class="ats-toolbar mb-3">
+    <form asp-action="Index" method="get" class="ats-search ats-search--md" role="search">
+        @if (StatusParam(Model.Status) is { } st) { <input type="hidden" name="status" value="@st" /> }
+        <span class="ms ms-sm ats-muted">search</span>
+        <input name="q" value="@Model.Q" placeholder="Name or email" aria-label="Search users" />
+    </form>
+    <div class="ats-filter-group">
+        @foreach (var f in filters)
+        {
+            var active = f.Val == Model.Status;
+            <a class="@(active ? "active" : "")" aria-current="@(active ? "page" : null)"
+               asp-action="Index" asp-route-status="@StatusParam(f.Val)" asp-route-q="@Model.Q">@f.Text</a>
+        }
+    </div>
+    <span class="ms-auto ats-muted ats-small">@total @(total == 1 ? "user" : "users")</span>
+</div>
+
+<div class="ats-card-flush">
+    <div class="ats-thead ats-table--users">
+        <span>User</span><span>Role</span><span>Status</span><span>Added</span><span></span>
+    </div>
+    @foreach (var u in Model.Results.Items)
+    {
+        var isMe = u.Id == Model.CurrentUserId;
+        var status = new StatusPillModel(u.IsActive ? "Active" : "Deactivated", u.IsActive ? PillTone.Success : PillTone.Neutral);
+        @* A11Y-1: the name is the row's real link; its overlay makes the whole row open Edit. *@
+        <div class="ats-trow ats-trow--link ats-table--users">
+            <span class="d-flex align-items-center gap-2 ats-min-w-0">
+                <partial name="Partials/_Avatar" model="new AvatarModel(u.DisplayName, 2.125)" />
+                <span class="ats-cell-stack">
+                    <span class="d-flex align-items-center gap-2 ats-min-w-0">
+                        <a class="ats-cell-title ats-row-link text-truncate" asp-action="Edit" asp-route-id="@u.Id" title="@u.DisplayName">@u.DisplayName</a>
+                        @if (isMe) { <span class="ats-chip ats-chip--neutral">You</span> }
+                    </span>
+                    <span class="ats-cell-sub"><span class="ats-truncate" title="@u.Email">@u.Email</span></span>
+                </span>
+            </span>
+            <span class="ats-meta">
+                <span class="ats-small">@u.Role</span>
+                <span><partial name="Partials/_StatusPill" model="status" /></span>
+                <span class="ats-small ats-muted"><local-time utc="@u.CreatedAt" format="monthday"></local-time></span>
+            </span>
+            <span class="d-flex justify-content-end ats-row-actions">
+                <a class="ms ms-sm ats-faint ats-icon-hit" asp-action="Edit" asp-route-id="@u.Id" aria-label="Edit @u.DisplayName">edit</a>
+            </span>
+        </div>
+    }
+    @if (Model.Results.Items.Count == 0)
+    {
+        <partial name="Partials/_EmptyState" model="@(new EmptyStateModel("group", "No users match.", "Try clearing the search or the filter."))" />
+    }
+</div>
+
+@{
+    var uq = new Dictionary<string, string>();
+    if (!string.IsNullOrEmpty(Model.Q)) uq["q"] = Model.Q;
+    if (StatusParam(Model.Status) is { } sp) uq["status"] = sp;
+    var pager = new Ats.Web.Models.PagerModel { Page = Model.Results.Page, TotalPages = Model.Results.TotalPages, Action = "Index", Query = uq };
+}
+<partial name="_Pager" model="pager" />

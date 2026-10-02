@@ -9,7 +9,7 @@ namespace Ats.Tests.Authorization;
 public class RolePermissionsTests
 {
     private static readonly string[] ReadOnly =
-        { AtsPermission.DashboardView, AtsPermission.JobsView, AtsPermission.CandidatesView };
+        { AtsPermission.DashboardView, AtsPermission.JobsView, AtsPermission.CandidatesView, AtsPermission.ProfileManage };
 
     public static TheoryData<string, string[]> Expected => new()
     {
@@ -48,6 +48,17 @@ public class RolePermissionsTests
     [Fact]
     public void Every_permission_is_granted_to_some_role() =>
         Assert.All(AtsPermission.All, p => Assert.NotEmpty(RolePermissions.RolesWith(p)));
+
+    [Fact]
+    public void Every_role_can_manage_its_own_profile() =>
+        Assert.All(AtsRole.All, r => Assert.True(RolePermissions.Has(r, AtsPermission.ProfileManage), r));
+
+    [Fact]
+    public void HiringManager_is_not_assignable_until_it_is_scoped()
+    {
+        Assert.DoesNotContain(AtsRole.HiringManager, AtsRole.Assignable);
+        Assert.Equal(new[] { AtsRole.Owner, AtsRole.Recruiter, AtsRole.Viewer }, AtsRole.Assignable);
+    }
 
     [Fact]
     public void Permission_names_are_unique() =>
