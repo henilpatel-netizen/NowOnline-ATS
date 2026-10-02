@@ -16,10 +16,46 @@ superpowers wherever they differ. You are the lead: you dispatch, judge and veri
 - No argument, or no plan exists yet: write one first with `superpowers:writing-plans` into
   `docs/plans/YYYY-MM-DD-<topic>.md`, show it to the developer, and wait for approval.
 
+## Test strategy (who runs what, and when)
+The full Playwright suite takes minutes and grows with every plan, so it runs where it adds information,
+never as a habit. Coverage is not reduced: every task is browser-verified, shared changes get the full
+suite at once, and every plan ends with a full-suite gate.
+
+| When | Who | Runs |
+|---|---|---|
+| During a task | `ats-implementer` | build, unit tests, format, plus the **targeted specs** you name in the dispatch (only when the task touches UI or a browser flow). Never the full suite. |
+| After a task (UI true) | `e2e-verifier` | the targeted specs; **new or changed specs twice** (flakiness); an existing failing test re-run once |
+| After a task that touched a **shared file** | `e2e-verifier` | the **full suite once**, in addition |
+| After the last task (any plan) | `e2e-verifier` | the **full suite once, always** (plan gate, before the whole-change review) |
+
+**Shared files:** `Views/Shared/**` (layouts, partials, `_Pager`, view components), `ViewComponents/**`,
+`wwwroot/js/**`, `wwwroot/css/**`, `Program.cs`, `Web/Identity/**`, `Web/Middleware/**`, `Web/Tenancy/**`,
+any `*ListQuery`/`Application/Common/**`, and authorization policies. A regression in these can break
+screens the task never touched, so it is caught in the task that caused it.
+
+**Picking targeted specs:** use the spec map in `.claude/agents/e2e-verifier.md`, plus every spec that
+references a changed page, controller or selector (`grep -l` the route or class in `tests/e2e`). When in
+doubt, include the spec; a few extra specs cost seconds, a missed one costs a late fix.
+
+**Environment (saves blocked runs):** before Playwright, make sure nothing stale listens on port 7044
+(the suite reuses a running server and would test old code). LocalDB: `sqllocaldb start MSSQLLocalDB`;
+if it fails with "SQL Server process failed to start", an instance from another Windows session holds it:
+`sqllocaldb stop MSSQLLocalDB -k`, stop any leftover `sqlservr.exe`, start again (developer-approved).
+Stop LocalDB again when the plan is finished.
+
+## Scope and pace
+- **Model:** follow the rule in step 1. Do not upgrade a UI/docs/tests task to `opus` because the developer
+  asked for polish; quality of UI work comes from the brief and the reviews, not the model tier.
+- **New scope found mid-run** (polish ideas, unrelated bugs) goes into a follow-up task at the end of the
+  plan, or a separate plan, unless it blocks the current task or is a security/tenancy defect. Tell the
+  developer what you added and why.
+- **Review findings:** blocking findings go through the fix loop (step 4). Minor, non-blocking findings
+  are collected and fixed once in a "review follow-ups" task after the last task, not one round per task.
+
 ## 0. Prepare
 1. Read the plan (or item) once. Extract each task's **full text**; subagents never read the plan file.
 2. Note which domain skill each task needs: entities, pipeline, career-site, integration, audit, ui,
-   multitenancy, architecture.
+   multitenancy, architecture. Note the targeted specs each task needs and whether it touches a shared file.
 3. Create a todo per task. Record `git status --short` as the baseline so you can tell the task's changes
    apart from what was already dirty.
 
@@ -30,6 +66,8 @@ Task N: <title>
 <full task text, acceptance criteria and verification step, pasted verbatim>
 Context: <where it fits, what earlier tasks changed, relevant files if known>
 Domain skill to read: .claude/skills/<domain>/SKILL.md
+Verify: dotnet build/test/format; Playwright: <targeted spec files, or "none (no UI or browser flow)">.
+Do not run the full Playwright suite; the e2e-verifier does that.
 ```
 Model: the agent defaults to `sonnet`. Pass `model: "opus"` on the Agent call when the task touches
 authentication or sessions, authorization policies, tenancy (query filter, interceptor, tenant context,
@@ -49,7 +87,9 @@ Handle the status it returns:
 ## 3. Review (parallel: one message, several Agent calls)
 - `tenancy-guard`: always, when **Data** is true, or for any change under `src/` in review mode.
 - `ats-conventions-reviewer`: always. Pass the full task text so it can check spec compliance.
-- `e2e-verifier`: only when **UI** is true. Pass the changed file list.
+- `e2e-verifier`: when **UI** is true, or when any shared file changed. Pass the changed file list, the
+  targeted specs, which specs are new or changed (run twice), and whether a shared file changed (then the
+  full suite once as well).
 - `pr-review-toolkit:silent-failure-hunter`: only when `Ats.Worker`, `Infrastructure/Integration` or any
   outbox/retry/HTTP-client code changed. Tell it to read `.claude/skills/integration/SKILL.md` first.
 
@@ -57,14 +97,17 @@ Give each reviewer the list of changed files and the task text; they read the di
 
 ## 4. Fix loop (maximum 2 rounds)
 Merge the findings. Drop any you can disprove by reading the code. Send the rest back to
-`ats-implementer` (same model as the task's first run) as one list with `path:line`, then re-run **only** the reviewers that failed. After
-2 rounds still failing: stop and hand the open findings to the developer.
+`ats-implementer` (same model as the task's first run) as one list with `path:line`, then re-run **only** the
+reviewers that failed. A fix round's Playwright check is the targeted specs for what the fix touched (plus the
+full suite if the fix touched a shared file). Minor findings go to the end-of-plan follow-ups (see "Scope and
+pace"). After 2 rounds still failing: stop and hand the open findings to the developer.
 
 ## 5. Definition of done (you run these yourself; never accept a report as evidence)
 - `dotnet build Ats.slnx`: 0 errors, no warnings the change introduced
 - `dotnet test Ats.slnx`: green
 - `dotnet format Ats.slnx --verify-no-changes`: clean
-- `TENANCY: PASS` (when run), `CONVENTIONS: PASS`, `E2E: PASS` (when UI)
+- `TENANCY: PASS` (when run), `CONVENTIONS: PASS`, `E2E: PASS` (when UI or a shared file changed: targeted
+  specs, plus the full suite for shared files)
 - Migration added: the file exists, and the `database update` command is in the close-out
 
 Anything missing means the task is not done. Say so plainly; never soften a failure.
@@ -76,7 +119,7 @@ Anything missing means the task is not done. Say so plainly; never soften a fail
 ```
 Task N: <title> - READY FOR DEVELOPER REVIEW
 Files: <list>
-Evidence: build <warnings>, tests <passed/total>, format clean, tenancy PASS, conventions PASS, e2e <PASS|n/a>
+Evidence: build <warnings>, tests <passed/total>, format clean, tenancy PASS, conventions PASS, e2e <targeted n/n [+ full n/n] | n/a>
 Agent runs: <count> (implementer <n>, reviews <n>), review rounds: <n>
 Implementer model: <sonnet | opus> (<reason, e.g. "touches session validation">)
 Suggested commit: <type(scope): summary>
@@ -84,9 +127,14 @@ Manual commands: <migration apply / anything the guard blocked, or "none">
 ```
 
 ## After the last task
-For a plan with 3 or more tasks, dispatch `superpowers:code-reviewer` once on the whole change (pass the
-plan path and the list of changed files; there are no commit SHAs because we do not commit). Then give one
-combined summary. **Stop there.** Do not commit, stage, stash, branch, merge or open a PR, and do not use
+1. **Review follow-ups:** if minor findings were collected, run them as one more task (steps 1-6).
+2. **Full-suite gate (always, any plan size):** dispatch `e2e-verifier` for the full Playwright suite once.
+   A failure: re-run that single test once to rule out flakiness; a real failure goes to `ats-implementer`
+   with the likely causing task's context, then the full suite runs again. The plan is not done until it is green.
+3. For a plan with 3 or more tasks, dispatch `superpowers:code-reviewer` once on the whole change (pass the
+   plan path and the list of changed files; there are no commit SHAs because we do not commit). Blocking
+   findings get one fix task (then targeted specs, plus the full suite if shared files changed).
+4. Give one combined summary, including the full-suite result (`e2e full n/n`). **Stop there.** Do not commit, stage, stash, branch, merge or open a PR, and do not use
 `superpowers:finishing-a-development-branch`. The developer takes it from here.
 
 ## Never

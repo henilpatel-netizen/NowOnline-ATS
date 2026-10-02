@@ -28,6 +28,10 @@ specific questions. Do not guess.
    - `dotnet build Ats.slnx` (0 new warnings)
    - `dotnet test Ats.slnx`
    - `dotnet format Ats.slnx` then `dotnet format Ats.slnx --verify-no-changes`
+   - Playwright: only the spec files the lead names in "Verify" (`npx playwright test <specs> --reporter=line`),
+     plus any spec you add or change. Do not run the full suite; the `e2e-verifier` runs it where needed.
+     If the lead names none and you changed UI, run `smoke.spec.ts` and the spec for the page you touched.
+     Before running, make sure nothing stale listens on port 7044; LocalDB recovery: see `.claude/skills/ats-ship/SKILL.md`.
 4. Schema change: create the migration file only
    (`dotnet ef migrations add <PascalName> --project src/Ats.Infrastructure --startup-project src/Ats.Web --context AtsDbContext`).
    Never apply it.
