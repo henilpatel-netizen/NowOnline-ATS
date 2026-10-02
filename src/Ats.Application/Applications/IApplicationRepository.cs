@@ -5,6 +5,7 @@ namespace Ats.Application.Applications;
 public interface IApplicationRepository
 {
     Task<Job?> GetJobAsync(int jobId, CancellationToken ct = default);
+    Task<bool> IsJobAssignedToAsync(int jobId, int userId, CancellationToken ct = default);
     Task<Dictionary<int, DateTimeOffset>> LatestEventTimesForJobAsync(int jobId, CancellationToken ct = default);
     Task<List<PipelineStage>> GetStagesForJobAsync(int jobId, CancellationToken ct = default);
     Task<List<JobApplication>> ListForJobAsync(int jobId, CancellationToken ct = default);

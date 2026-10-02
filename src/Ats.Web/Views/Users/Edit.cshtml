@@ -1,9 +1,16 @@
 @model Ats.Web.Models.UserEditPageViewModel
 @using Ats.Web.Models.Shared
+@using Ats.Domain.Enums
 @{
     ViewData["Title"] = "Edit user";
     var u = Model.User;
     var status = new StatusPillModel(u.IsActive ? "Active" : "Deactivated", u.IsActive ? PillTone.Success : PillTone.Neutral);
+    PillTone JobTone(JobStatus s) => s switch
+    {
+        JobStatus.Published => PillTone.Success,
+        JobStatus.Closed => PillTone.Neutral,
+        _ => PillTone.Warning
+    };
 }
 
 <section class="ats-card ats-user-head mb-3" aria-label="User summary">
@@ -16,7 +23,7 @@
         <span class="ats-small ats-muted text-break">@u.Email</span>
         <div class="d-flex align-items-center gap-2 flex-wrap mt-1">
             <partial name="Partials/_StatusPill" model="status" />
-            <span class="ats-chip ats-chip--info">@u.Role</span>
+            <span class="ats-chip ats-chip--info">@RoleOptions.Label(u.Role)</span>
             <span class="ats-xsmall ats-muted">Added <local-time utc="@u.CreatedAt" format="date"></local-time></span>
         </div>
     </div>
@@ -38,7 +45,7 @@
                         <dt class="form-label">Email</dt>
                         <dd class="text-break">@u.Email</dd>
                         <dt class="form-label">Role</dt>
-                        <dd>@u.Role</dd>
+                        <dd>@RoleOptions.Label(u.Role)</dd>
                     </dl>
                     <p class="form-text d-flex align-items-center gap-1 mb-3"><span class="ms ms-sm">lock</span> Your role and email can only be changed by another Owner.</p>
                 }
@@ -130,6 +137,32 @@
                             <button type="submit" class="btn btn-outline-secondary"><span class="ms ms-sm">person_check</span> Reactivate</button>
                         </form>
                     </div>
+                }
+            </section>
+        </div>
+    }
+
+    @if (Model.AssignedJobs is { } assignedJobs)
+    {
+        <div class="col-12">
+            <section class="ats-card" aria-labelledby="user-jobs-title">
+                <span class="ats-eyebrow">Hiring team:</span>
+                <h2 class="mt-1 mb-0" id="user-jobs-title">Assigned jobs.</h2>
+                @if (assignedJobs.Count == 0)
+                {
+                    <p class="ats-small ats-muted mt-3 mb-0">Not assigned to any jobs yet.</p>
+                }
+                else
+                {
+                    <ul class="ats-assigned-jobs">
+                        @foreach (var j in assignedJobs)
+                        {
+                            <li class="ats-action-item">
+                                <a class="ats-cell-title ats-link-hit" asp-controller="Board" asp-action="Index" asp-route-jobId="@j.Id">@j.Title</a>
+                                <partial name="Partials/_StatusPill" model="new StatusPillModel(j.Status.ToString(), JobTone(j.Status))" />
+                            </li>
+                        }
+                    </ul>
                 }
             </section>
         </div>

@@ -30,8 +30,14 @@ public sealed class FakeApplicationRepository : IApplicationRepository
     public Task<Job?> GetJobAsync(int jobId, CancellationToken ct = default) =>
         Task.FromResult(Jobs.FirstOrDefault(j => j.Id == jobId));
 
+    public Task<bool> IsJobAssignedToAsync(int jobId, int userId, CancellationToken ct = default) =>
+        Task.FromResult(Jobs.Any(j => j.Id == jobId && !j.IsDeleted && j.HiringManagers.Any(h => h.UserId == userId)));
+
     public Task<Dictionary<int, DateTimeOffset>> LatestEventTimesForJobAsync(int jobId, CancellationToken ct = default) =>
-        Task.FromResult(new Dictionary<int, DateTimeOffset>());
+        Task.FromResult(Events
+            .Where(e => Applications.Any(a => a.Id == e.ApplicationId && a.JobId == jobId))
+            .GroupBy(e => e.ApplicationId)
+            .ToDictionary(g => g.Key, g => g.Max(e => e.OccurredAt)));
 
     public Task<List<PipelineStage>> GetStagesForJobAsync(int jobId, CancellationToken ct = default)
     {
@@ -105,7 +111,7 @@ public sealed class FakeCurrentUser : ICurrentUser
     public int? UserId { get; set; } = 7;
     public string? Name { get; set; } = "Test User";
     public string? Role { get; set; } = "Owner";
-    public bool IsAuthenticated => UserId is not null;
+    public bool IsAuthenticated { get; set; } = true;
 }
 
 public sealed class FakeOutboxEnqueuer : IOutboxEnqueuer
@@ -131,6 +137,7 @@ public sealed class FakeCandidateRepository : ICandidateRepository
 {
     public List<Candidate> Candidates { get; } = new();
     public List<JobApplication> Applications { get; } = new();
+    public List<Job> Jobs { get; } = new();
     public int SaveCount { get; private set; }
     public bool ConcurrencyConflict { get; set; }
     private int _nextId = 100;
@@ -146,6 +153,10 @@ public sealed class FakeCandidateRepository : ICandidateRepository
 
     public Task<List<JobApplication>> ListApplicationsAsync(int candidateId, CancellationToken ct = default) =>
         Task.FromResult(Applications.Where(a => a.CandidateId == candidateId).ToList());
+
+    public Task<bool> HasApplicationOnJobAssignedToAsync(int candidateId, int userId, CancellationToken ct = default) =>
+        Task.FromResult(Applications.Any(a => a.CandidateId == candidateId
+            && Jobs.Any(j => j.Id == a.JobId && !j.IsDeleted && j.HiringManagers.Any(h => h.UserId == userId))));
 
     public Task AddAsync(Candidate candidate, CancellationToken ct = default)
     {

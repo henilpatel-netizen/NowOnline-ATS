@@ -7,15 +7,17 @@ using Microsoft.EntityFrameworkCore;
 namespace Ats.Infrastructure.Jobs;
 
 // Read projection for the jobs list. Filters/paginates on the server, then enriches only the
-// visible page (at most pageSize jobs) with counts and the avatar-stack names.
+// visible page (at most pageSize jobs) with counts and the avatar-stack names. Scoped by IJobScope:
+// every count below is keyed by the visible job ids, so it is scoped too.
 public sealed class JobListQuery : IJobListQuery
 {
     private readonly AtsDbContext _db;
-    public JobListQuery(AtsDbContext db) => _db = db;
+    private readonly IJobScope _scope;
+    public JobListQuery(AtsDbContext db, IJobScope scope) { _db = db; _scope = scope; }
 
     public async Task<PagedResult<JobListItem>> SearchAsync(JobStatus? status, string? search, int page, int pageSize, CancellationToken ct = default)
     {
-        var q = _db.Jobs.AsQueryable();
+        var q = _db.Jobs.VisibleTo(_scope);
         if (status is not null) q = q.Where(j => j.Status == status);
         if (!string.IsNullOrWhiteSpace(search))
         {

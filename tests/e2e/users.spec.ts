@@ -137,9 +137,10 @@ test('the list pages at 20 and the pager keeps the search and the filter', async
   await expect(page.locator('.ats-trow')).toHaveCount(20);
 });
 
-test('owner adds users; HiringManager is not offered', async ({ page }) => {
+test('owner adds users; every role is offered', async ({ page }) => {
   await page.goto('/Users/Create');
-  await expect(page.locator('#Role option')).toHaveText(['Owner', 'Recruiter', 'Viewer']);
+  await expect(page.locator('#Role option')).toHaveText(['Owner', 'Recruiter', 'Hiring manager', 'Viewer']);
+  await expect(page.locator('#Role option[value="HiringManager"]')).toHaveText('Hiring manager');
   await addUser(page, viewer, 'Viewer');
   await addUser(page, recruiter, 'Recruiter');
   await addUser(page, editee, 'Viewer');

@@ -1,8 +1,10 @@
 using System.Globalization;
 using Ats.Application.Abstractions;
 using Ats.Application.Auditing;
+using Ats.Application.Jobs;
 using Ats.Application.Users;
 using Ats.Domain.Authorization;
+using Ats.Domain.Enums;
 using Ats.Web.Identity;
 using Ats.Web.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -23,11 +25,13 @@ public class UsersController : Controller
     private readonly IIdentityService _identity;
     private readonly ICurrentUser _current;
     private readonly ITenantContext _tenant;
+    private readonly IHiringTeamQuery _hiringTeam;
     private readonly IAuditLogger _audit;
 
-    public UsersController(IUserService users, IUserListQuery userList, IIdentityService identity, ICurrentUser current, ITenantContext tenant, IAuditLogger audit)
+    public UsersController(IUserService users, IUserListQuery userList, IIdentityService identity, ICurrentUser current, ITenantContext tenant,
+        IHiringTeamQuery hiringTeam, IAuditLogger audit)
     {
-        _users = users; _userList = userList; _identity = identity; _current = current; _tenant = tenant; _audit = audit;
+        _users = users; _userList = userList; _identity = identity; _current = current; _tenant = tenant; _hiringTeam = hiringTeam; _audit = audit;
     }
 
     private int Me => _current.UserId!.Value;
@@ -60,7 +64,7 @@ public class UsersController : Controller
     public async Task<IActionResult> Edit(int id)
     {
         var stored = await _users.GetAsync(id);
-        return stored is null ? NotFound() : EditView(stored);
+        return stored is null ? NotFound() : await EditView(stored);
     }
 
     [HttpPost]
@@ -78,13 +82,13 @@ public class UsersController : Controller
             ModelState.Remove($"{DetailsPrefix}.{nameof(vm.Email)}");
             ModelState.Remove($"{DetailsPrefix}.{nameof(vm.Role)}");
         }
-        if (!ModelState.IsValid) return EditView(stored, vm);
+        if (!ModelState.IsValid) return await EditView(stored, vm);
 
         var update = await _users.UpdateAsync(new UpdateUserInput(id, vm.DisplayName, vm.Email, vm.Role), Me);
         if (!update.Result.Succeeded)
         {
             ModelState.AddModelError(string.Empty, update.Result.Error!);
-            return EditView(stored, vm);
+            return await EditView(stored, vm);
         }
         if (update.ChangedFields.Count == 0)
         {
@@ -93,7 +97,7 @@ public class UsersController : Controller
         }
 
         var after = await _users.GetAsync(id) ?? stored;
-        await _audit.LogAsync("UserUpdated", "User", Ref(id), UserAuditSummary.Updated(stored, after, update.ChangedFields));
+        await _audit.LogAsync("UserUpdated", "User", Ref(id), UserAuditSummary.Updated(stored, after, update.ChangedFields, update.RemovedFromJobs));
 
         // The sidebar shows the name from the cookie, so re-issue it. A name change does not rotate the stamp.
         if (isMe && update.ChangedFields.Contains(UserField.Name))
@@ -104,7 +108,10 @@ public class UsersController : Controller
             await AtsSignIn.SignInAsync(HttpContext, id, tenantId, session.Role, after.DisplayName, session.SecurityStamp, false);
         }
 
-        TempData["Success"] = update.SignedOut ? $"{after.DisplayName} updated. They are signed out." : $"{after.DisplayName} updated.";
+        var teams = update.RemovedFromJobs > 0 ? $", {UserAuditSummary.RemovedFromTeams(update.RemovedFromJobs)}" : "";
+        TempData["Success"] = update.SignedOut
+            ? $"{after.DisplayName} updated{teams}. They are signed out."
+            : $"{after.DisplayName} updated{teams}.";
         return RedirectToAction(nameof(Edit), new { id });
     }
 
@@ -157,8 +164,11 @@ public class UsersController : Controller
         return RedirectToAction(nameof(Edit), new { id });
     }
 
-    private ViewResult EditView(UserListItem stored, UserEditViewModel? details = null) =>
-        View(nameof(Edit), new UserEditPageViewModel(stored, stored.Id == Me, details ?? UserEditViewModel.From(stored), new()));
+    private async Task<ViewResult> EditView(UserListItem stored, UserEditViewModel? details = null)
+    {
+        var assignedJobs = stored.Role == AtsRole.HiringManager ? await _hiringTeam.JobsForAsync(stored.Id) : null;
+        return View(nameof(Edit), new UserEditPageViewModel(stored, stored.Id == Me, details ?? UserEditViewModel.From(stored), new(), assignedJobs));
+    }
 
     private static string Ref(int id) => id.ToString(CultureInfo.InvariantCulture);
 }

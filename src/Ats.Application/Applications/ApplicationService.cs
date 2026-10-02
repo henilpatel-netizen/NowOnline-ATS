@@ -2,11 +2,14 @@ using Ats.Application.Abstractions;
 using Ats.Application.Candidates;
 using Ats.Application.Common;
 using Ats.Application.Integration;
+using Ats.Application.Jobs;
 using Ats.Domain.Entities;
 using Ats.Domain.Enums;
 
 namespace Ats.Application.Applications;
 
+// Every read and MoveStageAsync is scoped by IJobScope: out of scope gives the same result as a
+// missing id (null, or an empty list for the per-job and per-application readers).
 public interface IApplicationService
 {
     Task<Job?> GetJobAsync(int jobId, CancellationToken ct = default);
@@ -18,7 +21,7 @@ public interface IApplicationService
     Task<List<ApplicationEvent>> ListEventsAsync(int applicationId, CancellationToken ct = default);
     Task<OperationResult> AddCandidateToJobAsync(AddCandidateToJobInput input, CancellationToken ct = default);
     Task<OperationResult> AddExistingCandidateToJobAsync(int jobId, int candidateId, CancellationToken ct = default);
-    Task<OperationResult> MoveStageAsync(int applicationId, int toStageId, byte[] rowVersion, CancellationToken ct = default);
+    Task<OperationResult> MoveStageAsync(int jobId, int applicationId, int toStageId, byte[] rowVersion, CancellationToken ct = default);
     Task<OperationResult> RemoveAsync(int applicationId, CancellationToken ct = default);
 }
 
@@ -28,19 +31,45 @@ public sealed class ApplicationService : IApplicationService
     private readonly ICandidateRepository _candidates;
     private readonly ICurrentUser _currentUser;
     private readonly IOutboxEnqueuer _outbox;
+    private readonly IJobScope _scope;
 
-    public ApplicationService(IApplicationRepository repo, ICandidateRepository candidates, ICurrentUser currentUser, IOutboxEnqueuer outbox)
+    public ApplicationService(IApplicationRepository repo, ICandidateRepository candidates, ICurrentUser currentUser,
+        IOutboxEnqueuer outbox, IJobScope scope)
     {
-        _repo = repo; _candidates = candidates; _currentUser = currentUser; _outbox = outbox;
+        _repo = repo; _candidates = candidates; _currentUser = currentUser; _outbox = outbox; _scope = scope;
     }
 
-    public Task<Job?> GetJobAsync(int jobId, CancellationToken ct = default) => _repo.GetJobAsync(jobId, ct);
-    public Task<Dictionary<int, DateTimeOffset>> LatestEventTimesForJobAsync(int jobId, CancellationToken ct = default) => _repo.LatestEventTimesForJobAsync(jobId, ct);
-    public Task<List<PipelineStage>> GetStagesForJobAsync(int jobId, CancellationToken ct = default) => _repo.GetStagesForJobAsync(jobId, ct);
-    public Task<List<JobApplication>> ListForJobAsync(int jobId, CancellationToken ct = default) => _repo.ListForJobAsync(jobId, ct);
-    public Task<JobApplication?> GetAsync(int id, CancellationToken ct = default) => _repo.GetAsync(id, ct);
-    public Task<JobApplication?> GetWithCandidateAsync(int id, CancellationToken ct = default) => _repo.GetWithCandidateAsync(id, ct);
-    public Task<List<ApplicationEvent>> ListEventsAsync(int applicationId, CancellationToken ct = default) => _repo.ListEventsAsync(applicationId, ct);
+    private Task<bool> InScopeAsync(int jobId, CancellationToken ct) =>
+        _scope.AllowsAsync(userId => _repo.IsJobAssignedToAsync(jobId, userId, ct));
+
+    public async Task<Job?> GetJobAsync(int jobId, CancellationToken ct = default) =>
+        await InScopeAsync(jobId, ct) ? await _repo.GetJobAsync(jobId, ct) : null;
+
+    public async Task<Dictionary<int, DateTimeOffset>> LatestEventTimesForJobAsync(int jobId, CancellationToken ct = default) =>
+        await InScopeAsync(jobId, ct) ? await _repo.LatestEventTimesForJobAsync(jobId, ct) : [];
+
+    public async Task<List<PipelineStage>> GetStagesForJobAsync(int jobId, CancellationToken ct = default) =>
+        await InScopeAsync(jobId, ct) ? await _repo.GetStagesForJobAsync(jobId, ct) : [];
+
+    public async Task<List<JobApplication>> ListForJobAsync(int jobId, CancellationToken ct = default) =>
+        await InScopeAsync(jobId, ct) ? await _repo.ListForJobAsync(jobId, ct) : [];
+
+    public async Task<JobApplication?> GetAsync(int id, CancellationToken ct = default)
+    {
+        var application = await _repo.GetAsync(id, ct);
+        return application is not null && await InScopeAsync(application.JobId, ct) ? application : null;
+    }
+
+    public async Task<JobApplication?> GetWithCandidateAsync(int id, CancellationToken ct = default)
+    {
+        var application = await _repo.GetWithCandidateAsync(id, ct);
+        return application is not null && await InScopeAsync(application.JobId, ct) ? application : null;
+    }
+
+    public async Task<List<ApplicationEvent>> ListEventsAsync(int applicationId, CancellationToken ct = default) =>
+        !_scope.IsRestricted || await GetAsync(applicationId, ct) is not null
+            ? await _repo.ListEventsAsync(applicationId, ct)
+            : [];
 
     public async Task<OperationResult> AddCandidateToJobAsync(AddCandidateToJobInput input, CancellationToken ct = default)
     {
@@ -116,10 +145,11 @@ public sealed class ApplicationService : IApplicationService
         }, ct);
     }
 
-    public async Task<OperationResult> MoveStageAsync(int applicationId, int toStageId, byte[] rowVersion, CancellationToken ct = default)
+    public async Task<OperationResult> MoveStageAsync(int jobId, int applicationId, int toStageId, byte[] rowVersion, CancellationToken ct = default)
     {
         var application = await _repo.GetAsync(applicationId, ct);
-        if (application is null) return OperationResult.Fail("Application not found.");
+        if (application is null || application.JobId != jobId || !await InScopeAsync(jobId, ct))
+            return OperationResult.Fail("Application not found.");
 
         var stages = await _repo.GetStagesForJobAsync(application.JobId, ct);
         var target = stages.FirstOrDefault(s => s.Id == toStageId);

@@ -31,9 +31,78 @@ description: Ats role-based access control - permission constants, the role map,
 1. Constant + `All` in `AtsPermission`. 2. Grant it in `RolePermissions`. 3. Update the expected sets in
 `RolePermissionsTests`. 4. Gate the action and the control.
 
+## Job scoping (HiringManager)
+Phase 3. A HiringManager sees and acts only on the jobs they are assigned to, and on those jobs' applications,
+candidates and CVs. Scoping is separate from tenancy (no global filter on `Job`; see the multitenancy skill).
+
+| Role | `jobs.view` | `jobs.viewall` | Effect |
+|---|---|---|---|
+| Owner, Recruiter, Viewer | yes | yes | every job in the tenant |
+| HiringManager | yes | no | assigned jobs only |
+
+- **Model:** `JobHiringManager` (`TenantEntity`, unique `(TenantId, JobId, UserId)`; details in the entities skill).
+  Several managers per job. A job's team is edited on the job form, which needs `jobs.manage`.
+- **`IJobScope`** (`Ats.Application/Jobs`, impl `JobScope`, scoped): `IsRestricted` is true only for an authenticated
+  user with `jobs.view` and without `jobs.viewall`; decided by permission, never role name. `UserId` is the user id
+  while restricted, else null. Anonymous callers (career site, worker) are unrestricted: they never reach the scoped
+  paths. A restricted user without a user id sees nothing.
+- **Own data:** own jobs = jobs the user is on the team of (soft-deleted jobs stay hidden); own applications = those
+  on an own job; own candidates = candidates with at least one own-job application. Candidate rows show only data
+  from own-job applications (latest job, stage, count).
+- **404 rule:** an out-of-scope id gets the same not-found as a missing id (no existence oracle): board, job edit,
+  application details and card, candidate page, CV download. Services return null (or an empty list for the per-job
+  readers), controllers map that to `NotFound()`.
+- **Board move:** `IApplicationService.MoveStageAsync(jobId, applicationId, ...)` requires the application to be in
+  scope AND to belong to the route `jobId`. This applies to every role (it also closed a gap where the route job id
+  was never checked).
+- **Where scoping lives:**
+  - `JobScopeFilter` (`Ats.Application/Jobs`, plain LINQ, unit-tested like `UserListFilter`): `AssignedTo(userId)`,
+    `VisibleTo(scope)` for jobs, applications, candidates and `ApplicationEvent`s (events are scoped through the
+    visible applications), and `AllowsAsync(isOwn)` for by-id paths.
+    Applications and candidates are scoped by joining through `db.Jobs`, never `JobHiringManagers` alone, so the
+    soft-delete filter applies.
+  - By-id guards: `JobService.GetAsync`, `JobService.UpdateAsync` (its own `AllowsAsync` check, same "Job not found."
+    as a missing id, so editing does not rely on `jobs.manage` implying `jobs.viewall`; no extra query for an
+    unrestricted user), `CandidateService.GetAsync`, and every per-job reader on
+    `IApplicationService` (`GetJobAsync`, `GetStagesForJobAsync`, `ListForJobAsync`, `LatestEventTimesForJobAsync`,
+    `GetAsync`, `GetWithCandidateAsync`, `ListEventsAsync`, `MoveStageAsync`) guard themselves.
+  - Scoped read models: `JobListQuery`, `CandidateListQuery`, `ApplicationCardQuery`, `GlobalSearchService`,
+    `DashboardService` (metrics, charts, attention items; for scoped users outbox counts are 0, settings are null and
+    the activity feed is null),
+    `ShellSummaryService` (sidebar badges, attention bell; failed deliveries and integration state are 0 or absent for
+    scoped users).
+  - Manage paths (`jobs.manage`, `candidates.manage`) are unscoped on purpose. The guard test
+    `Every_role_that_manages_jobs_or_candidates_views_all_jobs` fails if a role with either gains manage without
+    `jobs.viewall`.
+- **Pickers:** the board add-candidate list and the candidates add-to-job list load only with `candidates.manage`
+  (they list tenant-wide data).
+- **Assignment:** `JobInput.HiringManagerIds` replaces the whole team. Every id must be an active HiringManager in the
+  tenant, checked in one tenant-filtered query; any failure returns one generic error (no oracle on which ids exist).
+  Duplicates are ignored. Links are added through `Job.HiringManagers` (TenantId from the interceptor) and removed by
+  comparing against the loaded collection, never a posted id. `IJobRepository.TrySaveTeamChangesAsync` (edit) translates only
+  the team unique-index violation; `TrySaveNewJobAsync` (create) translates only the job-number race
+  (`IX_Jobs_TenantId_ExternalRef`), since a new job's team links cannot collide. Anything else is rethrown. The form shows chips (name and email); a member who was since deactivated or
+  re-roled is shown but no longer assignable. The board header shows the team; Users Edit has an "Assigned jobs" card
+  for a HiringManager.
+- **Role change away from HiringManager** (`UserService.UpdateAsync`, inside its serialisable transaction): the user's
+  `JobHiringManager` links are removed (`IUserRepository.RemoveHiringTeamLinksAsync`, tracked removal on the
+  tenant-filtered set), so switching back later does not silently restore old assignments.
+  `UserUpdateResult.RemovedFromJobs` carries the count of those jobs that are not deleted (links on deleted jobs are
+  removed too) into the flash and the `UserUpdated` audit ("removed from 3
+  hiring teams"). Deactivation keeps the links (a deactivated user cannot sign in; reactivation restores them).
+- **CVs are stored per candidate** (`Candidate.ResumeFileKey`), not per application, so a manager on job A can download
+  a CV the candidate uploaded when applying for job B. Accepted: it matches "own candidates' CVs".
+- **Adding a new read path safely:** any new query or by-id method that a `jobs.view` user can reach over jobs,
+  applications or candidates must apply `JobScopeFilter.VisibleTo` (lists, counts) or `AllowsAsync` (by id), and
+  return not-found for out-of-scope ids. Pass `db.Jobs` as the jobs queryable. Add a test for the restricted user.
+- The board header shows a member who is deactivated or no longer a HiringManager muted, with a "No access" text flag.
+- E2E: `tests/e2e/hiring-manager.spec.ts`.
+
 ## Users and sessions
 - `profile.manage` (all roles): own password change (`ProfileController`). `users.manage` (Owner): `UsersController`.
-- Assignable roles: `AtsRole.Assignable` = Owner, Recruiter, Viewer. HiringManager is withheld until phase 3.
+- Assignable roles: `AtsRole.Assignable` = Owner, Recruiter, HiringManager, Viewer (select label "Hiring manager",
+  `RoleOptions.Label`). Job scoping is decided by permission: `jobs.viewall` (Owner, Recruiter, Viewer) sees every
+  job; `jobs.view` without it (HiringManager) is limited to assigned jobs.
 - `UserService` rules: email trimmed, lower-cased, valid, globally unique (`IOnboardingStore.EmailExistsAsync`
   plus the `IX_Users_Email` violation translated in `UserRepository.TryAddAsync` on create and
   `TrySaveAsync` on update); name required, max 200;
@@ -91,5 +160,4 @@ description: Ats role-based access control - permission constants, the role map,
   entries describe the user from the stored record (`UserAuditSummary` for updates).
 
 ## Known limits
-- HiringManager is not assignable (`AtsRole.Assignable`) until phase 3 scopes it.
 - `User.Can` reads the single role claim and the role map directly; if policies gain extra requirements or users get multiple roles, switch views to `IAuthorizationService`.

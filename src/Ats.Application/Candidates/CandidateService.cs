@@ -1,4 +1,5 @@
 using Ats.Application.Common;
+using Ats.Application.Jobs;
 using Ats.Domain.Entities;
 
 namespace Ats.Application.Candidates;
@@ -6,6 +7,8 @@ namespace Ats.Application.Candidates;
 public interface ICandidateService
 {
     Task<List<Candidate>> ListAsync(CancellationToken ct = default);
+    // Scoped: a restricted user sees only candidates with an application on one of their jobs;
+    // null when out of scope, exactly as for a missing id.
     Task<Candidate?> GetAsync(int id, CancellationToken ct = default);
     Task<OperationResult> CreateAsync(string firstName, string lastName, string email, string? phone, CancellationToken ct = default);
     Task<OperationResult> UpdateAsync(int id, string firstName, string lastName, string email, string? phone, CancellationToken ct = default);
@@ -15,11 +18,20 @@ public interface ICandidateService
 public sealed class CandidateService : ICandidateService
 {
     private readonly ICandidateRepository _repo;
-    public CandidateService(ICandidateRepository repo) => _repo = repo;
+    private readonly IJobScope _scope;
+    public CandidateService(ICandidateRepository repo, IJobScope scope)
+    {
+        _repo = repo; _scope = scope;
+    }
 
     public Task<List<Candidate>> ListAsync(CancellationToken ct = default) => _repo.ListAsync(ct);
 
-    public Task<Candidate?> GetAsync(int id, CancellationToken ct = default) => _repo.GetAsync(id, ct);
+    public async Task<Candidate?> GetAsync(int id, CancellationToken ct = default)
+    {
+        return await _scope.AllowsAsync(userId => _repo.HasApplicationOnJobAssignedToAsync(id, userId, ct))
+            ? await _repo.GetAsync(id, ct)
+            : null;
+    }
 
     public async Task<OperationResult> CreateAsync(string firstName, string lastName, string email, string? phone, CancellationToken ct = default)
     {

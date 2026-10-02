@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Ats.Application.Common;
+using Ats.Application.Jobs;
 using Ats.Application.Users;
 using Ats.Domain.Enums;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -12,11 +13,13 @@ public static class RoleOptions
 {
     public static bool IsAssignable(string? role) => role is not null && AtsRole.Assignable.Contains(role);
 
-    // A role that cannot be assigned here (e.g. HiringManager set in the database) gets an empty leading
-    // option, so the browser does not preselect the first role and [Required] blocks a blind save.
+    public static string Label(string role) => role == AtsRole.HiringManager ? "Hiring manager" : role;
+
+    // A role that cannot be assigned here (a value set in the database) gets an empty leading option, so
+    // the browser does not preselect the first role and [Required] blocks a blind save.
     public static IEnumerable<SelectListItem> For(string? selected)
     {
-        var options = AtsRole.Assignable.Select(r => new SelectListItem(r, r, r == selected));
+        var options = AtsRole.Assignable.Select(r => new SelectListItem(Label(r), r, r == selected));
         return IsAssignable(selected) ? options : options.Prepend(new SelectListItem("Choose a role", "", true));
     }
 }
@@ -33,8 +36,10 @@ public class UserCreateViewModel
 
 // The Edit page: the stored record drives the header and the actions; Details and Reset are the two
 // posted forms, bound with their own prefixes. A Details error is shown on its field; a Reset error is
-// redirected back as a flash message, so the password is never echoed into the page.
-public sealed record UserEditPageViewModel(UserListItem User, bool IsMe, UserEditViewModel Details, UserResetPasswordViewModel Reset);
+// redirected back as a flash message, so the password is never echoed into the page. AssignedJobs is
+// null unless the user is a hiring manager.
+public sealed record UserEditPageViewModel(UserListItem User, bool IsMe, UserEditViewModel Details, UserResetPasswordViewModel Reset,
+    IReadOnlyList<AssignedJob>? AssignedJobs);
 
 public class UserEditViewModel
 {

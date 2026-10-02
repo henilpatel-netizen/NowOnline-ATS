@@ -9,6 +9,10 @@ description: The Ats Phase 1 aggregates - Job, Candidate, JobApplication, Applic
 - `Job` (TenantEntity, ISoftDeletable): Draft/Published/Closed lifecycle; `ExternalRef` = `JOB-{n}` from
   `TenantSettings.LastJobNumber` (stable, never reused; it is the ReferralTool vacancy `Id` in the
   vacancy push). References Department/Location/PipelineTemplate.
+- `JobHiringManager` (TenantEntity): the hiring team link between a job and a user. `Job.HiringManagers` is the
+  collection. Unique `(TenantId, JobId, UserId)` and an index `(TenantId, UserId)` for scope lookups. FK to `Jobs`
+  cascades; FK to `Users` is `Restrict` (users are deactivated, never deleted). Migration `AddJobHiringManagers`.
+  A user is assignable only while active with role HiringManager. It drives job scoping (authorization skill).
 - `Candidate` (TenantEntity, ISoftDeletable): deduped per tenant by `Email` (unique `(TenantId, Email)`).
 - `JobApplication` (TenantEntity, ISoftDeletable): the candidate-on-a-job aggregate. Named
   `JobApplication` (not `Application`) to avoid colliding with the `Ats.Application` namespace; the

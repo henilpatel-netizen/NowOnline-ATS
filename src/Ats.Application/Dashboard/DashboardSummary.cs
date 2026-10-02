@@ -20,5 +20,6 @@ public sealed record DashboardSummary(
     IReadOnlyList<StageCount> ByStage,
     IReadOnlyList<SourceSlice> Sources,
     IReadOnlyList<AttentionItem> NeedsAttention,
-    IReadOnlyList<ActivityItem> Activity,
+    // Null when the user may not see the tenant activity feed (job-scoped users); the view omits it.
+    IReadOnlyList<ActivityItem>? Activity,
     IntegrationHealth Integration);

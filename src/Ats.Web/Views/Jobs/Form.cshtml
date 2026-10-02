@@ -1,8 +1,11 @@
 ﻿@model Ats.Web.Models.JobEditViewModel
 @using Ats.Domain.Enums
+@using Ats.Web.Models.Shared
 @{
     var readOnly = Model.Id is not null && !User.Can(AtsPermission.JobsManage);
     ViewData["Title"] = Model.Id is null ? "New job" : readOnly ? "Job details" : "Edit job";
+    var selected = Model.HiringManagerIds.ToHashSet();
+    var staleMembers = Model.HiringTeam.Where(m => !m.IsAssignable).ToList();
 }
 <form asp-action="@(Model.Id is null ? "Create" : "Edit")" method="post" class="col-lg-8">
     <fieldset disabled="@readOnly">
@@ -38,6 +41,66 @@
                 <span asp-validation-for="PipelineTemplateId" class="text-danger small"></span>
             </div>
         </div>
+        <fieldset class="mb-3" aria-describedby="hiring-team-help">
+            <legend class="form-label fs-6 mb-1">Hiring team</legend>
+            <p class="form-text mt-0 mb-2" id="hiring-team-help">Hiring managers on the team see this job, its candidates and its board.</p>
+            @if (readOnly)
+            {
+                @if (Model.HiringTeam.Count == 0)
+                {
+                    <p class="ats-small ats-muted mb-0">No hiring team yet.</p>
+                }
+                else
+                {
+                    <ul class="ats-team-list">
+                        @foreach (var m in Model.HiringTeam)
+                        {
+                            <li class="ats-team-chip ats-team-chip--static">
+                                <span aria-hidden="true"><partial name="Partials/_Avatar" model="new AvatarModel(m.Name, 1.75)" /></span>
+                                <span class="ats-team-chip-text">
+                                    <span class="ats-team-chip-name" title="@m.Name">@m.Name</span>
+                                    <span class="ats-team-chip-email" title="@m.Email"><span class="visually-hidden">, </span>@m.Email</span>
+                                </span>
+                            </li>
+                        }
+                    </ul>
+                }
+            }
+            else if (Model.HiringManagerOptions.Count == 0 && staleMembers.Count == 0)
+            {
+                <p class="ats-small ats-muted mb-0">
+                    No hiring managers yet.
+                    @if (User.Can(AtsPermission.UsersManage))
+                    {
+                        <a class="ats-link-hit" asp-controller="Users" asp-action="Create">Add one on the Users screen</a>
+                    }
+                </p>
+            }
+            else
+            {
+                <div class="ats-team-list">
+                    @foreach (var o in Model.HiringManagerOptions)
+                    {
+                        <input type="checkbox" class="btn-check" name="@nameof(Model.HiringManagerIds)" value="@o.Id" id="hiring-manager-@o.Id" checked="@selected.Contains(o.Id)" />
+                        <label class="ats-team-chip" for="hiring-manager-@o.Id">
+                            <span aria-hidden="true"><partial name="Partials/_Avatar" model="new AvatarModel(o.Name, 1.75)" /></span>
+                            <span class="ats-team-chip-text">
+                                <span class="ats-team-chip-name" title="@o.Name">@o.Name</span>
+                                <span class="ats-team-chip-email" title="@o.Email"><span class="visually-hidden">, </span>@o.Email</span>
+                            </span>
+                            <span class="ms ms-sm ats-team-chip-tick">check</span>
+                        </label>
+                    }
+                </div>
+                @if (staleMembers.Count > 0)
+                {
+                    <p class="form-text mb-0 mt-2">
+                        Removed when you save, as they are no longer active hiring managers:
+                        @string.Join(", ", staleMembers.Select(m => m.Name)).
+                    </p>
+                }
+            }
+        </fieldset>
     </fieldset>
     <div class="d-flex align-items-center gap-2 border-top pt-3">
         @if (!readOnly) { <button type="submit" class="btn btn-primary">Save</button> }

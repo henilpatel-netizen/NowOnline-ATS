@@ -33,7 +33,9 @@ Moves post to `Board/Move` (drag-and-drop via SortableJS + htmx, or the per-card
 which calls `IApplicationService.MoveStageAsync`. A move appends an `ApplicationEvent`, sets terminal
 status when the target stage is terminal, and uses `RowVersion` optimistic concurrency (a conflict
 returns a friendly reload message and re-renders the board partial). The card carries `RowVersion` as
-base64; `Board/Move` returns the `_Board` partial for htmx requests and redirects otherwise. Every move
+base64; `MoveStageAsync(jobId, applicationId, ...)` requires the application to belong to the route job (for every
+role) and, for a HiringManager, that job to be one they are assigned to; otherwise "Application not found."
+(see the authorization skill). `Board/Move` returns the `_Board` partial for htmx requests and redirects otherwise. Every move
 (forward or backward) is recorded; nothing is emitted to ReferralTool in Phase 1 (that is Phase 3).
 
 ## Board UI (redesign)

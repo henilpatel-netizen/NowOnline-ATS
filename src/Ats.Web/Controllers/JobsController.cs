@@ -4,6 +4,7 @@ using Ats.Application.Jobs;
 using Ats.Application.Locations;
 using Ats.Application.Pipelines;
 using Ats.Domain.Authorization;
+using Ats.Web.Identity;
 using Ats.Web.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,12 +20,14 @@ public class JobsController : Controller
     private readonly IDepartmentService _departments;
     private readonly ILocationService _locations;
     private readonly IPipelineTemplateService _pipelines;
+    private readonly IHiringTeamQuery _hiringTeam;
     private readonly IAuditLogger _audit;
 
     public JobsController(IJobService jobs, IJobListQuery jobList, IDepartmentService departments,
-        ILocationService locations, IPipelineTemplateService pipelines, IAuditLogger audit)
+        ILocationService locations, IPipelineTemplateService pipelines, IHiringTeamQuery hiringTeam, IAuditLogger audit)
     {
-        _jobs = jobs; _jobList = jobList; _departments = departments; _locations = locations; _pipelines = pipelines; _audit = audit;
+        _jobs = jobs; _jobList = jobList; _departments = departments; _locations = locations; _pipelines = pipelines;
+        _hiringTeam = hiringTeam; _audit = audit;
     }
 
     public async Task<IActionResult> Index(string? q, Ats.Domain.Enums.JobStatus? status, int page = 1)
@@ -48,9 +51,9 @@ public class JobsController : Controller
     {
         if (!ModelState.IsValid) { await PopulateLists(vm); return View("Form", vm); }
         var result = await _jobs.CreateAsync(new JobInput(null, vm.Title, vm.Description,
-            vm.DepartmentId, vm.LocationId, vm.EmploymentType, vm.PipelineTemplateId));
+            vm.DepartmentId, vm.LocationId, vm.EmploymentType, vm.PipelineTemplateId, vm.HiringManagerIds));
         if (!result.Succeeded) { ModelState.AddModelError("", result.Error!); await PopulateLists(vm); return View("Form", vm); }
-        await _audit.LogAsync("JobCreated", "Job", null, $"Created job '{vm.Title}'");
+        await _audit.LogAsync("JobCreated", "Job", null, WithTeam($"Created job '{vm.Title}'", result.Team));
         TempData["Success"] = "Job created.";
         return RedirectToAction(nameof(Index));
     }
@@ -71,6 +74,7 @@ public class JobsController : Controller
             PipelineTemplateId = job.PipelineTemplateId
         };
         await PopulateLists(vm);
+        vm.HiringManagerIds = vm.HiringTeam.Where(m => m.IsAssignable).Select(m => m.Id).ToList();
         return View("Form", vm);
     }
 
@@ -80,9 +84,9 @@ public class JobsController : Controller
     {
         if (!ModelState.IsValid) { await PopulateLists(vm); return View("Form", vm); }
         var result = await _jobs.UpdateAsync(new JobInput(vm.Id, vm.Title, vm.Description,
-            vm.DepartmentId, vm.LocationId, vm.EmploymentType, vm.PipelineTemplateId));
+            vm.DepartmentId, vm.LocationId, vm.EmploymentType, vm.PipelineTemplateId, vm.HiringManagerIds));
         if (!result.Succeeded) { ModelState.AddModelError("", result.Error!); await PopulateLists(vm); return View("Form", vm); }
-        await _audit.LogAsync("JobUpdated", "Job", vm.Id?.ToString(), $"Updated job '{vm.Title}'");
+        await _audit.LogAsync("JobUpdated", "Job", vm.Id?.ToString(), WithTeam($"Updated job '{vm.Title}'", result.Team));
         TempData["Success"] = "Job updated.";
         return RedirectToAction(nameof(Index));
     }
@@ -125,5 +129,12 @@ public class JobsController : Controller
             .Select(l => new SelectListItem(l.Name, l.Id.ToString())).ToList();
         vm.Pipelines = (await _pipelines.ListAsync())
             .Select(p => new SelectListItem(p.Name, p.Id.ToString())).ToList();
+        if (User.Can(AtsPermission.JobsManage)) vm.HiringManagerOptions = await _hiringTeam.AssignableAsync();
+        // A failed Edit POST reaches this without the job-scope check; safe because every role with
+        // jobs.manage also has jobs.viewall (guarded in RolePermissionsTests).
+        if (vm.Id is int id) vm.HiringTeam = await _hiringTeam.TeamAsync(id);
     }
+
+    private static string WithTeam(string summary, HiringTeamChange team) =>
+        team.IsEmpty ? summary : $"{summary}; {team.Describe()}";
 }

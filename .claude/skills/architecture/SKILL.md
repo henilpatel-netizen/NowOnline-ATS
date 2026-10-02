@@ -77,6 +77,11 @@ Infrastructure wiring is centralised in `Ats.Infrastructure/DependencyInjection.
   Its `UserListFilter` (`ApplyListFilter`, in `Ats.Application.Users`) is an `IQueryable` filter kept in
   Application so it can be unit-tested without a database: an accepted exception to "list filters live in
   Infrastructure".
+- **`JobScopeFilter` (HiringManager job scoping) follows the same exception:** plain LINQ in
+  `Ats.Application/Jobs` beside `IJobScope`, applied by the Infrastructure read models and repositories, so it is
+  unit-tested without a database. `IHiringTeamQuery` (contract in `Ats.Application/Jobs/JobModels.cs`, impl
+  `Ats.Infrastructure/Jobs/HiringTeamQuery`) is the read-only query for assignable managers, a job's team and a
+  manager's jobs. Rules: authorization skill.
 - **`ITenantContext` and `ICurrentUser` are registered by each HOST, never by Infrastructure.**
   Web = `HttpTenantContext` (tenant_id claim, or slug via `HttpContext.Items`) + `CurrentUser`;
   Worker = `WorkerTenantContext` + `AnonymousCurrentUser`. A new host must register both or the

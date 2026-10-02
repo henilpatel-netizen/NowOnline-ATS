@@ -69,6 +69,7 @@ public static class DependencyInjection
         services.AddScoped<ILocationService, LocationService>();
         services.AddScoped<IPipelineTemplateRepository, PipelineTemplateRepository>();
         services.AddScoped<IPipelineTemplateService, PipelineTemplateService>();
+        services.AddScoped<IJobScope, JobScope>();
         services.AddScoped<IJobRepository, JobRepository>();
         services.AddScoped<IJobService, JobService>();
         services.AddScoped<ICandidateRepository, CandidateRepository>();
@@ -94,6 +95,7 @@ public static class DependencyInjection
         services.AddScoped<IJobListQuery, JobListQuery>();
         services.AddScoped<ICandidateListQuery, CandidateListQuery>();
         services.AddScoped<IUserListQuery, UserListQuery>();
+        services.AddScoped<IHiringTeamQuery, HiringTeamQuery>();
         services.AddScoped<IApplicationCardQuery, ApplicationCardQuery>();
         services.AddScoped<IOrganisationReadService, OrganisationReadService>();
 

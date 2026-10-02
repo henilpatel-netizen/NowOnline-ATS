@@ -1,3 +1,4 @@
+using Ats.Application.Jobs;
 using Ats.Domain.Entities;
 using Ats.Web.Models.Board;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -12,6 +13,7 @@ public class BoardViewModel
     public List<BoardColumn> Columns { get; set; } = new();
     public string? Error { get; set; }
     public List<SelectListItem> CandidateOptions { get; set; } = new();
+    public IReadOnlyList<HiringTeamMember> HiringTeam { get; set; } = [];
 
     // Stats strip (prototype L420-425).
     public int InProcess { get; set; }

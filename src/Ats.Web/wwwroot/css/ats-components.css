@@ -1213,6 +1213,88 @@
   min-height: 1.5rem;
 }
 
+/* Inside a sentence the taller box must not make the line taller. */
+p > .ats-link-hit { margin-block: -.25rem; }
+
+/* ---------- Hiring team ----------
+   Avatar + name chips. On the Jobs form each chip is the label of a .btn-check checkbox (visually
+   hidden, still focusable), so the native control carries state and keyboard use; elsewhere the chips
+   are static list items. */
+.ats-team-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ats-team-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 2.25rem;
+  padding: .25rem .75rem .25rem .25rem;
+  border: 1px solid var(--ats-border);
+  border-radius: var(--no-radius-pill);
+  background: var(--ats-surface);
+  color: var(--ats-ink);
+  font-size: .875rem;
+  cursor: pointer;
+}
+
+.ats-team-chip:hover { border-color: var(--ats-ink-subtle); }
+
+.ats-team-chip-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Name over email, so two managers with the same name can be told apart. Ink-muted, not ink-subtle:
+   the email must stay AA on the accent-tinted background of a selected chip. */
+.ats-team-chip-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+
+.ats-team-chip-email {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ats-ink-muted);
+  font-size: .75rem;
+}
+
+.ats-team-chip-tick { visibility: hidden; color: var(--ats-accent-text); }
+
+.btn-check:checked + .ats-team-chip {
+  border-color: var(--ats-accent);
+  background: color-mix(in srgb, var(--ats-accent) 12%, var(--ats-surface));
+}
+
+.btn-check:checked + .ats-team-chip .ats-team-chip-tick { visibility: visible; }
+
+.btn-check:focus-visible + .ats-team-chip {
+  outline: 2px solid var(--ats-focus-ring);
+  outline-offset: 2px;
+}
+
+.ats-team-chip--static,
+.ats-team-chip--static:hover { cursor: default; border-color: var(--ats-border); }
+
+/* Users Edit: a hiring manager's jobs, one .ats-action-item per job. */
+.ats-assigned-jobs { margin: 0; padding: 0; list-style: none; }
+.ats-assigned-jobs > li > a { flex: 1 1 14rem; min-width: 0; }
+
+/* Board header: the team line under the job facts. */
+.ats-board-team { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: .5rem; }
+
+.ats-board-team .ats-team-chip { min-height: 2rem; font-size: .8125rem; }
+
+/* Board header: a member who is deactivated or no longer a hiring manager. The text flag carries the
+   meaning; the muted look only backs it up. Opacity on the avatar only, so the text stays AA. */
+.ats-team-chip--inactive,
+.ats-team-chip--inactive:hover { border-style: dashed; background: var(--ats-surface-subtle); color: var(--ats-ink-muted); }
+.ats-team-chip--inactive .ats-team-chip-avatar { opacity: .5; }
+.ats-team-chip-flag { color: var(--ats-ink-muted); font-size: .75rem; white-space: nowrap; }
+
 /* ---------- Touch targets (phones) ----------
    Every control reaches 44x44px. Desktop density is untouched: all of this sits under the phone
    breakpoint, which is also where the table templates collapse. Locked by tests/e2e/layout-gates.spec.ts. */
@@ -1236,4 +1318,6 @@
   .ats-icon-hit,
   .ats-check-hit,
   .ats-link-hit { min-width: 2.75rem; min-height: 2.75rem; }
+
+  .ats-team-chip:not(.ats-team-chip--static) { min-height: 2.75rem; }
 }

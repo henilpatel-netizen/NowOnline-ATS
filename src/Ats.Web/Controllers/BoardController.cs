@@ -37,7 +37,7 @@ public class BoardController : Controller
         try { rv = Convert.FromBase64String(rowVersion); }
         catch (FormatException) { rv = Array.Empty<byte>(); }
 
-        var result = await _service.MoveStageAsync(applicationId, toStageId, rv);
+        var result = await _service.MoveStageAsync(jobId, applicationId, toStageId, rv);
         var model = await _board.BuildAsync(jobId, result.Succeeded ? null : result.Error);
         if (model is null) return NotFound();
 

@@ -1,18 +1,19 @@
 # Ats Role-Based Access Control (RBAC) Design
 
-Date: 30 September 2026. Status: phases 1 and 2 implemented.
+Date: 30 September 2026. Status: phases 1, 2 and 3 implemented.
 
 ## Permission matrix
 
 | Permission | Constant | Owner | Recruiter | HiringManager | Viewer |
 |---|---|---|---|---|---|
 | `dashboard.view` | `DashboardView` | yes | yes | yes | yes |
-| `jobs.view` | `JobsView` | yes | yes | yes (own jobs: phase 3) | yes |
+| `jobs.view` | `JobsView` | yes | yes | yes (own jobs) | yes |
+| `jobs.viewall` | `JobsViewAll` | yes | yes | no | yes |
 | `jobs.manage` | `JobsManage` | yes | yes | no | no |
-| `candidates.view` | `CandidatesView` | yes | yes | yes (own jobs: phase 3) | yes |
+| `candidates.view` | `CandidatesView` | yes | yes | yes (own jobs) | yes |
 | `candidates.manage` | `CandidatesManage` | yes | yes | no | no |
-| `applications.move` | `ApplicationsMove` | yes | yes | yes (own jobs: phase 3) | no |
-| `resumes.download` | `ResumesDownload` | yes | yes | yes (own jobs: phase 3) | no |
+| `applications.move` | `ApplicationsMove` | yes | yes | yes (own jobs) | no |
+| `resumes.download` | `ResumesDownload` | yes | yes | yes (own jobs) | no |
 | `pipelines.manage` | `PipelinesManage` | yes | yes | no | no |
 | `organisation.manage` | `OrganisationManage` | yes | yes | no | no |
 | `careersite.manage` | `CareerSiteManage` | yes | no | no | no |
@@ -24,7 +25,8 @@ Date: 30 September 2026. Status: phases 1 and 2 implemented.
 ## Roles
 - **Owner:** tenant admin (users, integration, career site, audit, all data). Multiple Owners are allowed; there is no separate Admin role.
 - **Recruiter:** day-to-day hiring plus pipeline and organisation setup.
-- **HiringManager:** only assigned jobs and their candidates (scoping arrives in phase 3).
+- **HiringManager:** only assigned jobs and their applications, candidates and CVs (phase 3). Assignable on the
+  Users screen (label "Hiring manager").
 - **Viewer:** read-only, no CV download (GDPR data minimisation).
 
 ## Architecture
@@ -34,14 +36,15 @@ Date: 30 September 2026. Status: phases 1 and 2 implemented.
   (`RequireRole(RolePermissions.RolesWith(p))`) plus a require-authenticated fallback policy
   (`Ats.Web/Identity/PermissionPolicies.cs`).
 - Controllers use `[Authorize(Policy = AtsPermission.X)]`; views use `User.Can(AtsPermission.X)`.
-- "Own jobs" scoping (phase 3) goes in the `*ListQuery` read models, not in the tenancy global query filter.
+- "Own jobs" scoping (phase 3) is explicit: `IJobScope` plus `JobScopeFilter` in the read models and by-id guards,
+  not the tenancy global query filter. A user is scoped when they hold `jobs.view` without `jobs.viewall`.
 - A future `Ats.Api` host reuses the same policies. The tenant always comes from the `tenant_id` claim.
 
 ## Phases
 1. **Permission enforcement** (done, this spec). No migration.
 2. **User management** (done, 30 September 2026): add user, change role, reset password, deactivate and
-   reactivate, last-Owner guard, `SecurityStamp` session revocation, audit entries. HiringManager is not
-   assignable before phase 3 (`AtsRole.Assignable`).
+   reactivate, last-Owner guard, `SecurityStamp` session revocation, audit entries. HiringManager was not
+   assignable until phase 3 (`AtsRole.Assignable`).
    - Decision (30 September 2026): an Owner sets a temporary password and the user must change it at first
      sign-in. Email invites follow when email is integrated.
    - Passwords (temporary and own): required, maximum 128 characters (hashing very long inputs is a
@@ -54,7 +57,14 @@ Date: 30 September 2026. Status: phases 1 and 2 implemented.
    - Deactivation (not deletion) is the only removal; it keeps audit history and authorship intact.
    - Out of scope: minimum password length on tenant sign-up (`Register`), throttling wrong
      current-password attempts.
-3. **HiringManager scoping:** `Job.HiringManagerUserId`; scope jobs, candidates, board, CVs, search and dashboard.
+3. **HiringManager scoping** (done, 2 October 2026). Plan: `docs/plans/2026-10-02-rbac-phase-3-hiring-manager-scoping.md`.
+   The `JobHiringManager` table (migration `AddJobHiringManagers`) links jobs to hiring managers; it replaces the
+   earlier idea of a single `Job.HiringManagerUserId`. Jobs, candidates, board, CVs, search, dashboard and the
+   sidebar badges are scoped; out-of-scope ids return 404; a board move must match the route job for every role.
+   HiringManager is assignable.
+   - Decision (2 October 2026): several hiring managers per job.
+   - Decision (2 October 2026): the HiringManager dashboard shows only their own jobs, and the activity feed
+     (audit data) is hidden for them.
 4. **`Ats.Api` host** with JWT, reusing the policies. Pending decisions:
    - API purpose: front end/mobile, or machine-to-machine API clients with scoped, hashed keys.
    - Token issuer: self-issued JWT behind `IIdentityService`, or Entra External ID.

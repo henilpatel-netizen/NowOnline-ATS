@@ -1,4 +1,5 @@
 using Ats.Application.Applications;
+using Ats.Application.Jobs;
 using Ats.Domain.Entities;
 using Ats.Domain.Enums;
 using Ats.Tests.Fakes;
@@ -21,8 +22,9 @@ public class ApplicationServiceTests
     private const int OnHold = 104;   // terminal flag set, but outcome None
 
     private static (ApplicationService Service, FakeApplicationRepository Repo,
-                    FakeCandidateRepository Candidates, FakeOutboxEnqueuer Outbox) Build()
+                    FakeCandidateRepository Candidates, FakeOutboxEnqueuer Outbox) Build(FakeCurrentUser? user = null)
     {
+        user ??= new FakeCurrentUser();
         var repo = new FakeApplicationRepository();
         repo.Jobs.Add(new Job { Id = JobId, Title = "Dev", PipelineTemplateId = TemplateId, ExternalRef = "JOB-1" });
         repo.Stages.AddRange(new[]
@@ -35,7 +37,7 @@ public class ApplicationServiceTests
         });
         var candidates = new FakeCandidateRepository();
         var outbox = new FakeOutboxEnqueuer();
-        var service = new ApplicationService(repo, candidates, new FakeCurrentUser(), outbox);
+        var service = new ApplicationService(repo, candidates, user, outbox, new JobScope(user));
         return (service, repo, candidates, outbox);
     }
 
@@ -63,7 +65,7 @@ public class ApplicationServiceTests
         var (service, repo, _, _) = Build();
         var app = SeedApplication(repo);
 
-        var result = await service.MoveStageAsync(app.Id, Hired, app.RowVersion);
+        var result = await service.MoveStageAsync(JobId, app.Id, Hired, app.RowVersion);
 
         Assert.True(result.Succeeded);
         Assert.Equal(ApplicationStatus.Hired, app.Status);
@@ -76,7 +78,7 @@ public class ApplicationServiceTests
         var (service, repo, _, _) = Build();
         var app = SeedApplication(repo);
 
-        var result = await service.MoveStageAsync(app.Id, Rejected, app.RowVersion);
+        var result = await service.MoveStageAsync(JobId, app.Id, Rejected, app.RowVersion);
 
         Assert.True(result.Succeeded);
         Assert.Equal(ApplicationStatus.Rejected, app.Status);
@@ -89,7 +91,7 @@ public class ApplicationServiceTests
         var (service, repo, _, _) = Build();
         var app = SeedApplication(repo);
 
-        await service.MoveStageAsync(app.Id, OnHold, app.RowVersion);
+        await service.MoveStageAsync(JobId, app.Id, OnHold, app.RowVersion);
 
         Assert.Equal(ApplicationStatus.Active, app.Status);
         Assert.Equal(OnHold, app.CurrentStageId);
@@ -102,7 +104,7 @@ public class ApplicationServiceTests
         var app = SeedApplication(repo, Hired);
         app.Status = ApplicationStatus.Hired;
 
-        await service.MoveStageAsync(app.Id, Interview, app.RowVersion);
+        await service.MoveStageAsync(JobId, app.Id, Interview, app.RowVersion);
 
         Assert.Equal(ApplicationStatus.Active, app.Status);
     }
@@ -115,7 +117,7 @@ public class ApplicationServiceTests
         var (service, repo, _, outbox) = Build();
         var app = SeedApplication(repo);
 
-        var result = await service.MoveStageAsync(app.Id, Applied, app.RowVersion);
+        var result = await service.MoveStageAsync(JobId, app.Id, Applied, app.RowVersion);
 
         Assert.True(result.Succeeded);
         Assert.Empty(repo.Events);
@@ -129,7 +131,7 @@ public class ApplicationServiceTests
         var (service, repo, _, _) = Build();
         var app = SeedApplication(repo);
 
-        var result = await service.MoveStageAsync(app.Id, 9999, app.RowVersion);
+        var result = await service.MoveStageAsync(JobId, app.Id, 9999, app.RowVersion);
 
         Assert.False(result.Succeeded);
         Assert.Contains("does not belong", result.Error);
@@ -141,7 +143,7 @@ public class ApplicationServiceTests
     {
         var (service, _, _, _) = Build();
 
-        var result = await service.MoveStageAsync(404, Hired, new byte[] { 1 });
+        var result = await service.MoveStageAsync(JobId, 404, Hired, new byte[] { 1 });
 
         Assert.False(result.Succeeded);
         Assert.Contains("not found", result.Error);
@@ -154,7 +156,7 @@ public class ApplicationServiceTests
         var app = SeedApplication(repo);
         repo.ConcurrencyConflict = true;
 
-        var result = await service.MoveStageAsync(app.Id, Hired, app.RowVersion);
+        var result = await service.MoveStageAsync(JobId, app.Id, Hired, app.RowVersion);
 
         Assert.False(result.Succeeded);
         Assert.Contains("changed by someone else", result.Error);
@@ -167,7 +169,7 @@ public class ApplicationServiceTests
         var app = SeedApplication(repo);
         var expected = new byte[] { 9, 9, 9 };
 
-        await service.MoveStageAsync(app.Id, Interview, expected);
+        await service.MoveStageAsync(JobId, app.Id, Interview, expected);
 
         Assert.Equal(expected, repo.ExpectedRowVersion);
     }
@@ -178,13 +180,37 @@ public class ApplicationServiceTests
         var (service, repo, _, outbox) = Build();
         var app = SeedApplication(repo);
 
-        await service.MoveStageAsync(app.Id, Interview, app.RowVersion);
+        await service.MoveStageAsync(JobId, app.Id, Interview, app.RowVersion);
 
         var ev = Assert.Single(repo.Events);
         Assert.Equal(Applied, ev.FromStageId);
         Assert.Equal(Interview, ev.ToStageId);
         Assert.Equal(7, ev.MovedByUserId);              // from FakeCurrentUser
         Assert.Equal((app.Id, Interview), Assert.Single(outbox.Staged));
+    }
+
+    [Theory]
+    [InlineData(AtsRole.Owner)]
+    [InlineData(AtsRole.Recruiter)]
+    [InlineData(AtsRole.HiringManager)]
+    [InlineData(AtsRole.Viewer)]
+    public async Task A_move_whose_route_job_is_not_the_application_job_is_rejected(string role)
+    {
+        var user = new FakeCurrentUser { Role = role };
+        var (service, repo, _, outbox) = Build(user);
+        var app = SeedApplication(repo);
+        const int otherJob = 2;
+        repo.Jobs.Add(new Job { Id = otherJob, Title = "Other", PipelineTemplateId = TemplateId, ExternalRef = "JOB-2" });
+        foreach (var job in repo.Jobs)
+            job.HiringManagers.Add(new JobHiringManager { JobId = job.Id, UserId = user.UserId!.Value });
+
+        var result = await service.MoveStageAsync(otherJob, app.Id, Interview, app.RowVersion);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("not found", result.Error);
+        Assert.Equal(Applied, app.CurrentStageId);
+        Assert.Empty(repo.Events);
+        Assert.Empty(outbox.Staged);
     }
 
     // ---- Create: dedup, validation, atomicity -------------------------------------------------

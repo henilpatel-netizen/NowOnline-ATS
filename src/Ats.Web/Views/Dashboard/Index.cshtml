@@ -102,24 +102,27 @@
     </div>
 </div>
 
-<div class="ats-card mt-3">
-    <span class="ats-eyebrow">Latest activity:</span>
-    <h2 class="mt-1 mb-2">What moved.</h2>
-    @if (Model.Activity.Count == 0)
-    {
-        <p class="ats-small ats-muted mb-0">No activity recorded yet.</p>
-    }
-    else
-    {
-        <div class="d-flex flex-column">
-            @foreach (var a in Model.Activity)
-            {
-                <div class="ats-divider-bottom d-flex align-items-center gap-3 py-2">
-                    <partial name="Partials/_Avatar" model="new AvatarModel(a.Actor, 2)" />
-                    <span class="ats-small flex-grow-1">@a.Text</span>
-                    <span class="ats-mono ats-xsmall ats-muted"><local-time utc="@a.OccurredAt" format="time"></local-time></span>
-                </div>
-            }
-        </div>
-    }
-</div>
+@if (Model.Activity is not null)
+{
+    <div class="ats-card mt-3">
+        <span class="ats-eyebrow">Latest activity:</span>
+        <h2 class="mt-1 mb-2">What moved.</h2>
+        @if (Model.Activity.Count == 0)
+        {
+            <p class="ats-small ats-muted mb-0">No activity recorded yet.</p>
+        }
+        else
+        {
+            <div class="d-flex flex-column">
+                @foreach (var a in Model.Activity)
+                {
+                    <div class="ats-divider-bottom d-flex align-items-center gap-3 py-2">
+                        <partial name="Partials/_Avatar" model="new AvatarModel(a.Actor, 2)" />
+                        <span class="ats-small flex-grow-1">@a.Text</span>
+                        <span class="ats-mono ats-xsmall ats-muted"><local-time utc="@a.OccurredAt" format="time"></local-time></span>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}

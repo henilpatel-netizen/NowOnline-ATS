@@ -1,6 +1,7 @@
 using Ats.Application.Abstractions;
 using Ats.Application.Applications;
 using Ats.Application.Common;
+using Ats.Application.Jobs;
 using Ats.Domain.Enums;
 using Ats.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -13,11 +14,12 @@ public sealed class ApplicationCardQuery : IApplicationCardQuery
 {
     private readonly AtsDbContext _db;
     private readonly IFileStore _files;
-    public ApplicationCardQuery(AtsDbContext db, IFileStore files) { _db = db; _files = files; }
+    private readonly IJobScope _scope;
+    public ApplicationCardQuery(AtsDbContext db, IFileStore files, IJobScope scope) { _db = db; _files = files; _scope = scope; }
 
     public async Task<ApplicationCard?> GetAsync(int applicationId, CancellationToken ct = default)
     {
-        var a = await _db.Applications
+        var a = await _db.Applications.VisibleTo(_db.Jobs, _scope)
             .Where(x => x.Id == applicationId)
             .Select(x => new
             {

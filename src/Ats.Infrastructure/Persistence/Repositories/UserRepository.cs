@@ -47,11 +47,23 @@ public sealed class UserRepository : IUserRepository
         }
         catch (DbUpdateException ex) when (IsDuplicateEmail(ex))
         {
-            // Detach so a later SaveChanges in this scope does not retry the rejected update.
-            foreach (var entry in ex.Entries)
+            // Detach so a later SaveChanges in this scope does not retry the rejected update, including
+            // hiring team links removed alongside it.
+            foreach (var entry in ex.Entries.Concat(_db.ChangeTracker.Entries<JobHiringManager>()).ToList())
                 entry.State = EntityState.Detached;
             return false;
         }
+    }
+
+    // Tracked removal (no ExecuteDelete), on the tenant-filtered set. Links on soft-deleted jobs go too, but
+    // only jobs still visible are counted, as those are the teams an Owner knows about.
+    public async Task<int> RemoveHiringTeamLinksAsync(int userId, CancellationToken ct = default)
+    {
+        var links = await _db.JobHiringManagers.Where(h => h.UserId == userId).ToListAsync(ct);
+        if (links.Count == 0) return 0;
+        _db.JobHiringManagers.RemoveRange(links);
+        var jobIds = links.Select(l => l.JobId).ToList();
+        return await _db.Jobs.CountAsync(j => jobIds.Contains(j.Id), ct);
     }
 
     public Task SaveChangesAsync(CancellationToken ct = default) => _db.SaveChangesAsync(ct);
@@ -68,9 +80,12 @@ public sealed class UserRepository : IUserRepository
         return await strategy.ExecuteAsync(async () =>
         {
             // A retry re-runs the work after a rollback, but tracked users would still carry the failed
-            // attempt's edits (a tracking query does not overwrite them). Detach only users, so the work
-            // reloads them from the database and unrelated pending changes in this scope survive.
+            // attempt's edits (a tracking query does not overwrite them). Detach only users and hiring team
+            // links (removed by a role change), so the work reloads them from the database and unrelated
+            // pending changes in this scope survive.
             foreach (var entry in _db.ChangeTracker.Entries<AppUser>().ToList())
+                entry.State = EntityState.Detached;
+            foreach (var entry in _db.ChangeTracker.Entries<JobHiringManager>().ToList())
                 entry.State = EntityState.Detached;
 
             await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);

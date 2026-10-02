@@ -18,4 +18,5 @@ public class Job : TenantEntity, ISoftDeletable
 
     public Department? Department { get; set; }
     public Location? Location { get; set; }
+    public ICollection<JobHiringManager> HiringManagers { get; set; } = [];
 }

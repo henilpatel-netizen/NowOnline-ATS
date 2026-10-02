@@ -24,6 +24,15 @@ public class UserAuditSummaryTests
         Assert.Equal("Updated 'old@acme.test': role to Owner", UserAuditSummary.Updated(Before, after, [UserField.Role]));
     }
 
+    [Theory]
+    [InlineData(1, "Updated 'old@acme.test': role to Viewer, removed from 1 hiring team")]
+    [InlineData(3, "Updated 'old@acme.test': role to Viewer, removed from 3 hiring teams")]
+    public void Names_the_hiring_teams_a_role_change_removed(int removed, string expected)
+    {
+        var after = Before with { Role = AtsRole.Viewer };
+        Assert.Equal(expected, UserAuditSummary.Updated(Before, after, [UserField.Role], removed));
+    }
+
     [Fact]
     public void A_name_change_does_not_repeat_the_name()
     {

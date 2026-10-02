@@ -1,4 +1,5 @@
 using Ats.Application.Common;
+using Ats.Application.Jobs;
 using Ats.Application.Search;
 using Ats.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +12,8 @@ public sealed class GlobalSearchService : IGlobalSearchService
     private const int MinTermLength = 2;
 
     private readonly AtsDbContext _db;
-    public GlobalSearchService(AtsDbContext db) => _db = db;
+    private readonly IJobScope _scope;
+    public GlobalSearchService(AtsDbContext db, IJobScope scope) { _db = db; _scope = scope; }
 
     public async Task<SearchResults> SearchAsync(string? term, CancellationToken ct = default)
     {
@@ -23,14 +25,14 @@ public sealed class GlobalSearchService : IGlobalSearchService
         // metacharacters are escaped so a user typing % gets a literal match, not a full scan.
         var pattern = LikePattern.Contains(trimmed);
 
-        var jobs = await _db.Jobs
+        var jobs = await _db.Jobs.VisibleTo(_scope)
             .Where(j => EF.Functions.Like(j.Title, pattern) || EF.Functions.Like(j.ExternalRef, pattern))
             .OrderByDescending(j => j.PublishedAt)
             .Take(PerCategory)
             .Select(j => new JobHit(j.Id, j.Title, j.ExternalRef, j.Status.ToString()))
             .ToListAsync(ct);
 
-        var candidates = await _db.Candidates
+        var candidates = await _db.Candidates.VisibleTo(_db.Applications, _db.Jobs, _scope)
             .Where(c => EF.Functions.Like(c.FirstName, pattern)
                      || EF.Functions.Like(c.LastName, pattern)
                      || EF.Functions.Like(c.Email, pattern))
@@ -39,7 +41,7 @@ public sealed class GlobalSearchService : IGlobalSearchService
             .Select(c => new CandidateHit(c.Id, c.FirstName + " " + c.LastName, c.Email))
             .ToListAsync(ct);
 
-        var applications = await _db.Applications
+        var applications = await _db.Applications.VisibleTo(_db.Jobs, _scope)
             .Where(a => a.SourceCode != null && EF.Functions.Like(a.SourceCode, pattern))
             .OrderByDescending(a => a.AppliedAt)
             .Take(PerCategory)

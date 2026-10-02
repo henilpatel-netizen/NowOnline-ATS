@@ -20,7 +20,7 @@ All have `EntityType` "User" and `EntityRef` = the user id. Summaries never cont
 | Action | Written by | Summary |
 |---|---|---|
 | `UserCreated` | `UsersController.Create` | `Added '<email>' as <role>` |
-| `UserUpdated` | `UsersController.Edit` | built by `UserAuditSummary.Updated` from the stored record before and after, listing only what changed (email, role, name) |
+| `UserUpdated` | `UsersController.Edit` | built by `UserAuditSummary.Updated` from the stored record before and after, listing only what changed (email, role, name), plus "removed from N hiring teams" when a role change away from HiringManager cleared links |
 | `UserPasswordReset` | `UsersController.ResetPassword` | `Reset password for '<email>'` |
 | `UserDeactivated` / `UserReactivated` | `UsersController.Deactivate` / `Reactivate` | `Deactivated '<email>'` / `Reactivated '<email>'` |
 | `PasswordChanged` | `ProfileController.ChangePassword` | `Changed own password` |
@@ -45,6 +45,12 @@ deliveries, draft jobs) rather than any notification store. Time-to-hire, offer 
 source split are computed there too via `DashboardMath` (unit-tested in `Ats.Tests`). Offer
 acceptance currently uses a documented proxy denominator (applications that progressed in the last
 90 days); see the comment in `DashboardService`.
+
+The activity feed is audit data and is hidden for job-scoped users (HiringManager): `DashboardService` returns no
+feed and the view drops the section. The other dashboard figures are scoped to their own jobs.
+
+`JobCreated` and `JobUpdated` summaries append hiring team changes by name, e.g. `; hiring team: added Ada, Bo;
+removed Cy` (`HiringTeamChange.Describe`); nothing is appended when the team did not change.
 
 ## Audit screen (redesign)
 `IAuditQuery.SearchAsync` (filtered by free text / action / date-from, paged) backs the rebuilt audit

@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Ats.Web.Controllers;
 
-// Search spans jobs and candidates, so it needs both view permissions. Phase 3 scopes results for HiringManager.
+// Search spans jobs and candidates, so it needs both view permissions.
 [Authorize(Policy = AtsPermission.JobsView)]
 [Authorize(Policy = AtsPermission.CandidatesView)]
 public class SearchController : Controller

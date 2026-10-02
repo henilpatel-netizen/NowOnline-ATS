@@ -97,7 +97,7 @@
                     <span class="ats-sidebar-user-name">@Model.UserName</span>
                     @if (!string.IsNullOrEmpty(Model.Role))
                     {
-                        <span class="ats-sidebar-user-role">@Model.Role</span>
+                        <span class="ats-sidebar-user-role">@RoleOptions.Label(Model.Role)</span>
                     }
                 </span>
                 <a asp-controller="Profile" asp-action="ChangePassword" class="ats-sidebar-icon-btn text-decoration-none"

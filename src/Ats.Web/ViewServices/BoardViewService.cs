@@ -1,6 +1,9 @@
+using Ats.Application.Abstractions;
 using Ats.Application.Applications;
 using Ats.Application.Candidates;
 using Ats.Application.Common;
+using Ats.Application.Jobs;
+using Ats.Domain.Authorization;
 using Ats.Domain.Entities;
 using Ats.Domain.Enums;
 using Ats.Web.Models;
@@ -22,11 +25,15 @@ public sealed class BoardViewService : IBoardViewService
 {
     private readonly IApplicationService _applications;
     private readonly ICandidateService _candidates;
+    private readonly ICurrentUser _user;
+    private readonly IHiringTeamQuery _hiringTeam;
 
-    public BoardViewService(IApplicationService applications, ICandidateService candidates)
+    public BoardViewService(IApplicationService applications, ICandidateService candidates, ICurrentUser user, IHiringTeamQuery hiringTeam)
     {
         _applications = applications;
         _candidates = candidates;
+        _user = user;
+        _hiringTeam = hiringTeam;
     }
 
     public async Task<BoardViewModel?> BuildAsync(int jobId, string? error, CancellationToken ct = default)
@@ -58,9 +65,12 @@ public sealed class BoardViewService : IBoardViewService
                 .ToList())).ToList();
 
         var active = apps.Where(a => a.Status == ApplicationStatus.Active).ToList();
-        var candidateOptions = (await _candidates.ListAsync(ct))
-            .Select(c => new SelectListItem($"{c.FullName} <{c.Email}>", c.Id.ToString()))
-            .ToList();
+        // The add-candidate picker lists every candidate in the tenant, so only users who may add one get it.
+        var candidateOptions = RolePermissions.Has(_user.Role, AtsPermission.CandidatesManage)
+            ? (await _candidates.ListAsync(ct))
+                .Select(c => new SelectListItem($"{c.FullName} <{c.Email}>", c.Id.ToString()))
+                .ToList()
+            : [];
 
         return new BoardViewModel
         {
@@ -68,6 +78,7 @@ public sealed class BoardViewService : IBoardViewService
             Columns = columns,
             Error = error,
             CandidateOptions = candidateOptions,
+            HiringTeam = await _hiringTeam.TeamAsync(jobId, ct),
             InProcess = active.Count,
             AvgDaysInStage = DashboardMath.MeanDays(active.Select(a => now - LastActivity(a)).ToList()),
             FromReferral = apps.Count(a => a.Origin == ApplicationOrigin.Referral),

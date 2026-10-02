@@ -21,6 +21,29 @@
             @if (Model.Job.Location is not null) { <text>· @(Model.Job.Location.City ?? Model.Job.Location.Name)</text> }
             <text>· @Model.Job.EmploymentType</text>
         </div>
+        <div class="ats-board-team">
+            <span class="ats-eyebrow" id="board-team-label">Hiring team</span>
+            @if (Model.HiringTeam.Count == 0)
+            {
+                <span class="ats-small ats-muted">No hiring team</span>
+            }
+            else
+            {
+                <ul class="ats-team-list" aria-labelledby="board-team-label">
+                    @foreach (var m in Model.HiringTeam)
+                    {
+                        <li class="ats-team-chip ats-team-chip--static @(m.IsAssignable ? "" : "ats-team-chip--inactive")" title="@m.Email">
+                            <span class="ats-team-chip-avatar" aria-hidden="true"><partial name="Partials/_Avatar" model="new AvatarModel(m.Name, 1.5)" /></span>
+                            <span class="ats-team-chip-name">@m.Name<span class="visually-hidden">, @m.Email</span></span>
+                            @if (!m.IsAssignable)
+                            {
+                                <span class="ats-team-chip-flag">No access</span>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
     </div>
     <div class="ats-pagehead-actions">
         @if (canAddCandidate)

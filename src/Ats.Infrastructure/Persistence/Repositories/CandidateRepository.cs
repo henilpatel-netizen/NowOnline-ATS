@@ -1,4 +1,5 @@
 using Ats.Application.Candidates;
+using Ats.Application.Jobs;
 using Ats.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,6 +22,12 @@ public sealed class CandidateRepository : ICandidateRepository
 
     public Task<List<JobApplication>> ListApplicationsAsync(int candidateId, CancellationToken ct = default) =>
         _db.Applications.Where(a => a.CandidateId == candidateId).ToListAsync(ct);
+
+    public Task<bool> HasApplicationOnJobAssignedToAsync(int candidateId, int userId, CancellationToken ct = default)
+    {
+        var ownJobs = _db.Jobs.AssignedTo(userId);
+        return _db.Applications.AnyAsync(a => a.CandidateId == candidateId && ownJobs.Any(j => j.Id == a.JobId), ct);
+    }
 
     public async Task AddAsync(Candidate candidate, CancellationToken ct = default) =>
         await _db.Candidates.AddAsync(candidate, ct);

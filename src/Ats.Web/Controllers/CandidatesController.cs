@@ -4,6 +4,7 @@ using Ats.Application.Candidates;
 using Ats.Application.Jobs;
 using Ats.Domain.Authorization;
 using Ats.Domain.Enums;
+using Ats.Web.Identity;
 using Ats.Web.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -28,9 +29,12 @@ public class CandidatesController : Controller
     public async Task<IActionResult> Index(string? q, int page = 1)
     {
         var results = await _candidateList.SearchAsync(q, page, 20);
-        var jobs = (await _jobs.ListAsync())
-            .Where(j => j.Status == JobStatus.Published)
-            .Select(j => new SelectListItem($"{j.ExternalRef} - {j.Title}", j.Id.ToString())).ToList();
+        // The add-to-job menu lists every published job in the tenant, so only users who may use it get it.
+        var jobs = User.Can(AtsPermission.CandidatesManage)
+            ? (await _jobs.ListAsync())
+                .Where(j => j.Status == JobStatus.Published)
+                .Select(j => new SelectListItem($"{j.ExternalRef} - {j.Title}", j.Id.ToString())).ToList()
+            : [];
         return View(new CandidatesIndexViewModel { Results = results, Q = q, PublishedJobs = jobs });
     }
 

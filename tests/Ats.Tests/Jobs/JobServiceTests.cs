@@ -15,7 +15,7 @@ public class JobServiceTests
         var repo = new FakeJobRepository();
         repo.Jobs.AddRange(jobs);
         var outbox = new FakeOutboxEnqueuer();
-        return (new JobService(repo, outbox), repo, outbox);
+        return (new JobService(repo, outbox, new JobScope(new FakeCurrentUser())), repo, outbox);
     }
 
     private static Job DraftJob(int id = 1) => new()
@@ -28,7 +28,7 @@ public class JobServiceTests
     };
 
     private static JobInput Input(int? id = null, string title = "Developer", int pipelineId = 3) =>
-        new(id, title, null, null, null, EmploymentType.FullTime, pipelineId);
+        new(id, title, null, null, null, EmploymentType.FullTime, pipelineId, []);
 
     // ---- Create -------------------------------------------------------------------------------
 
@@ -79,12 +79,21 @@ public class JobServiceTests
     public async Task A_clashing_job_number_is_reported_rather_than_throwing()
     {
         var (service, repo, _) = Build();
-        repo.NumberClash = true;
+        repo.RejectNextCreateAsDuplicateJobNumber = true;
 
         var result = await service.CreateAsync(Input());
 
         Assert.False(result.Succeeded);
-        Assert.Contains("job number", result.Error);
+        Assert.Equal("Could not assign a job number just now. Please try again.", result.Error);
+    }
+
+    [Fact]
+    public async Task Any_other_save_failure_on_create_is_not_swallowed()
+    {
+        var (service, repo, _) = Build();
+        repo.CreateFailure = new InvalidOperationException("database down");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateAsync(Input()));
     }
 
     // ---- Update -------------------------------------------------------------------------------

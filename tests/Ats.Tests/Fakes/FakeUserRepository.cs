@@ -11,6 +11,9 @@ public sealed class FakeUserRepository : IUserRepository
     public int TransactionCount { get; private set; }
     public bool RejectNextAddAsDuplicate { get; set; }
     public bool RejectNextSaveAsDuplicate { get; set; }
+    public List<JobHiringManager> TeamLinks { get; } = new();
+    public bool RemovedTeamLinksOutsideTransaction { get; private set; }
+    private bool _inTransaction;
 
     public Task<AppUser?> GetAsync(int id, CancellationToken ct = default) =>
         Task.FromResult(Users.FirstOrDefault(u => u.Id == id));
@@ -42,15 +45,23 @@ public sealed class FakeUserRepository : IUserRepository
         return Task.FromResult(true);
     }
 
+    public Task<int> RemoveHiringTeamLinksAsync(int userId, CancellationToken ct = default)
+    {
+        if (!_inTransaction) RemovedTeamLinksOutsideTransaction = true;
+        return Task.FromResult(TeamLinks.RemoveAll(l => l.UserId == userId));
+    }
+
     public Task SaveChangesAsync(CancellationToken ct = default)
     {
         SaveCount++;
         return Task.CompletedTask;
     }
 
-    public Task<T> InTransactionAsync<T>(Func<CancellationToken, Task<T>> work, CancellationToken ct = default)
+    public async Task<T> InTransactionAsync<T>(Func<CancellationToken, Task<T>> work, CancellationToken ct = default)
     {
         TransactionCount++;
-        return work(ct);
+        _inTransaction = true;
+        try { return await work(ct); }
+        finally { _inTransaction = false; }
     }
 }

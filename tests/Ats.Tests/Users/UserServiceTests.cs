@@ -43,12 +43,12 @@ public class UserServiceTests
     }
 
     [Fact]
-    public async Task Create_rejects_HiringManager()
+    public async Task Create_accepts_HiringManager()
     {
         var (s, repo, _) = Build();
-        var (result, _) = await s.CreateAsync(Input(AtsRole.HiringManager));
-        Assert.False(result.Succeeded);
-        Assert.Equal(2, repo.Users.Count);
+        var (result, userId) = await s.CreateAsync(Input(AtsRole.HiringManager));
+        Assert.True(result.Succeeded, result.Error);
+        Assert.Equal(AtsRole.HiringManager, repo.Users.Single(u => u.Id == userId).Role);
     }
 
     [Theory]
@@ -127,6 +127,58 @@ public class UserServiceTests
         Assert.Equal(0, repo.SaveCount);
         Assert.Equal(before, repo.Users[1].SecurityStamp);
         Assert.Null(emails.Checked);
+    }
+
+    private static (UserService Service, FakeUserRepository Repo) BuildWithHiringManager()
+    {
+        var (s, repo, _) = Build();
+        repo.Users.Add(new AppUser { Id = 3, Email = "hm@acme.test", DisplayName = "Hm", Role = AtsRole.HiringManager, PasswordHash = "hash:x" });
+        repo.TeamLinks.AddRange(
+        [
+            new JobHiringManager { JobId = 10, UserId = 3 },
+            new JobHiringManager { JobId = 11, UserId = 3 },
+            new JobHiringManager { JobId = 10, UserId = 4 },
+        ]);
+        return (s, repo);
+    }
+
+    [Fact]
+    public async Task Changing_a_hiring_manager_to_another_role_removes_their_team_links()
+    {
+        var (s, repo) = BuildWithHiringManager();
+        var update = await s.UpdateAsync(Edit(3, "Hm", "hm@acme.test", AtsRole.Viewer), OwnerId);
+        Assert.True(update.Result.Succeeded, update.Result.Error);
+        Assert.Equal(2, update.RemovedFromJobs);
+        Assert.Equal(4, Assert.Single(repo.TeamLinks).UserId);
+        Assert.False(repo.RemovedTeamLinksOutsideTransaction);
+    }
+
+    [Fact]
+    public async Task A_hiring_manager_keeping_their_role_keeps_their_team_links()
+    {
+        var (s, repo) = BuildWithHiringManager();
+        var update = await s.UpdateAsync(Edit(3, "Renamed", "hm@acme.test", AtsRole.HiringManager), OwnerId);
+        Assert.True(update.Result.Succeeded, update.Result.Error);
+        Assert.Equal(0, update.RemovedFromJobs);
+        Assert.Equal(3, repo.TeamLinks.Count);
+    }
+
+    [Fact]
+    public async Task A_failed_role_change_away_from_hiring_manager_keeps_their_team_links()
+    {
+        var (s, repo) = BuildWithHiringManager();
+        var update = await s.UpdateAsync(Edit(3, "Hm", "hm@acme.test", "SuperAdmin"), OwnerId);
+        Assert.False(update.Result.Succeeded);
+        Assert.Equal(0, update.RemovedFromJobs);
+        Assert.Equal(3, repo.TeamLinks.Count);
+    }
+
+    [Fact]
+    public async Task Deactivating_a_hiring_manager_keeps_their_team_links()
+    {
+        var (s, repo) = BuildWithHiringManager();
+        Assert.True((await s.SetActiveAsync(3, false, OwnerId)).Result.Succeeded);
+        Assert.Equal(3, repo.TeamLinks.Count);
     }
 
     [Fact]
@@ -294,11 +346,12 @@ public class UserServiceTests
     }
 
     [Fact]
-    public async Task Role_cannot_be_changed_to_HiringManager()
+    public async Task Role_can_be_changed_to_HiringManager()
     {
         var (s, repo, _) = Build();
-        Assert.Equal("Choose a valid role.", (await s.UpdateAsync(Edit(role: AtsRole.HiringManager), OwnerId)).Result.Error);
-        Assert.Equal(AtsRole.Recruiter, repo.Users[1].Role);
+        var update = await s.UpdateAsync(Edit(role: AtsRole.HiringManager), OwnerId);
+        Assert.True(update.Result.Succeeded, update.Result.Error);
+        Assert.Equal(AtsRole.HiringManager, repo.Users[1].Role);
     }
 
     [Theory]
@@ -309,14 +362,16 @@ public class UserServiceTests
         Assert.Equal("Choose a valid role.", (await Build().Service.UpdateAsync(Edit(role: role), OwnerId)).Result.Error);
 
     // A role outside Assignable can only come from the database; keeping it must not block other edits.
+    // Every AtsRole is assignable now, so a stored value outside AtsRole.All stands in for one.
     [Fact]
     public async Task A_stored_non_assignable_role_that_is_kept_is_accepted()
     {
+        const string legacy = "LegacyRole";
         var (s, repo, _) = Build();
-        repo.Users[1].Role = AtsRole.HiringManager;
-        var update = await s.UpdateAsync(Edit(name: "Hiring Manager", role: AtsRole.HiringManager), OwnerId);
+        repo.Users[1].Role = legacy;
+        var update = await s.UpdateAsync(Edit(name: "Legacy User", role: legacy), OwnerId);
         Assert.True(update.Result.Succeeded, update.Result.Error);
-        Assert.Equal(AtsRole.HiringManager, repo.Users[1].Role);
+        Assert.Equal(legacy, repo.Users[1].Role);
         Assert.Equal(new[] { UserField.Name }, update.ChangedFields);
     }
 

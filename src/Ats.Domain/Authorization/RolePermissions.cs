@@ -15,12 +15,13 @@ public static class RolePermissions
         [AtsRole.Owner] = [.. AtsPermission.All],
         [AtsRole.Recruiter] =
         [
-            .. ReadOnly, AtsPermission.JobsManage, AtsPermission.CandidatesManage, AtsPermission.ApplicationsMove,
-            AtsPermission.ResumesDownload, AtsPermission.PipelinesManage, AtsPermission.OrganisationManage,
+            .. ReadOnly, AtsPermission.JobsViewAll, AtsPermission.JobsManage, AtsPermission.CandidatesManage,
+            AtsPermission.ApplicationsMove, AtsPermission.ResumesDownload, AtsPermission.PipelinesManage,
+            AtsPermission.OrganisationManage,
         ],
-        // Not yet limited to the manager's own jobs; phase 3 adds that. Not assignable until then (AtsRole.Assignable).
+        // No JobsViewAll: limited to the jobs assigned to the manager.
         [AtsRole.HiringManager] = [.. ReadOnly, AtsPermission.ApplicationsMove, AtsPermission.ResumesDownload],
-        [AtsRole.Viewer] = [.. ReadOnly],
+        [AtsRole.Viewer] = [.. ReadOnly, AtsPermission.JobsViewAll],
     };
 
     public static bool Has(string? role, string permission) =>

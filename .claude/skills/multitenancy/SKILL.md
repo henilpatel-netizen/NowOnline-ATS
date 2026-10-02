@@ -51,6 +51,11 @@ NowOnline defaults for nulls. It reads `Tenants` by id (Tenant is not an `ITenan
 unfiltered) and `TenantSettings` under the normal filter. This introduced **no** new filter-bypass
 spot; the five above are still the only ones.
 
+## Job scoping is not tenancy
+HiringManager job scoping (authorization skill) is a separate, explicit filter (`JobScopeFilter`, `IJobScope`). It
+never uses a global query filter, and it always joins through `db.Jobs` so the soft-delete and tenant filters apply.
+It adds no filter-bypass spot.
+
 ## Rule
 Outside those five documented spots: never `IgnoreQueryFilters()`, never hand-set `TenantId`, never
 expose an unfiltered queryable. See `.claude/rules/multi-tenancy.md`.

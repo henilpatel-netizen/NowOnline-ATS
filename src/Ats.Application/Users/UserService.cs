@@ -19,8 +19,9 @@ public static class UserField
 }
 
 // ChangedFields lists what was saved (UserField values, empty on failure or no-op) so the caller can
-// write the audit summary without reading the user again.
-public sealed record UserUpdateResult(OperationResult Result, IReadOnlyList<string> ChangedFields)
+// write the audit summary without reading the user again. RemovedFromJobs counts the hiring teams a
+// role change away from HiringManager removed the user from.
+public sealed record UserUpdateResult(OperationResult Result, IReadOnlyList<string> ChangedFields, int RemovedFromJobs = 0)
 {
     // A changed email or role rotates the security stamp, so the user's sessions end.
     public bool SignedOut => ChangedFields.Contains(UserField.Email) || ChangedFields.Contains(UserField.Role);
@@ -120,6 +121,11 @@ public sealed class UserService : IUserService
 
             if (roleChanged && await IsLastActiveOwnerAsync(user, innerCt)) return UpdateFailed(LastOwner);
             if (emailChanged && await _emails.EmailExistsAsync(email, innerCt)) return UpdateFailed(DuplicateEmail);
+
+            // Switching back to HiringManager later must not silently restore old assignments. Deactivation
+            // keeps the links: a deactivated user cannot sign in.
+            if (roleChanged && user.Role == AtsRole.HiringManager)
+                result = result with { RemovedFromJobs = await _repo.RemoveHiringTeamLinksAsync(user.Id, innerCt) };
 
             if (nameChanged) user.DisplayName = name;
             if (emailChanged) user.Email = email;

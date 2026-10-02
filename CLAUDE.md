@@ -140,10 +140,10 @@ four phases (`docs/plans/2026-07-30-ats-redesign-phase-{1..4}-*.md`).
 | Architecture | `.claude/skills/architecture/SKILL.md` | Solution layout, layering, DI, where code goes, `Paging`/`LikePattern` list helpers |
 | Multi-tenancy | `.claude/skills/multitenancy/SKILL.md` | `TenantEntity`, query filter, interceptor, onboarding stamping |
 | UI | `.claude/skills/ui/SKILL.md` | Layouts, design tokens, shared components, how to add a page, phone navigation, layout gates, Edit-page pattern |
-| Entities | `.claude/skills/entities/SKILL.md` | Job/Candidate/JobApplication/Event, soft delete, ExternalRef |
+| Entities | `.claude/skills/entities/SKILL.md` | Job/Candidate/JobApplication/Event, hiring team (`JobHiringManager`), soft delete, ExternalRef |
 | Pipeline | `.claude/skills/pipeline/SKILL.md` | Templates, stages, board moves, history, concurrency |
 | Career site | `.claude/skills/career-site/SKILL.md` | Careers area, slug tenancy, IFileStore, public apply |
 | Integration | `.claude/skills/integration/SKILL.md` | Vacancy push, outbox, worker, ReferralTool client, settings |
 | Audit | `.claude/skills/audit/SKILL.md` | Audit log (user and account entries, search), dashboard metrics, integration test tools |
-| Authorization | `.claude/skills/authorization/SKILL.md` | Permissions, role map, policies, fallback policy, gating actions and controls, users (list, Edit page, update rules), sessions |
+| Authorization | `.claude/skills/authorization/SKILL.md` | Permissions, role map, policies, fallback policy, gating actions and controls, job scoping (HiringManager), users (list, Edit page, update rules), sessions |
 | Orchestration | `.claude/skills/ats-ship/SKILL.md` | `/ats-ship`: implement, parallel review, done-gate, no git |

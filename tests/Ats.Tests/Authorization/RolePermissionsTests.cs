@@ -14,11 +14,11 @@ public class RolePermissionsTests
     public static TheoryData<string, string[]> Expected => new()
     {
         { AtsRole.Owner, AtsPermission.All },
-        { AtsRole.Recruiter, [.. ReadOnly, AtsPermission.JobsManage, AtsPermission.CandidatesManage,
+        { AtsRole.Recruiter, [.. ReadOnly, AtsPermission.JobsViewAll, AtsPermission.JobsManage, AtsPermission.CandidatesManage,
             AtsPermission.ApplicationsMove, AtsPermission.ResumesDownload,
             AtsPermission.PipelinesManage, AtsPermission.OrganisationManage] },
         { AtsRole.HiringManager, [.. ReadOnly, AtsPermission.ApplicationsMove, AtsPermission.ResumesDownload] },
-        { AtsRole.Viewer, ReadOnly },
+        { AtsRole.Viewer, [.. ReadOnly, AtsPermission.JobsViewAll] },
     };
 
     [Theory]
@@ -54,11 +54,21 @@ public class RolePermissionsTests
         Assert.All(AtsRole.All, r => Assert.True(RolePermissions.Has(r, AtsPermission.ProfileManage), r));
 
     [Fact]
-    public void HiringManager_is_not_assignable_until_it_is_scoped()
-    {
-        Assert.DoesNotContain(AtsRole.HiringManager, AtsRole.Assignable);
-        Assert.Equal(new[] { AtsRole.Owner, AtsRole.Recruiter, AtsRole.Viewer }, AtsRole.Assignable);
-    }
+    public void Assignable_is_Owner_Recruiter_HiringManager_Viewer() =>
+        Assert.Equal(new[] { AtsRole.Owner, AtsRole.Recruiter, AtsRole.HiringManager, AtsRole.Viewer }, AtsRole.Assignable);
+
+    [Fact]
+    public void Only_HiringManager_views_jobs_without_viewing_all() =>
+        Assert.Equal(new[] { AtsRole.HiringManager },
+            AtsRole.All.Where(r => RolePermissions.Has(r, AtsPermission.JobsView) && !RolePermissions.Has(r, AtsPermission.JobsViewAll)));
+
+    // Manage paths (the Jobs Edit POST team reload, the add-candidate job pickers,
+    // AddExistingCandidateToJob) skip the job-scope check, so they must never serve a job-scoped user.
+    // ApplicationsMove is left out: HiringManager holds it and is scoped by design.
+    [Fact]
+    public void Every_role_that_manages_jobs_or_candidates_views_all_jobs() =>
+        Assert.All(AtsRole.All.Where(r => RolePermissions.Has(r, AtsPermission.JobsManage) || RolePermissions.Has(r, AtsPermission.CandidatesManage)),
+            r => Assert.True(RolePermissions.Has(r, AtsPermission.JobsViewAll), r));
 
     [Fact]
     public void Permission_names_are_unique() =>

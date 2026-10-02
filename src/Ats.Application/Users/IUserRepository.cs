@@ -13,6 +13,9 @@ public interface IUserRepository
     Task<int?> TryAddAsync(AppUser user, CancellationToken ct = default);
     // Saves; false when the save hit the unique email index (a concurrent change took that email).
     Task<bool> TrySaveAsync(CancellationToken ct = default);
+    // Marks every hiring team link of the user for removal (saved by the next save); returns how many of those
+    // jobs are not deleted.
+    Task<int> RemoveHiringTeamLinksAsync(int userId, CancellationToken ct = default);
     Task SaveChangesAsync(CancellationToken ct = default);
     Task<T> InTransactionAsync<T>(Func<CancellationToken, Task<T>> work, CancellationToken ct = default);
 }

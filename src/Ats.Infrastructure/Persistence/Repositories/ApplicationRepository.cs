@@ -1,4 +1,5 @@
 using Ats.Application.Applications;
+using Ats.Application.Jobs;
 using Ats.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,6 +13,9 @@ public sealed class ApplicationRepository : IApplicationRepository
     public Task<Job?> GetJobAsync(int jobId, CancellationToken ct = default) =>
         _db.Jobs.Include(j => j.Department).Include(j => j.Location)
             .FirstOrDefaultAsync(j => j.Id == jobId, ct);
+
+    public Task<bool> IsJobAssignedToAsync(int jobId, int userId, CancellationToken ct = default) =>
+        _db.Jobs.AssignedTo(userId).AnyAsync(j => j.Id == jobId, ct);
 
     public async Task<Dictionary<int, DateTimeOffset>> LatestEventTimesForJobAsync(int jobId, CancellationToken ct = default) =>
         await (

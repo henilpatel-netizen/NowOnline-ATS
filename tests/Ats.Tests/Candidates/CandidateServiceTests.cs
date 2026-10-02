@@ -1,4 +1,5 @@
 using Ats.Application.Candidates;
+using Ats.Application.Jobs;
 using Ats.Domain.Entities;
 using Ats.Tests.Fakes;
 using Xunit;
@@ -17,7 +18,7 @@ public class CandidateServiceTests
             new JobApplication { Id = 10, CandidateId = 1, JobId = 5 },
             new JobApplication { Id = 11, CandidateId = 1, JobId = 6 },
             new JobApplication { Id = 12, CandidateId = 2, JobId = 5 });
-        return (new CandidateService(repo), repo);
+        return (new CandidateService(repo, new JobScope(new FakeCurrentUser())), repo);
     }
 
     [Fact]

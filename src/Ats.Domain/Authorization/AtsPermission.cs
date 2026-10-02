@@ -8,6 +8,8 @@ public static class AtsPermission
 {
     public const string DashboardView = "dashboard.view";
     public const string JobsView = "jobs.view";
+    // Unrestricted job visibility. jobs.view without it limits a user to the jobs assigned to them.
+    public const string JobsViewAll = "jobs.viewall";
     public const string JobsManage = "jobs.manage";
     public const string CandidatesView = "candidates.view";
     public const string CandidatesManage = "candidates.manage";
@@ -23,7 +25,7 @@ public static class AtsPermission
 
     public static readonly string[] All =
     {
-        DashboardView, JobsView, JobsManage, CandidatesView, CandidatesManage, ApplicationsMove,
+        DashboardView, JobsView, JobsViewAll, JobsManage, CandidatesView, CandidatesManage, ApplicationsMove,
         ResumesDownload, PipelinesManage, OrganisationManage, CareerSiteManage, IntegrationManage,
         AuditView, UsersManage, ProfileManage,
     };

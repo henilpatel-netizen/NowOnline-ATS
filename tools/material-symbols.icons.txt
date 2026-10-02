@@ -4,6 +4,7 @@ arrow_back
 arrow_forward
 bolt
 cable
+check
 check_circle
 chevron_left
 chevron_right
