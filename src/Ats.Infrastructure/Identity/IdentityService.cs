@@ -17,8 +17,9 @@ public sealed class IdentityService : IIdentityService
 
     public string HashPassword(string password) => _hasher.HashPassword(new AppUser(), password);
 
+    // An empty hash is an invite-pending user: never a match, whatever the hasher would make of it.
     public bool VerifyPassword(string hash, string password) =>
-        _hasher.VerifyHashedPassword(new AppUser(), hash, password) != PasswordVerificationResult.Failed;
+        hash.Length > 0 && _hasher.VerifyHashedPassword(new AppUser(), hash, password) != PasswordVerificationResult.Failed;
 
     public async Task<SignInResult> ValidateCredentialsAsync(string email, string password, CancellationToken ct = default)
     {
@@ -26,7 +27,7 @@ public sealed class IdentityService : IIdentityService
         // IgnoreQueryFilters: sign-in happens before a tenant is in context. Email is globally unique
         // (IX_Users_Email), so this resolves to at most one user, in exactly one tenant.
         var user = await _db.Users.IgnoreQueryFilters().SingleOrDefaultAsync(u => u.Email == normalized, ct);
-        if (user is null || !VerifyPassword(user.PasswordHash, password))
+        if (user is null || user.IsInvitePending || !VerifyPassword(user.PasswordHash, password))
             return new SignInResult(false, null, null, null, null, "Invalid email or password.");
 
         if (!user.IsActive)

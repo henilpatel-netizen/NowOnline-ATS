@@ -99,8 +99,12 @@ public sealed class FakeApplicationRepository : IApplicationRepository
         finally { _inTransaction = false; }
     }
 
+    // Raised by every successful save (not by a concurrency failure).
+    public event Action? Saved;
+
     private void Save()
     {
+        Saved?.Invoke();
         SaveCount++;
         if (_inTransaction) SavesInsideTransaction++;
     }

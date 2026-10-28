@@ -10,12 +10,9 @@
         <input asp-for="Email" class="form-control" autocomplete="off" /><span asp-validation-for="Email" class="text-danger small"></span></div>
     <div class="mb-3"><label asp-for="Role" class="form-label"></label>
         <select asp-for="Role" asp-items="RoleOptions.For(Model.Role)" class="form-select"></select><span asp-validation-for="Role" class="text-danger small"></span></div>
-    <div class="mb-3"><label asp-for="TemporaryPassword" class="form-label"></label>
-        <input asp-for="TemporaryPassword" class="form-control" autocomplete="new-password" />
-        <div class="form-text">Share it securely; the user must change it when they first sign in.</div>
-        <span asp-validation-for="TemporaryPassword" class="text-danger small"></span></div>
+    <p class="form-text d-flex align-items-center gap-1 mb-3"><span class="ms ms-sm">email</span> We email them an invitation link. They choose their own password; the link works for 7 days.</p>
     <div class="d-flex align-items-center gap-2 border-top pt-3">
-        <button type="submit" class="btn btn-primary">Add user</button>
+        <button type="submit" class="btn btn-primary">Send invitation</button>
         <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a>
     </div>
 </form>

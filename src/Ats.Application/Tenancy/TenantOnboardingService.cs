@@ -1,4 +1,5 @@
 using Ats.Application.Abstractions;
+using Ats.Application.Common;
 using Ats.Domain.Entities;
 
 namespace Ats.Application.Tenancy;
@@ -31,9 +32,12 @@ public sealed class TenantOnboardingService : ITenantOnboardingService
 
         // Email is globally unique across tenants, so reject an address already in use before we try
         // to insert (avoids surfacing the DB unique-index violation as an unhandled error).
-        var ownerEmail = input.OwnerEmail.Trim().ToLowerInvariant();
+        // The same rule as every other user address, so the owner can receive account email.
+        var ownerEmail = EmailAddress.Normalise(input.OwnerEmail);
+        if (!EmailAddress.IsValid(ownerEmail))
+            return new RegisterTenantResult(false, 0, 0, EmailAddress.Invalid);
         if (await _store.EmailExistsAsync(ownerEmail, ct))
-            return new RegisterTenantResult(false, 0, 0, "That email address is already registered.");
+            return new RegisterTenantResult(false, 0, 0, EmailAddress.Duplicate);
 
         var tenant = new Tenant { Name = input.CompanyName.Trim(), Slug = slug };
         var settings = new TenantSettings { CodeParameterName = "ref" };

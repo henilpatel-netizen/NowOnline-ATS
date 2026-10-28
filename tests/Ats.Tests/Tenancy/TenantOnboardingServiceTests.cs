@@ -34,6 +34,24 @@ public class TenantOnboardingServiceTests
         Assert.Equal("owner@acme.test", store.CreatedOwnerEmail);
     }
 
+    // The owner must be able to receive account email, and the email system rejects what EmailAddress rejects.
+    [Theory]
+    [InlineData("not-an-email")]
+    [InlineData("owner@")]
+    [InlineData("Owner Name <owner@acme.test>")]
+    public async Task Rejects_an_email_the_email_system_would_refuse(string email)
+    {
+        var store = new FakeStore();
+        var service = new TenantOnboardingService(store, new FakeIdentity());
+
+        var result = await service.RegisterAsync(Input("acme", email));
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("Enter a valid email address.", result.Error);
+        Assert.Null(store.CheckedEmail);
+        Assert.False(store.CreateCalled);
+    }
+
     [Fact]
     public async Task Creates_the_tenant_when_slug_and_email_are_free()
     {

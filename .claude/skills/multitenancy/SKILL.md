@@ -43,13 +43,26 @@ settable `WorkerTenantContext` the `OutboxProcessor` sets per message.
 - `OutboxClaimStore.ClaimDueAsync` (`Ats.Worker`): claims due outbox messages across all tenants
   with one raw-SQL statement (`SqlQueryRaw`, which the LINQ query filter does not apply to); the
   `OutboxProcessor` then sets `WorkerTenantContext.CurrentTenantId` per message.
+- `AccountStore` (`IAccountStore`, signed-out account links: forgot password, invite, email change):
+  `IgnoreQueryFilters()` on `Users` only by the globally unique normalised email, or by an explicit tenant id AND
+  user id taken from a token validated by `IAccountTokens`. `FindByEmailAsync` normalises the email itself.
+  `Audit(user, ...)` stamps `AuditEntry.TenantId` by hand from the loaded user (the interceptor leaves a non-zero
+  value alone). `EmailTakenAsync` reuses `OnboardingStore.EmailExistsAsync`. Only the account-link services in
+  `Ats.Application/Accounts` (e.g. `AccountRecoveryService`) may inject it; before acting on a token they must
+  compare `token.SecurityStamp` with the loaded user's stamp and check `TenantActiveAsync`. `TrySaveAsync`
+  returns false on the `IX_Users_Email` violation and clears the change tracker; it adds no bypass.
+
+## Global tables (not bypass spots)
+`EmailMessages` is a global table like `Tenants`: not an `ITenantEntity`, so there is no filter to bypass (its
+`TenantId` is informational only). It is written only through `IEmailOutbox` and read only by the Worker; never
+expose it to a back-office query.
 
 ## Branding (redesign)
 `TenantSettings` carries per-tenant branding (`BrandAccentColor`, `BrandSidebarTheme`, career hero
 copy). `ITenantBrandingService` resolves them, cached per request, with
 NowOnline defaults for nulls. It reads `Tenants` by id (Tenant is not an `ITenantEntity`, so it is
 unfiltered) and `TenantSettings` under the normal filter. This introduced **no** new filter-bypass
-spot; the five above are still the only ones.
+spot; the six above are still the only ones.
 
 ## Job scoping is not tenancy
 HiringManager job scoping (authorization skill) is a separate, explicit filter (`JobScopeFilter`, `IJobScope`). It
@@ -57,5 +70,5 @@ never uses a global query filter, and it always joins through `db.Jobs` so the s
 It adds no filter-bypass spot.
 
 ## Rule
-Outside those five documented spots: never `IgnoreQueryFilters()`, never hand-set `TenantId`, never
+Outside those six documented spots: never `IgnoreQueryFilters()`, never hand-set `TenantId`, never
 expose an unfiltered queryable. See `.claude/rules/multi-tenancy.md`.

@@ -11,7 +11,7 @@ test('search matches the action and the entity type', async ({ page }) => {
   await expect(page.locator(rows).first()).toBeVisible();
   await expect(page.locator(`${rows} .ats-audit-action`, { hasText: /^User/ }).first()).toBeVisible();
 
-  // "Added 'x' as Viewer" does not contain the action name, so only the Action column can match.
+  // "Invited 'x' as Viewer" does not contain the action name, so only the Action column can match.
   await page.goto('/Audit?q=UserCreated');
   await expect(page.locator(`${rows} .ats-audit-action`, { hasText: 'UserCreated' }).first()).toBeVisible();
 });

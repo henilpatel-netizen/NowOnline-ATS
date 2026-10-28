@@ -1,6 +1,8 @@
 using System.Globalization;
 using Ats.Application.Abstractions;
+using Ats.Application.Accounts;
 using Ats.Application.Auditing;
+using Ats.Application.Common;
 using Ats.Application.Jobs;
 using Ats.Application.Users;
 using Ats.Domain.Authorization;
@@ -16,7 +18,6 @@ namespace Ats.Web.Controllers;
 public class UsersController : Controller
 {
     private const string DetailsPrefix = "Details";
-    private const string ResetPrefix = "Reset";
 
     private const int PageSize = 20;
 
@@ -27,11 +28,16 @@ public class UsersController : Controller
     private readonly ITenantContext _tenant;
     private readonly IHiringTeamQuery _hiringTeam;
     private readonly IAuditLogger _audit;
+    private readonly IInvitationService _invites;
+    private readonly IAccountRecoveryService _recovery;
+    private readonly IEmailChangeService _emailChange;
 
     public UsersController(IUserService users, IUserListQuery userList, IIdentityService identity, ICurrentUser current, ITenantContext tenant,
-        IHiringTeamQuery hiringTeam, IAuditLogger audit)
+        IHiringTeamQuery hiringTeam, IAuditLogger audit, IInvitationService invites, IAccountRecoveryService recovery,
+        IEmailChangeService emailChange)
     {
         _users = users; _userList = userList; _identity = identity; _current = current; _tenant = tenant; _hiringTeam = hiringTeam; _audit = audit;
+        _invites = invites; _recovery = recovery; _emailChange = emailChange;
     }
 
     private int Me => _current.UserId!.Value;
@@ -49,14 +55,24 @@ public class UsersController : Controller
     public async Task<IActionResult> Create(UserCreateViewModel vm)
     {
         if (!ModelState.IsValid) return View(vm);
-        var (result, userId) = await _users.CreateAsync(new CreateUserInput(vm.DisplayName, vm.Email, vm.Role, vm.TemporaryPassword));
+        var (result, userId) = await _users.CreateAsync(new CreateUserInput(vm.DisplayName, vm.Email, vm.Role));
         if (!result.Succeeded)
         {
             ModelState.AddModelError(string.Empty, result.Error!);
             return View(vm);
         }
-        await _audit.LogAsync("UserCreated", "User", Ref(userId!.Value), $"Added '{vm.Email.Trim().ToLowerInvariant()}' as {vm.Role}");
-        TempData["Success"] = "User added. Share the temporary password securely; they must change it when they first sign in.";
+        var id = userId!.Value;
+        var email = EmailAddress.Normalise(vm.Email);
+        await _audit.LogAsync("UserCreated", "User", Ref(id), $"Invited '{email}' as {vm.Role}");
+
+        // A second save: when it fails the user still exists, invite-pending, and the Owner can resend.
+        var invite = await _invites.SendInviteAsync(id);
+        if (!invite.Succeeded)
+        {
+            TempData["Error"] = $"{vm.DisplayName.Trim()} was added, but the invitation could not be sent. Use Resend invite to try again.";
+            return RedirectToAction(nameof(Edit), new { id });
+        }
+        TempData["Success"] = $"Invitation sent to {email}.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -90,14 +106,15 @@ public class UsersController : Controller
             ModelState.AddModelError(string.Empty, update.Result.Error!);
             return await EditView(stored, vm);
         }
-        if (update.ChangedFields.Count == 0)
+        if (update.ChangedFields.Count == 0 && update.PendingEmail is null)
         {
             TempData["Info"] = "No changes to save.";
             return RedirectToAction(nameof(Edit), new { id });
         }
 
         var after = await _users.GetAsync(id) ?? stored;
-        await _audit.LogAsync("UserUpdated", "User", Ref(id), UserAuditSummary.Updated(stored, after, update.ChangedFields, update.RemovedFromJobs));
+        if (update.ChangedFields.Count > 0)
+            await _audit.LogAsync("UserUpdated", "User", Ref(id), UserAuditSummary.Updated(stored, after, update.ChangedFields, update.RemovedFromJobs));
 
         // The sidebar shows the name from the cookie, so re-issue it. A name change does not rotate the stamp.
         if (isMe && update.ChangedFields.Contains(UserField.Name))
@@ -109,32 +126,62 @@ public class UsersController : Controller
         }
 
         var teams = update.RemovedFromJobs > 0 ? $", {UserAuditSummary.RemovedFromTeams(update.RemovedFromJobs)}" : "";
-        TempData["Success"] = update.SignedOut
-            ? $"{after.DisplayName} updated{teams}. They are signed out."
-            : $"{after.DisplayName} updated{teams}.";
+        var updated = update.ChangedFields.Count == 0 ? ""
+            : update.SignedOut && !stored.InvitePending ? $"{after.DisplayName} updated{teams}. They are signed out. "
+            : $"{after.DisplayName} updated{teams}. ";
+
+        // Second saves, after the update: a failure here leaves the update in place and says what did not happen.
+        if (update.PendingEmail is { } newEmail)
+        {
+            var request = await _emailChange.RequestAsync(id, newEmail, Me);
+            if (!request.Succeeded)
+            {
+                TempData["Error"] = $"{updated}The email address was not changed: {request.Error}";
+                return RedirectToAction(nameof(Edit), new { id });
+            }
+            await _audit.LogAsync("UserEmailChangeRequested", "User", Ref(id), $"Requested an email change from '{after.Email}' to '{newEmail}'");
+            // The request rotates the stamp; a role change in the same save has said so already.
+            var signedOut = update.SignedOut ? "" : "They are signed out. ";
+            TempData["Success"] = $"{updated}{signedOut}Verification sent to {newEmail}. The address changes when they confirm.";
+        }
+        else if (stored.InvitePending && update.ChangedFields.Contains(UserField.Email))
+        {
+            var invite = await _invites.SendInviteAsync(id);
+            if (invite.Succeeded) TempData["Success"] = $"{updated}Invitation sent to {after.Email}.";
+            else TempData["Error"] = $"{updated}The invitation could not be sent to {after.Email}: {invite.Error}";
+        }
+        else TempData["Success"] = updated.TrimEnd();
         return RedirectToAction(nameof(Edit), new { id });
     }
 
-    // Every outcome redirects back to Edit, so a refresh never re-posts or lands on this action. The
-    // error travels in TempData; the password is never put there or in the URL.
+    // Sends the same link as Forgot password; the password and the user's sessions are left alone.
     [HttpPost]
-    public async Task<IActionResult> ResetPassword(int id, [Bind(Prefix = ResetPrefix)] UserResetPasswordViewModel vm)
+    public async Task<IActionResult> ResetPassword(int id)
     {
         var stored = await _users.GetAsync(id);
         if (stored is null) return NotFound();
 
-        if (!ModelState.IsValid)
-        {
-            TempData["Error"] = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).FirstOrDefault(m => m.Length > 0)
-                ?? "Enter a temporary password.";
-            return RedirectToAction(nameof(Edit), new { id });
-        }
-
-        var result = await _users.ResetPasswordAsync(id, vm.TemporaryPassword, Me);
+        var result = await _recovery.SendResetLinkAsync(id, Me);
         if (result.Succeeded)
         {
-            await _audit.LogAsync("UserPasswordReset", "User", Ref(id), $"Reset password for '{stored.Email}'");
-            TempData["Success"] = $"Password reset for {stored.DisplayName}. They are signed out and must set a new one at next sign-in.";
+            await _audit.LogAsync("UserPasswordResetSent", "User", Ref(id), $"Sent a password reset link to '{stored.Email}'");
+            TempData["Success"] = $"Reset link sent to {stored.Email}.";
+        }
+        else TempData["Error"] = result.Error;
+        return RedirectToAction(nameof(Edit), new { id });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ResendInvite(int id)
+    {
+        var stored = await _users.GetAsync(id);
+        if (stored is null) return NotFound();
+
+        var result = await _invites.ResendAsync(id);
+        if (result.Succeeded)
+        {
+            await _audit.LogAsync("UserInviteResent", "User", Ref(id), $"Resent the invitation to '{stored.Email}'");
+            TempData["Success"] = $"Invitation sent again to {stored.Email}.";
         }
         else TempData["Error"] = result.Error;
         return RedirectToAction(nameof(Edit), new { id });
@@ -167,7 +214,7 @@ public class UsersController : Controller
     private async Task<ViewResult> EditView(UserListItem stored, UserEditViewModel? details = null)
     {
         var assignedJobs = stored.Role == AtsRole.HiringManager ? await _hiringTeam.JobsForAsync(stored.Id) : null;
-        return View(nameof(Edit), new UserEditPageViewModel(stored, stored.Id == Me, details ?? UserEditViewModel.From(stored), new(), assignedJobs));
+        return View(nameof(Edit), new UserEditPageViewModel(stored, stored.Id == Me, details ?? UserEditViewModel.From(stored), assignedJobs));
     }
 
     private static string Ref(int id) => id.ToString(CultureInfo.InvariantCulture);

@@ -19,7 +19,7 @@ public sealed class FakeUserRepository : IUserRepository
         Task.FromResult(Users.FirstOrDefault(u => u.Id == id));
 
     public Task<int> CountActiveOwnersAsync(CancellationToken ct = default) =>
-        Task.FromResult(Users.Count(u => u.IsActive && u.Role == AtsRole.Owner));
+        Task.FromResult(Users.Count(u => u.IsActive && u.Role == AtsRole.Owner && u.PasswordHash != ""));
 
     public Task<int?> TryAddAsync(AppUser user, CancellationToken ct = default)
     {

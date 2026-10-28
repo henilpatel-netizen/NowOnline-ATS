@@ -14,7 +14,7 @@ description: Ats solution layout, strict layering, DI registration, and where ea
   `HttpTenantContext`, `IdentityService`, `OnboardingStore`, `DependencyInjection`. References Application.
 - `Ats.Web` — MVC back-office at the root (`/Jobs`, `/Candidates`, `/Board`, `/Integration`, ...); cookie
   auth; controllers are thin. The public career site is the `Careers` area at `/careers/{slug}`.
-- `Ats.Worker` — background host (outbox delivery; built out in Phase 3).
+- `Ats.Worker` — background host (outbox delivery, built out in Phase 3; email delivery, see the notifications skill).
 
 ## Layering (strict)
 Controllers -> Application services -> repositories -> EF Core. Domain has no framework deps.
@@ -79,9 +79,13 @@ Infrastructure wiring is centralised in `Ats.Infrastructure/DependencyInjection.
   Infrastructure".
 - **`JobScopeFilter` (HiringManager job scoping) follows the same exception:** plain LINQ in
   `Ats.Application/Jobs` beside `IJobScope`, applied by the Infrastructure read models and repositories, so it is
-  unit-tested without a database. `IHiringTeamQuery` (contract in `Ats.Application/Jobs/JobModels.cs`, impl
+  unit-tested without a database. **`NotificationRecipientFilter`** (`Ats.Application/Notifications`, applied by
+  `Ats.Infrastructure/Notifications/NotificationRecipientsQuery`) is the same exception: who gets new-application and
+  stage-change email. `IHiringTeamQuery` (contract in `Ats.Application/Jobs/JobModels.cs`, impl
   `Ats.Infrastructure/Jobs/HiringTeamQuery`) is the read-only query for assignable managers, a job's team and a
   manager's jobs. Rules: authorization skill.
+- **`Ats.Application.Common.EmailAddress`** (`Normalise`, `IsValid`, shared error texts) is the one rule for a
+  user's sign-in address; do not re-implement trimming or validation. Email delivery: notifications skill.
 - **`ITenantContext` and `ICurrentUser` are registered by each HOST, never by Infrastructure.**
   Web = `HttpTenantContext` (tenant_id claim, or slug via `HttpContext.Items`) + `CurrentUser`;
   Worker = `WorkerTenantContext` + `AnonymousCurrentUser`. A new host must register both or the

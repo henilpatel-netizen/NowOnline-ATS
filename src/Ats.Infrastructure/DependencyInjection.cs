@@ -1,4 +1,5 @@
 using Ats.Application.Abstractions;
+using Ats.Application.Accounts;
 using Ats.Application.Applications;
 using Ats.Application.Auditing;
 using Ats.Application.Branding;
@@ -6,9 +7,11 @@ using Ats.Application.Candidates;
 using Ats.Application.Career;
 using Ats.Application.Dashboard;
 using Ats.Application.Departments;
+using Ats.Application.Email;
 using Ats.Application.Integration;
 using Ats.Application.Jobs;
 using Ats.Application.Locations;
+using Ats.Application.Notifications;
 using Ats.Application.Organisation;
 using Ats.Application.Pipelines;
 using Ats.Application.Search;
@@ -20,10 +23,12 @@ using Ats.Infrastructure.Auditing;
 using Ats.Infrastructure.Branding;
 using Ats.Infrastructure.Candidates;
 using Ats.Infrastructure.Dashboard;
+using Ats.Infrastructure.Email;
 using Ats.Infrastructure.Files;
 using Ats.Infrastructure.Identity;
 using Ats.Infrastructure.Integration;
 using Ats.Infrastructure.Jobs;
+using Ats.Infrastructure.Notifications;
 using Ats.Infrastructure.Organisation;
 using Ats.Infrastructure.Persistence;
 using Ats.Infrastructure.Persistence.Repositories;
@@ -34,6 +39,7 @@ using Ats.Infrastructure.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Ats.Infrastructure;
 
@@ -46,6 +52,7 @@ public static class DependencyInjection
         // worker). Infrastructure no longer owns an HTTP implementation, so the worker no longer
         // has to remove-and-replace one.
         services.AddScoped<IIdentityService, IdentityService>();
+        services.AddScoped<IAccountStore, AccountStore>();
         services.AddScoped<TenantSaveChangesInterceptor>();
 
         services.AddDbContext<AtsDbContext>((sp, options) =>
@@ -80,6 +87,11 @@ public static class DependencyInjection
         services.AddScoped<ICareerRepository, CareerRepository>();
         services.AddScoped<ICareerService, CareerService>();
         services.AddScoped<IOutboxEnqueuer, OutboxEnqueuer>();
+        services.AddScoped<IEmailOutbox, EmailOutbox>();
+        services.AddScoped<INotificationRecipientsQuery, NotificationRecipientsQuery>();
+        // Through IOptions: both hosts bind IntegrationOptions, only Web also registers the plain object.
+        services.AddScoped<IHiringNotifier>(sp => ActivatorUtilities.CreateInstance<HiringNotifier>(sp,
+            sp.GetRequiredService<IOptions<IntegrationOptions>>().Value));
         services.AddScoped<IIntegrationSettingsService, IntegrationSettingsService>();
         services.AddScoped<IDeliveryLogService, DeliveryLogService>();
         services.AddScoped<IAuditLogger, AuditLogger>();

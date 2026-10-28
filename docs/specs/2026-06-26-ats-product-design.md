@@ -207,7 +207,7 @@ Customer), `CodeParameterName` (default `ref`, must match ReferralTool's `Custom
 - Validation: FluentValidation in the Application layer.
 - API versioning: Asp.Versioning, v1.0 baseline.
 - Audit: back-office action log + `ApplicationEvent` history + `WebhookDelivery` log.
-- Notifications: email on new application / stage change behind `IEmailSender` (dev sink locally).
+- Notifications: email on new application / stage change behind `IEmailSender` (dev sink locally). Implemented (28 October 2026) as `IEmailOutbox` + Worker delivery, with a pickup directory or `RedirectAllTo` as the dev sink; see `.claude/skills/notifications/SKILL.md`.
 - Security (OWASP-aligned): constant-time token/API-key comparison; resume upload type/size
   validation; career-site inputs treated as untrusted; outbound URLs are tenant-config, not user input.
 

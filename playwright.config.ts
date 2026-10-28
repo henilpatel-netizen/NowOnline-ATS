@@ -10,6 +10,9 @@ export default defineConfig({
   workers: 1,
   reporter: [['list'], ['html', { outputFolder: 'artifacts/playwright-report', open: 'never' }]],
   outputDir: 'artifacts/playwright-results',
+  // Runs Ats.Worker writing mail to artifacts/mail as .eml files (read by tests/e2e/mailbox.ts).
+  globalSetup: './tests/e2e/mail-worker.setup.ts',
+  globalTeardown: './tests/e2e/mail-worker.teardown.ts',
   use: {
     baseURL,
     ignoreHTTPSErrors: true,
@@ -35,5 +38,8 @@ export default defineConfig({
     reuseExistingServer: true,
     timeout: 180_000,
     stdout: 'pipe',
+    // Every request comes from 127.0.0.1, so the account-email (5) and account-token (30) rate limits per
+    // 15 minutes would trip. Applies only to a server Playwright starts; a reused one keeps its own limits.
+    env: { RateLimits__AccountEmailPermitLimit: '100', RateLimits__AccountTokenPermitLimit: '300' },
   },
 });

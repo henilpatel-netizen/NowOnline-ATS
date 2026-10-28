@@ -360,15 +360,17 @@ A record that has several actions gets one Edit page instead of a row menu and a
   added date.
 - **Details card:** the editable form, with the Save button and Cancel. Fields a user may not change on their
   own record are shown read-only in a `<dl class="ats-field-list">` with a one-line reason.
-- **Danger zone** (`.ats-card.ats-danger-zone`, one `.ats-action-item` per action): destructive actions,
-  each a form with `hx-confirm`, `data-confirm-title`, `data-confirm-ok` and `data-confirm-variant="danger"`.
+- **Danger zone** (`.ats-card.ats-danger-zone`, one `.ats-action-item` per action): account actions that
+  need a confirmation, each a form with `hx-confirm`, `data-confirm-title` and `data-confirm-ok`. Destructive
+  ones (Deactivate) use `data-confirm-variant="danger"`; non-destructive ones (Send reset link, Resend invite)
+  may live here too, with the primary variant (omit `data-confirm-variant`), as Users > Edit does.
   The reversible counterpart (Reactivate) sits in a plain "Account access" card. On your own record the
   card is replaced by a "Security" card (link to Change password).
 - **PRG everywhere:** every POST redirects back to Edit with a flash that names the record; an error goes in
   `TempData["Error"]`, never a secret. A validation error on the main form redisplays the page.
 - **Forced password change shell:** a user held on Change password (`must_change_password` claim) gets no
   nav links, no global search and no notifications; the sidebar and top bar view components decide, not each
-  view. Locked by `tests/e2e/users.spec.ts`.
+  view. Nothing sets `must_change_password` since decision D1, so the e2e check was removed.
 
 ## Breadcrumbs (Phase 9)
 `TopBarViewComponent` maps controller -> (group, page). On any action other than `Index` it also

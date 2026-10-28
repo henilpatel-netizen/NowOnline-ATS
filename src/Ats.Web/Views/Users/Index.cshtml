@@ -42,7 +42,7 @@
     @foreach (var u in Model.Results.Items)
     {
         var isMe = u.Id == Model.CurrentUserId;
-        var status = new StatusPillModel(u.IsActive ? "Active" : "Deactivated", u.IsActive ? PillTone.Success : PillTone.Neutral);
+        var status = UserStatus.Pill(u);
         @* A11Y-1: the name is the row's real link; its overlay makes the whole row open Edit. *@
         <div class="ats-trow ats-trow--link ats-table--users">
             <span class="d-flex align-items-center gap-2 ats-min-w-0">

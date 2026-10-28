@@ -64,7 +64,7 @@ public class JobScopeTests
             new PipelineStage { Id = Applied, PipelineTemplateId = TemplateId, Name = "Applied", Order = 1 },
             new PipelineStage { Id = Interview, PipelineTemplateId = TemplateId, Name = "Interview", Order = 2 },
         ]);
-        var service = new ApplicationService(repo, new FakeCandidateRepository(), user, new FakeOutboxEnqueuer(), new JobScope(user));
+        var service = new ApplicationService(repo, new FakeCandidateRepository(), user, new FakeOutboxEnqueuer(), new JobScope(user), new NullHiringNotifier());
         return (service, repo);
     }
 

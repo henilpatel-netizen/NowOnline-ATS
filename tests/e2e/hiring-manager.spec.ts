@@ -2,7 +2,8 @@ import { type Browser, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { randomUUID } from 'node:crypto';
 import { test, expect, acceptConfirm } from './confirm';
-import { findUserUrl } from './users';
+import { findUserUrl, INVITE_SUBJECT, acceptInvite, inviteUser } from './users';
+import { waitForMail } from './mailbox';
 
 // A HiringManager sees only the jobs they are assigned to. Everything is created through the UI with
 // run-unique names in the local dev database; jobs are deleted and the manager is deactivated at the end.
@@ -15,7 +16,6 @@ type Candidate = { first: string; last: string; full: string; email: string };
 
 // Rebuilt by the first test, so --repeat-each gets fresh names for every repetition.
 let f: {
-  temp: string;
   password: string;
   manager: { name: string; email: string };
   titles: { a: string; b: string; c: string };
@@ -37,7 +37,6 @@ function newFixture() {
     return { first: 'HM', last, full: `HM ${last}`, email: `hm-cand-${tag.toLowerCase()}-${run}@example.test` };
   };
   return {
-    temp: `Temp-${randomUUID()}-pass`,
     password: `New-${randomUUID()}-password`,
     manager: { name: `E2E Hiring Manager ${run}`, email: `hiring-manager-${run}@example.test` },
     titles: { a: `HM Job A ${run}`, b: `HM Job B ${run}`, c: `HM Job C ${run}` },
@@ -141,16 +140,6 @@ async function setHiringTeam(page: Page, id: number, email: string, assigned: bo
   await expect(page.getByText('Job updated.')).toBeVisible();
 }
 
-async function signInAs(browser: Browser, email: string, password: string) {
-  const ctx = await browser.newContext({ baseURL, ignoreHTTPSErrors: true });
-  const page = await ctx.newPage();
-  await page.goto('/Account/Login');
-  await page.locator('#Email').fill(email);
-  await page.locator('#Password').fill(password);
-  await page.getByRole('button', { name: 'Sign in' }).click();
-  return page;
-}
-
 async function status(page: Page, url: string) {
   return (await page.goto(url))?.status();
 }
@@ -159,13 +148,7 @@ test('owner creates a hiring manager, two published jobs and a CV applicant on e
   test.setTimeout(180_000);
   f = newFixture();
 
-  await page.goto('/Users/Create');
-  await page.locator('#DisplayName').fill(f.manager.name);
-  await page.locator('#Email').fill(f.manager.email);
-  await page.locator('#Role').selectOption('HiringManager');
-  await page.locator('#TemporaryPassword').fill(f.temp);
-  await page.getByRole('button', { name: 'Add user' }).click();
-  await expect(page.locator('.alert-success')).toBeVisible();
+  await inviteUser(page, f.manager, 'HiringManager');
 
   await createJob(page, f.titles.a, []);
   await createJob(page, f.titles.b, []);
@@ -206,14 +189,9 @@ test('owner assigns the manager to job A on the job form', async ({ page }) => {
   await expect(page.getByText('No hiring team')).toBeVisible();
 });
 
-test('the manager sets their own password', async ({ browser }) => {
-  f.hm = await signInAs(browser, f.manager.email, f.temp);
-  await expect(f.hm).toHaveURL(/\/Profile\/ChangePassword/);
-  await f.hm.locator('#CurrentPassword').fill(f.temp);
-  await f.hm.locator('#NewPassword').fill(f.password);
-  await f.hm.locator('#ConfirmPassword').fill(f.password);
-  await f.hm.getByRole('button', { name: 'Change password' }).click();
-  await expect(f.hm.locator('#ats-sidebar')).toBeVisible();
+test('the manager accepts the invitation and sets their own password', async ({ browser }) => {
+  const mail = await waitForMail(f.manager.email, INVITE_SUBJECT);
+  f.hm = await acceptInvite(browser, mail.link!, f.password);
   await expect(f.hm).not.toHaveURL(/\/Profile\/ChangePassword/);
 });
 

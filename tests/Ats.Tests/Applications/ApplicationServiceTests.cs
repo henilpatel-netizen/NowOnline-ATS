@@ -1,5 +1,7 @@
 using Ats.Application.Applications;
+using Ats.Application.Integration;
 using Ats.Application.Jobs;
+using Ats.Application.Notifications;
 using Ats.Domain.Entities;
 using Ats.Domain.Enums;
 using Ats.Tests.Fakes;
@@ -22,7 +24,24 @@ public class ApplicationServiceTests
     private const int OnHold = 104;   // terminal flag set, but outcome None
 
     private static (ApplicationService Service, FakeApplicationRepository Repo,
-                    FakeCandidateRepository Candidates, FakeOutboxEnqueuer Outbox) Build(FakeCurrentUser? user = null)
+                    FakeCandidateRepository Candidates, FakeOutboxEnqueuer Outbox) Build(FakeCurrentUser? user = null) =>
+        Build(user, new NullHiringNotifier());
+
+    // A real HiringNotifier whose drafts commit only with a successful repository save.
+    private static (ApplicationService Service, FakeApplicationRepository Repo,
+                    FakeNotificationRecipientsQuery Recipients, FakeEmailOutbox Emails) BuildWithMail(FakeCurrentUser? user = null)
+    {
+        var recipients = new FakeNotificationRecipientsQuery();
+        var emails = new FakeEmailOutbox();
+        var notifier = new HiringNotifier(recipients, emails, new FakeTenantBranding(), new FakeTenantContext(),
+            new IntegrationOptions { CareerSiteBaseUrl = "https://ats.example" });
+        var (service, repo, _, _) = Build(user, notifier);
+        repo.Saved += emails.Commit;
+        return (service, repo, recipients, emails);
+    }
+
+    private static (ApplicationService Service, FakeApplicationRepository Repo,
+                    FakeCandidateRepository Candidates, FakeOutboxEnqueuer Outbox) Build(FakeCurrentUser? user, IHiringNotifier notifier)
     {
         user ??= new FakeCurrentUser();
         var repo = new FakeApplicationRepository();
@@ -37,7 +56,7 @@ public class ApplicationServiceTests
         });
         var candidates = new FakeCandidateRepository();
         var outbox = new FakeOutboxEnqueuer();
-        var service = new ApplicationService(repo, candidates, user, outbox, new JobScope(user));
+        var service = new ApplicationService(repo, candidates, user, outbox, new JobScope(user), notifier);
         return (service, repo, candidates, outbox);
     }
 
@@ -211,6 +230,97 @@ public class ApplicationServiceTests
         Assert.Equal(Applied, app.CurrentStageId);
         Assert.Empty(repo.Events);
         Assert.Empty(outbox.Staged);
+    }
+
+    // ---- Stage moves: hiring-team email --------------------------------------------------------
+
+    private static JobApplication SeedNamedApplication(FakeApplicationRepository repo)
+    {
+        var app = SeedApplication(repo);
+        app.Candidate = new Candidate { Id = 900, FirstName = "Ada", LastName = "Lovelace", Email = "ada@private.test", Phone = "0612345678" };
+        return app;
+    }
+
+    [Fact]
+    public async Task A_move_mails_each_assigned_hiring_manager_except_the_mover_once_the_save_commits()
+    {
+        var mover = new FakeCurrentUser { UserId = 31, Role = AtsRole.HiringManager };
+        var (service, repo, recipients, emails) = BuildWithMail(mover);
+        var app = SeedNamedApplication(repo);
+        recipients.Add(30, AtsRole.HiringManager);
+        recipients.Add(31, AtsRole.HiringManager);
+        recipients.Add(32, AtsRole.Recruiter);
+        recipients.Assign(JobId, 30);
+        recipients.Assign(JobId, 31);
+        repo.Jobs[0].HiringManagers.Add(new JobHiringManager { JobId = JobId, UserId = 31 });
+
+        var result = await service.MoveStageAsync(JobId, app.Id, Interview, app.RowVersion);
+
+        Assert.True(result.Succeeded);
+        var draft = Assert.Single(emails.Committed).Draft;
+        Assert.Equal("user30@acme.test", draft.To);
+        Assert.Contains("Ada Lovelace", draft.TextBody);
+        Assert.Contains("Interview", draft.TextBody);
+        Assert.Contains("Dev", draft.TextBody);
+        Assert.DoesNotContain("ada@private.test", draft.TextBody + draft.HtmlBody);
+        Assert.DoesNotContain("0612345678", draft.TextBody + draft.HtmlBody);
+    }
+
+    [Fact]
+    public async Task A_move_on_a_job_without_hiring_managers_mails_no_one()
+    {
+        var (service, repo, recipients, emails) = BuildWithMail();
+        var app = SeedNamedApplication(repo);
+        recipients.Add(32, AtsRole.Recruiter);
+        recipients.Add(33, AtsRole.Owner);
+
+        await service.MoveStageAsync(JobId, app.Id, Interview, app.RowVersion);
+
+        Assert.Empty(emails.Staged);
+    }
+
+    [Fact]
+    public async Task A_no_op_move_mails_no_one()
+    {
+        var (service, repo, recipients, emails) = BuildWithMail();
+        var app = SeedNamedApplication(repo);
+        recipients.Add(30, AtsRole.HiringManager);
+        recipients.Assign(JobId, 30);
+
+        await service.MoveStageAsync(JobId, app.Id, Applied, app.RowVersion);
+
+        Assert.Empty(emails.Staged);
+    }
+
+    [Fact]
+    public async Task A_move_that_loses_the_concurrency_race_commits_no_email()
+    {
+        var (service, repo, recipients, emails) = BuildWithMail();
+        var app = SeedNamedApplication(repo);
+        recipients.Add(30, AtsRole.HiringManager);
+        recipients.Assign(JobId, 30);
+        repo.ConcurrencyConflict = true;
+
+        var result = await service.MoveStageAsync(JobId, app.Id, Interview, app.RowVersion);
+
+        Assert.False(result.Succeeded);
+        Assert.Single(emails.Staged);     // staged on the unit of work...
+        Assert.Empty(emails.Committed);   // ...and discarded with the failed save
+    }
+
+    [Fact]
+    public async Task A_recruiter_adding_a_candidate_in_the_back_office_mails_no_one()
+    {
+        var (service, repo, recipients, emails) = BuildWithMail();
+        recipients.Add(32, AtsRole.Recruiter);
+        recipients.Add(30, AtsRole.HiringManager);
+        recipients.Assign(JobId, 30);
+
+        var result = await service.AddCandidateToJobAsync(new AddCandidateToJobInput(JobId, "Ada", "Lovelace", "ada@x.test", null));
+
+        Assert.True(result.Succeeded);
+        Assert.Single(repo.Applications);
+        Assert.Empty(emails.Staged);
     }
 
     // ---- Create: dedup, validation, atomicity -------------------------------------------------

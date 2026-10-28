@@ -4,7 +4,7 @@
 @{
     ViewData["Title"] = "Edit user";
     var u = Model.User;
-    var status = new StatusPillModel(u.IsActive ? "Active" : "Deactivated", u.IsActive ? PillTone.Success : PillTone.Neutral);
+    var status = UserStatus.Pill(u);
     PillTone JobTone(JobStatus s) => s switch
     {
         JobStatus.Published => PillTone.Success,
@@ -61,7 +61,12 @@
                             <div class="form-text">Their current role cannot be assigned from this screen. Choose one of these roles to change it.</div>
                         }
                         <span asp-validation-for="Details.Role" class="text-danger small"></span></div>
-                    <p class="form-text d-flex align-items-center gap-1 mb-3"><span class="ms ms-sm">info</span> Changing the email or role signs the user out.</p>
+                    <p class="form-text d-flex align-items-center gap-1 mb-3"><span class="ms ms-sm">info</span>
+                        @(u.InvitePending
+                            ? "Changing the email sends a new invitation to the new address."
+                            : !u.IsActive
+                            ? "Reactivate the user before changing their email address."
+                            : "Changing the role or email signs the user out. A new email address applies once they confirm it from that mailbox.")</p>
                 }
                 <div class="d-flex align-items-center gap-2 border-top pt-3">
                     <button type="submit" class="btn btn-primary">Save changes</button>
@@ -93,25 +98,36 @@
             <section class="ats-card @(u.IsActive ? "ats-danger-zone" : "")" aria-labelledby="user-actions-title">
                 <span class="ats-eyebrow">Access:</span>
                 <h2 class="mt-1 mb-0" id="user-actions-title">@(u.IsActive ? "Danger zone." : "Account access.")</h2>
-                @if (u.IsActive)
+                @if (u.IsActive && u.InvitePending)
                 {
                     <div class="ats-action-item">
                         <div class="ats-cell-stack">
-                            <h3 class="ats-action-title">Reset password</h3>
-                            <p class="ats-small ats-muted mb-0">Sets a temporary password and signs them out at once.</p>
+                            <h3 class="ats-action-title">Resend invite</h3>
+                            <p class="ats-small ats-muted mb-0">They have not accepted yet. Sends a new link; earlier links stop working.</p>
                         </div>
-                        <form asp-action="ResetPassword" asp-route-id="@u.Id" method="post" class="ats-action-form"
-                              hx-confirm="Reset the password for @u.DisplayName? They are signed out at once."
-                              data-confirm-title="Reset password" data-confirm-ok="Reset password" data-confirm-variant="danger">
-                            <label asp-for="Reset.TemporaryPassword" class="form-label"></label>
-                            <div class="input-group">
-                                <input asp-for="Reset.TemporaryPassword" class="form-control" autocomplete="new-password" aria-describedby="reset-password-help" />
-                                <button type="submit" class="btn btn-outline-danger">Reset password</button>
-                            </div>
-                            <div class="form-text" id="reset-password-help">Share it securely; they must change it at their next sign-in.</div>
-                            <span asp-validation-for="Reset.TemporaryPassword" class="text-danger small"></span>
+                        <form asp-action="ResendInvite" asp-route-id="@u.Id" method="post"
+                              hx-confirm="Send @u.DisplayName a new invitation? Earlier links stop working."
+                              data-confirm-title="Resend invite" data-confirm-ok="Resend invite">
+                            <button type="submit" class="btn btn-outline-secondary"><span class="ms ms-sm">email</span> Resend invite</button>
                         </form>
                     </div>
+                }
+                @if (u.IsActive)
+                {
+                    if (!u.InvitePending)
+                    {
+                        <div class="ats-action-item">
+                            <div class="ats-cell-stack">
+                                <h3 class="ats-action-title">Send reset link</h3>
+                                <p class="ats-small ats-muted mb-0">Emails them a link to choose a new password. Their password and sessions stay as they are until they use it.</p>
+                            </div>
+                            <form asp-action="ResetPassword" asp-route-id="@u.Id" method="post"
+                                  hx-confirm="Send a password reset link to @u.DisplayName?"
+                                  data-confirm-title="Send reset link" data-confirm-ok="Send reset link">
+                                <button type="submit" class="btn btn-outline-secondary"><span class="ms ms-sm">email</span> Send reset link</button>
+                            </form>
+                        </div>
+                    }
                     <div class="ats-action-item">
                         <div class="ats-cell-stack">
                             <h3 class="ats-action-title">Deactivate user</h3>
@@ -129,10 +145,10 @@
                     <div class="ats-action-item">
                         <div class="ats-cell-stack">
                             <h3 class="ats-action-title">Reactivate user</h3>
-                            <p class="ats-small ats-muted mb-0">They can sign in again with their existing password.</p>
+                            <p class="ats-small ats-muted mb-0">@(u.InvitePending ? "Then resend the invitation; earlier links stop working." : "They can sign in again with their existing password.")</p>
                         </div>
                         <form asp-action="Reactivate" asp-route-id="@u.Id" method="post"
-                              hx-confirm="Reactivate @u.DisplayName? They can sign in again with their existing password."
+                              hx-confirm="@(u.InvitePending ? $"Reactivate {u.DisplayName}? Then resend the invitation so they can set a password." : $"Reactivate {u.DisplayName}? They can sign in again with their existing password.")"
                               data-confirm-title="Reactivate user" data-confirm-ok="Reactivate">
                             <button type="submit" class="btn btn-outline-secondary"><span class="ms ms-sm">person_check</span> Reactivate</button>
                         </form>

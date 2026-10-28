@@ -139,6 +139,11 @@ lease expiring during one in-flight call can cause a duplicate send, which Refer
 absorbs. Keep `ClaimLeaseSeconds` above a typical batch's run time. Manual SQL Server verification steps:
 `docs/review/phase-10-outbox-delivery-correctness.md`.
 
+## Email delivery
+The Worker also drains the `EmailMessages` queue (`EmailDrainer`); see `.claude/skills/notifications/SKILL.md`.
+The Worker now **requires a valid `Email` section to start** (start-up validation), so a missing `Email__*`
+setting stops the outbox drainer too.
+
 ## ReferralTool-side setup (required before the loop runs; data/config only, no RT code change)
 The integration uses only existing ReferralTool endpoints. The developer configures ReferralTool and
 fills the ATS integration settings to match:

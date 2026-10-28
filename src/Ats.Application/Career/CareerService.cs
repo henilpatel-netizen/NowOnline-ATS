@@ -2,6 +2,7 @@ using Ats.Application.Applications;
 using Ats.Application.Candidates;
 using Ats.Application.Common;
 using Ats.Application.Integration;
+using Ats.Application.Notifications;
 using Ats.Domain.Entities;
 using Ats.Domain.Enums;
 
@@ -13,10 +14,12 @@ public sealed class CareerService : ICareerService
     private readonly ICandidateRepository _candidates;
     private readonly IApplicationRepository _applications;
     private readonly IOutboxEnqueuer _outbox;
+    private readonly IHiringNotifier _notifier;
 
-    public CareerService(ICareerRepository career, ICandidateRepository candidates, IApplicationRepository applications, IOutboxEnqueuer outbox)
+    public CareerService(ICareerRepository career, ICandidateRepository candidates, IApplicationRepository applications,
+        IOutboxEnqueuer outbox, IHiringNotifier notifier)
     {
-        _career = career; _candidates = candidates; _applications = applications; _outbox = outbox;
+        _career = career; _candidates = candidates; _applications = applications; _outbox = outbox; _notifier = notifier;
     }
 
     public Task<List<Job>> GetPublishedJobsAsync(CancellationToken ct = default) => _career.GetPublishedJobsAsync(ct);
@@ -79,7 +82,7 @@ public sealed class CareerService : ICareerService
             Status = ApplicationStatus.Active
         };
 
-        // Atomic: the application, its initial event, and the outbox message commit together.
+        // Atomic: the application, its initial event, the outbox message and the hiring-team emails commit together.
         return await _applications.InTransactionAsync(async innerCt =>
         {
             await _applications.AddApplicationAsync(application, innerCt);
@@ -94,6 +97,7 @@ public sealed class CareerService : ICareerService
                 MovedByUserId = null   // public apply, no signed-in user
             }, innerCt);
             await _outbox.StageAsync(application.Id, firstStage.Id, innerCt);
+            await _notifier.StageNewApplicationAsync(job.Id, job.Title, $"{candidate.FirstName} {candidate.LastName}".Trim(), innerCt);
             await _applications.SaveChangesAsync(innerCt);
             return OperationResult.Ok;
         }, ct);

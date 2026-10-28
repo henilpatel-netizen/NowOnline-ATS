@@ -1,5 +1,7 @@
 using System.Security.Claims;
+using System.Threading.RateLimiting;
 using Ats.Application.Abstractions;
+using Ats.Application.Accounts;
 using Ats.Application.Integration;
 using Ats.Infrastructure;
 using Ats.Infrastructure.Persistence;
@@ -7,6 +9,8 @@ using Ats.Web.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,6 +37,9 @@ builder.Services.AddDataProtection()
 
 builder.Services.AddAtsInfrastructure(builder.Configuration);
 
+builder.Services.TryAddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<IAccountTokens, DataProtectionAccountTokens>();
+
 // Vacancy snapshots carry an absolute career-site URL; fail at startup rather than on the first publish.
 builder.Services.AddOptions<IntegrationOptions>()
     .Bind(builder.Configuration.GetSection("Integration"))
@@ -41,6 +48,34 @@ builder.Services.AddOptions<IntegrationOptions>()
     .Validate(o => !o.AllowInsecureReferralToolUrl || builder.Environment.IsDevelopment(),
         "Integration:AllowInsecureReferralToolUrl is only allowed in Development.")
     .ValidateOnStart();
+// Application services take the validated options object itself (Application has no Options dependency).
+builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<IntegrationOptions>>().Value);
+// Registered here, not in AddAtsInfrastructure: they need IAccountTokens, which only this host provides.
+builder.Services.AddScoped<IAccountRecoveryService, AccountRecoveryService>();
+builder.Services.AddScoped<IInvitationService, InvitationService>();
+builder.Services.AddScoped<IEmailChangeService, EmailChangeService>();
+
+// Signed-out account POSTs, fixed 15-minute window per client IP. "account-email" (default 5) is on Forgot
+// password, the only one that mails an address typed by a stranger. "account-token" (default 30) is on the
+// POSTs that use an emailed link (reset, accept invite, confirm email), so one office behind a NAT IP can
+// onboard a team. The e2e suite raises both, since every test request comes from 127.0.0.1. A rejection is a
+// plain-text 429 (no page; the limit is per IP, so it reveals nothing about any address).
+var accountEmailPermits = builder.Configuration.GetValue("RateLimits:AccountEmailPermitLimit", 5);
+var accountTokenPermits = builder.Configuration.GetValue("RateLimits:AccountTokenPermitLimit", 30);
+builder.Services.AddRateLimiter(o =>
+{
+    o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    void PerIp(string policy, int permits) => o.AddPolicy(policy, http => RateLimitPartition.GetFixedWindowLimiter(
+        http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = permits, Window = TimeSpan.FromMinutes(15) }));
+    PerIp(Ats.Web.Controllers.AccountController.EmailRateLimit, accountEmailPermits);
+    PerIp(Ats.Web.Controllers.AccountController.TokenRateLimit, accountTokenPermits);
+    o.OnRejected = (ctx, ct) =>
+    {
+        ctx.HttpContext.Response.ContentType = "text/plain; charset=utf-8";
+        return new ValueTask(ctx.HttpContext.Response.WriteAsync("Too many requests. Please try again later.", ct));
+    };
+});
 
 // Host-owned tenant/user resolution (QUAL-6).
 builder.Services.AddHttpContextAccessor();
@@ -122,6 +157,7 @@ app.UseStatusCodePagesWithReExecute("/Home/Status", "?code={0}");
 
 app.UseHttpsRedirection();
 app.UseRouting();
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();

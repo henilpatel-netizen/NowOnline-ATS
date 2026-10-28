@@ -1,0 +1,31 @@
+@model Ats.Web.Models.AcceptInviteViewModel
+@{ ViewData["Title"] = "Accept your invitation"; }
+<h1 class="h4 mb-3 text-center">Accept your invitation</h1>
+@if (Model.Invite is not { } invite)
+{
+    <p role="alert">This invitation is invalid or has expired. Ask your administrator for a new one.</p>
+    <a asp-action="Login" class="btn btn-primary w-100">Go to sign in</a>
+}
+else
+{
+    <p class="mb-3">Welcome, <strong>@invite.DisplayName</strong>. Choose a password to activate your account.</p>
+    <form asp-action="AcceptInvite" method="post">
+        <div asp-validation-summary="ModelOnly" role="alert" class="text-danger small mb-2"></div>
+        <input type="hidden" asp-for="Token" />
+        <div class="mb-3">
+            <label for="invite-email" class="form-label">Email</label>
+            <input id="invite-email" type="email" class="form-control" value="@invite.Email" autocomplete="username" readonly />
+        </div>
+        <div class="mb-3">
+            <label asp-for="NewPassword" class="form-label"></label>
+            <input asp-for="NewPassword" class="form-control" autocomplete="new-password" />
+            <span asp-validation-for="NewPassword" class="text-danger small"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="ConfirmPassword" class="form-label"></label>
+            <input asp-for="ConfirmPassword" class="form-control" autocomplete="new-password" />
+            <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Set password and sign in</button>
+    </form>
+}

@@ -13,9 +13,13 @@ public class AppUser : ITenantEntity
     public string PasswordHash { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;   // one of AtsRole.*
     public bool IsActive { get; set; } = true;
-    // Set for a temporary password (new user or admin reset); cleared when the user sets their own.
+    // Set only for legacy users who received an Owner-typed temporary password before 28 October 2026; nothing
+    // sets it now. Cleared when the user sets their own password.
     public bool MustChangePassword { get; set; }
     // Rotated on every security-relevant change; a cookie carrying an older value is rejected.
     public Guid SecurityStamp { get; set; } = Guid.NewGuid();
     public DateTimeOffset CreatedAt { get; set; }
+
+    // Invited by email and has not set a password yet: cannot sign in and is not counted as an active Owner.
+    public bool IsInvitePending => PasswordHash.Length == 0;
 }

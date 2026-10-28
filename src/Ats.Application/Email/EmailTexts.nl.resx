@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Greeting" xml:space="preserve">
+    <value>Hallo {0},</value>
+  </data>
+  <data name="GreetingGeneric" xml:space="preserve">
+    <value>Hallo,</value>
+  </data>
+  <data name="LinkFallback" xml:space="preserve">
+    <value>Werkt de knop niet? Kopieer dan deze link naar je browser:</value>
+  </data>
+  <data name="IgnoreIfNotRequested" xml:space="preserve">
+    <value>Heb je dit niet aangevraagd? Dan kun je deze e-mail negeren.</value>
+  </data>
+  <data name="ContactAdministrator" xml:space="preserve">
+    <value>Had je dit niet verwacht? Neem dan contact op met je beheerder.</value>
+  </data>
+  <data name="Expires1Hour" xml:space="preserve">
+    <value>Deze link verloopt over 1 uur.</value>
+  </data>
+  <data name="Expires24Hours" xml:space="preserve">
+    <value>Deze link verloopt over 24 uur.</value>
+  </data>
+  <data name="Expires7Days" xml:space="preserve">
+    <value>Deze link verloopt over 7 dagen.</value>
+  </data>
+  <data name="PasswordReset_Subject" xml:space="preserve">
+    <value>Stel je wachtwoord voor {0} opnieuw in</value>
+  </data>
+  <data name="PasswordReset_Body" xml:space="preserve">
+    <value>We hebben een verzoek ontvangen om het wachtwoord van je account bij {0} opnieuw in te stellen.</value>
+  </data>
+  <data name="PasswordReset_Action" xml:space="preserve">
+    <value>Wachtwoord opnieuw instellen</value>
+  </data>
+  <data name="Invite_Subject" xml:space="preserve">
+    <value>Je bent uitgenodigd voor {0}</value>
+  </data>
+  <data name="Invite_Body" xml:space="preserve">
+    <value>{0} heeft je uitgenodigd voor {1}. Stel een wachtwoord in om je account te activeren.</value>
+  </data>
+  <data name="Invite_Action" xml:space="preserve">
+    <value>Uitnodiging accepteren</value>
+  </data>
+  <data name="Invite_Ignore" xml:space="preserve">
+    <value>Had je deze uitnodiging niet verwacht? Dan kun je deze e-mail negeren.</value>
+  </data>
+  <data name="EmailChangeVerify_Subject" xml:space="preserve">
+    <value>Bevestig je nieuwe e-mailadres voor {0}</value>
+  </data>
+  <data name="EmailChangeVerify_Body" xml:space="preserve">
+    <value>Bevestig dat je dit e-mailadres wilt gebruiken voor je account bij {0}.</value>
+  </data>
+  <data name="EmailChangeVerify_Action" xml:space="preserve">
+    <value>E-mailadres bevestigen</value>
+  </data>
+  <data name="EmailChangeNotice_Subject" xml:space="preserve">
+    <value>Wijziging van je e-mailadres voor {0} aangevraagd</value>
+  </data>
+  <data name="EmailChangeNotice_Body" xml:space="preserve">
+    <value>Er is gevraagd om het e-mailadres van je account bij {0} te wijzigen in {1}. De wijziging gaat in zodra het nieuwe adres is bevestigd.</value>
+  </data>
+  <data name="PasswordChanged_Subject" xml:space="preserve">
+    <value>Je wachtwoord voor {0} is gewijzigd</value>
+  </data>
+  <data name="PasswordChanged_Body" xml:space="preserve">
+    <value>Het wachtwoord van je account bij {0} is gewijzigd.</value>
+  </data>
+  <data name="AccountDeactivated_Subject" xml:space="preserve">
+    <value>Je account voor {0} is gedeactiveerd</value>
+  </data>
+  <data name="AccountDeactivated_Body" xml:space="preserve">
+    <value>Je account bij {0} is gedeactiveerd. Je kunt niet meer inloggen.</value>
+  </data>
+  <data name="NewApplication_Subject" xml:space="preserve">
+    <value>Nieuwe sollicitatie voor {0}</value>
+  </data>
+  <data name="NewApplication_Body" xml:space="preserve">
+    <value>{0} heeft gesolliciteerd op {1} bij {2}.</value>
+  </data>
+  <data name="NewApplication_Action" xml:space="preserve">
+    <value>Sollicitatie bekijken</value>
+  </data>
+  <data name="StageChanged_Subject" xml:space="preserve">
+    <value>{0} is verplaatst naar {1}</value>
+  </data>
+  <data name="StageChanged_Body" xml:space="preserve">
+    <value>{0} is verplaatst naar de fase {1} voor {2} bij {3}.</value>
+  </data>
+  <data name="StageChanged_Action" xml:space="preserve">
+    <value>Sollicitatie bekijken</value>
+  </data>
+</root>

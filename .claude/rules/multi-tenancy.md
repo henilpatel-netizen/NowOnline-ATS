@@ -8,9 +8,9 @@
   - `TenantSaveChangesInterceptor` stamps `TenantId` on insert from `ITenantContext`. Inserting a
     tenant entity with no tenant in context throws.
 - Do NOT hand-set `TenantId` in normal code; let the interceptor do it.
-- There are exactly five documented places that bypass the filter (`IgnoreQueryFilters()`), set
+- There are exactly six documented places that bypass the filter (`IgnoreQueryFilters()`), set
   `TenantId` by hand, or set `HttpContext.Items["TenantId"]`: the three below, plus the career-site
-  slug middleware and the outbox worker claim described after them. Outside these, never do any of those:
+  slug middleware, the outbox worker claim and the account store described after them. Outside these, never do any of those:
   - `IdentityService.ValidateCredentialsAsync` (sign-in: no tenant claim yet; matches the unique email) and
     `IdentityService.GetSessionAsync` (cookie validation and cookie re-issue: per-request validation runs
     before `HttpContext.User`, so before the tenant context, and `ProfileController` re-issues the cookie
@@ -35,4 +35,19 @@
   `TenantId` before processing, so per-tenant reads, `TenantId` stamping, and the `WebhookDelivery`
   insert scope correctly. The worker registers `WorkerTenantContext` in place of `HttpTenantContext`
   (no HttpContext). This is a documented filter-bypass spot.
+- `IAccountStore` (`Ats.Application/Accounts`, impl `Ats.Infrastructure/Identity/AccountStore`) serves the
+  signed-out account links (forgot password, invite, email change), where no tenant is in context. It reads
+  `Users` with `IgnoreQueryFilters()` only by the globally unique normalised email (`FindByEmailAsync`, like
+  `ValidateCredentialsAsync`) or by an explicit tenant id AND user id (`GetAsync`); callers pass only ids from a
+  token validated by `IAccountTokens` (which carries the user's `SecurityStamp`) or the email. `Tenants` reads are
+  unfiltered by nature; `EmailTakenAsync` delegates to `OnboardingStore.EmailExistsAsync`. `Audit` adds an
+  `AuditEntry` with `TenantId` set explicitly (the interceptor leaves a non-zero `TenantId` alone), so it is also
+  a documented hand-set `TenantId` spot (it takes the tenant, user id and name from the loaded `AppUser`). It
+  exposes no queryable. Only the account-link services in `Ats.Application/Accounts` may inject `IAccountStore`;
+  before acting on a token they must compare `token.SecurityStamp` with the loaded user's stamp and check
+  `TenantActiveAsync`. `TrySaveAsync` saves and returns false on the `IX_Users_Email` unique-index violation
+  (clearing the change tracker); it adds no bypass.
+- `EmailMessages` is a global table like `Tenants`: not an `ITenantEntity`, so there is no filter to
+  bypass (its `TenantId` is informational only). It is written only through `IEmailOutbox` and read only
+  by the Worker; never expose it to a back-office query. This is not a bypass spot.
 - Never expose a queryable that bypasses the filter outside those documented spots.

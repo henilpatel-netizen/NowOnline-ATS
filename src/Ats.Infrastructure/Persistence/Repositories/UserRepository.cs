@@ -20,7 +20,7 @@ public sealed class UserRepository : IUserRepository
         _db.Users.FirstOrDefaultAsync(u => u.Id == id, ct);
 
     public Task<int> CountActiveOwnersAsync(CancellationToken ct = default) =>
-        _db.Users.CountAsync(u => u.IsActive && u.Role == AtsRole.Owner, ct);
+        _db.Users.CountAsync(u => u.IsActive && u.Role == AtsRole.Owner && u.PasswordHash != "", ct);
 
     public async Task<int?> TryAddAsync(AppUser user, CancellationToken ct = default)
     {
@@ -68,7 +68,7 @@ public sealed class UserRepository : IUserRepository
 
     public Task SaveChangesAsync(CancellationToken ct = default) => _db.SaveChangesAsync(ct);
 
-    private static bool IsDuplicateEmail(DbUpdateException ex) =>
+    internal static bool IsDuplicateEmail(DbUpdateException ex) =>
         ex.InnerException is SqlException { Number: UniqueIndexViolation or UniqueConstraintViolation } sql
         && sql.Message.Contains(EmailIndex, StringComparison.Ordinal);
 

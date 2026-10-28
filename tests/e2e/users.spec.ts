@@ -1,15 +1,17 @@
 import { type Browser, type Page } from '@playwright/test';
 import { test, expect, acceptConfirm } from './confirm';
-import { PAGER_FIXTURE_COUNT, PAGER_FIXTURE_PREFIX, ensurePagerFixtures, findUserUrl, otherEditUrl, ownRow } from './users';
+import {
+  INVITE_SUBJECT, PAGER_FIXTURE_COUNT, PAGER_FIXTURE_PREFIX, acceptInvite, ensurePagerFixtures, findUserUrl, inviteUser, otherEditUrl, ownRow,
+} from './users';
+import { waitForMail } from './mailbox';
 
-// Creates real users in the local dev database (deactivated at the end). Passwords are generated per
+// Invites real users in the local dev database (deactivated at the end). Passwords are generated per
 // run and exist only in this local database.
 test.describe.configure({ mode: 'serial' });
 
 // Same origin the config uses; afterAll cannot rely on test.info().
 const baseURL = process.env.ATS_BASE_URL ?? 'https://localhost:7044';
 const run = Date.now();
-const TEMP = `Temp-${run}-pass`;
 const NEW = `New-${run}-password`;
 const RESET = `Reset-${run}-pass`;
 const viewer = { name: `E2E Viewer ${run}`, email: `viewer-${run}@example.test` };
@@ -18,16 +20,19 @@ const editee = { name: `E2E Editee ${run}`, email: `editee-${run}@example.test` 
 const edited = { name: `E2E Edited ${run}`, email: `edited-${run}@example.test` };
 
 async function addUser(page: Page, u: { name: string; email: string }, role: string) {
-  await page.goto('/Users/Create');
-  await page.locator('#DisplayName').fill(u.name);
-  await page.locator('#Email').fill(u.email);
-  await page.locator('#Role').selectOption(role);
-  await page.locator('#TemporaryPassword').fill(TEMP);
-  await page.getByRole('button', { name: 'Add user' }).click();
-  await expect(page.locator('.alert-success')).toBeVisible();
+  await inviteUser(page, u, role);
   await page.goto(findUserUrl(u.email));
-  await expect(page.locator('.ats-trow', { hasText: u.email })).toHaveCount(1);
+  const row = page.locator('.ats-trow', { hasText: u.email });
+  await expect(row).toHaveCount(1);
+  await expect(row.getByText('Invited', { exact: true })).toBeVisible();
 }
+
+/** Account links are built from Integration:CareerSiteBaseUrl, which the e2e app shares with the suite's base URL. */
+const inviteLinkPrefix = () =>
+  `${(process.env.ATS_CAREER_SITE_BASE_URL ?? baseURL).replace(/\/$/, '')}/Account/AcceptInvite?token=`;
+const INVALID_INVITE = 'This invitation is invalid or has expired. Ask your administrator for a new one.';
+const INVALID_EMAIL_LINK = 'This link is invalid or has expired. Ask your administrator to change the address again.';
+const RESET_SUBJECT = 'Reset your password';
 
 async function signInAs(browser: Browser, email: string, password: string) {
   const ctx = await browser.newContext({ baseURL, ignoreHTTPSErrors: true });
@@ -37,16 +42,6 @@ async function signInAs(browser: Browser, email: string, password: string) {
   await page.locator('#Password').fill(password);
   await page.getByRole('button', { name: 'Sign in' }).click();
   return page;
-}
-
-async function setOwnPassword(page: Page) {
-  await expect(page).toHaveURL(/\/Profile\/ChangePassword/);
-  await page.locator('#CurrentPassword').fill(TEMP);
-  await page.locator('#NewPassword').fill(NEW);
-  await page.locator('#ConfirmPassword').fill(NEW);
-  await page.getByRole('button', { name: 'Change password' }).click();
-  await expect(page.locator('#ats-sidebar')).toBeVisible();
-  await expect(page).not.toHaveURL(/\/Profile\/ChangePassword/);
 }
 
 // Every user change lives on the Edit page; the list row only links to it.
@@ -137,13 +132,74 @@ test('the list pages at 20 and the pager keeps the search and the filter', async
   await expect(page.locator('.ats-trow')).toHaveCount(20);
 });
 
-test('owner adds users; every role is offered', async ({ page }) => {
+test('owner invites users without a password; every role is offered', async ({ page }) => {
   await page.goto('/Users/Create');
   await expect(page.locator('#Role option')).toHaveText(['Owner', 'Recruiter', 'Hiring manager', 'Viewer']);
   await expect(page.locator('#Role option[value="HiringManager"]')).toHaveText('Hiring manager');
+  await expect(page.locator('#ats-content input[type="password"]')).toHaveCount(0);
   await addUser(page, viewer, 'Viewer');
   await addUser(page, recruiter, 'Recruiter');
   await addUser(page, editee, 'Viewer');
+
+  await page.goto(`/Audit?q=${encodeURIComponent(viewer.email)}`);
+  await expect(page.getByText(`Invited '${viewer.email}' as Viewer`)).toBeVisible();
+});
+
+test('an invited user cannot sign in, accepts the emailed link once and is signed in', async ({ page, browser }) => {
+  const blocked = await signInAs(browser, viewer.email, 'any-password');
+  await expect(blocked.getByText('Invalid email or password.')).toBeVisible();
+  await blocked.context().close();
+
+  const mail = await waitForMail(viewer.email, INVITE_SUBJECT);
+  expect(mail.link?.startsWith(inviteLinkPrefix()), `link was ${mail.link}`).toBe(true);
+  const link = mail.link!;
+
+  // A mail scanner opening the link must not use it up.
+  const probe = await browser.newContext({ baseURL, ignoreHTTPSErrors: true });
+  const probePage = await probe.newPage();
+  for (let i = 0; i < 2; i++) {
+    await probePage.goto(link);
+    await expect(probePage.getByText(viewer.name)).toBeVisible();
+    await expect(probePage.locator('#NewPassword')).toBeVisible();
+  }
+  await probe.close();
+
+  const viewerPage = await acceptInvite(browser, link, NEW);
+  await expect(viewerPage).not.toHaveURL(/\/Profile\/ChangePassword/);
+  await viewerPage.goto(link);
+  await expect(viewerPage.getByText(INVALID_INVITE)).toBeVisible();
+  await expect(viewerPage.locator('#NewPassword')).toHaveCount(0);
+  await viewerPage.context().close();
+
+  await page.goto(findUserUrl(viewer.email));
+  const row = page.locator('.ats-trow', { hasText: viewer.email });
+  await expect(row.getByText('Active', { exact: true })).toBeVisible();
+  await expect(row.getByText('Invited', { exact: true })).toHaveCount(0);
+});
+
+test('resending an invite kills the first link', async ({ page, browser }) => {
+  const first = await waitForMail(recruiter.email, INVITE_SUBJECT);
+
+  await openEdit(page, recruiter);
+  await expect(summary(page).getByText('Invited', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Send reset link' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Resend invite' }).click();
+  await acceptConfirm(page, `Send ${recruiter.name} a new invitation? Earlier links stop working.`);
+  await expect(page.getByText(`Invitation sent again to ${recruiter.email}.`)).toBeVisible();
+  const second = await waitForMail(recruiter.email, INVITE_SUBJECT);
+  expect(second.link).not.toBe(first.link);
+
+  const stale = await browser.newContext({ baseURL, ignoreHTTPSErrors: true });
+  const stalePage = await stale.newPage();
+  await stalePage.goto(first.link!);
+  await expect(stalePage.getByText(INVALID_INVITE)).toBeVisible();
+  await stale.close();
+
+  const recruiterPage = await acceptInvite(browser, second.link!, NEW);
+  await recruiterPage.context().close();
+  await openEdit(page, recruiter);
+  await expect(page.getByRole('button', { name: 'Resend invite' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Send reset link' })).toBeVisible();
 });
 
 test('every row, the own one included, links to Edit by name and by the edit icon', async ({ page }) => {
@@ -159,45 +215,10 @@ test('every row, the own one included, links to Edit by name and by the edit ico
   await expect(summary(page).getByText('Active', { exact: true })).toBeVisible();
 });
 
-test('viewer must set a password, then is read-only', async ({ page: owner, browser }) => {
+test('viewer is read-only', async ({ page: owner, browser }) => {
   const otherUserEdit = await otherEditUrl(owner, 'active');
-  const page = await signInAs(browser, viewer.email, TEMP);
-  await expect(page).toHaveURL(/\/Profile\/ChangePassword/);
-  await page.goto('/Jobs'); // held on the change page
-  await expect(page).toHaveURL(/\/Profile\/ChangePassword/);
-
-  // While held the shell offers nothing that would bounce back here: no nav, no search, no bell.
-  const sidebar = page.locator('#ats-sidebar');
-  await expect(sidebar.locator('nav')).toHaveCount(0);
-  await expect(sidebar.getByRole('link', { name: 'Jobs' })).toHaveCount(0);
-  await expect(page.locator('#ats-global-search')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Notifications' })).toHaveCount(0);
-  await expect(sidebar.getByRole('button', { name: 'Sign out' })).toBeVisible();
-
-  // A non-boosted htmx request while held gets an HX-Redirect to the change page, not the page itself.
-  const held = await page.request.get('/Search?q=abc', { headers: { 'HX-Request': 'true' }, maxRedirects: 0 });
-  expect(held.status()).toBe(204);
-  expect(held.headers()['hx-redirect']).toBe('/Profile/ChangePassword');
-
-  // Phones: the navigation panel then holds only the user block, so Sign out stays one tap away.
-  await page.setViewportSize({ width: 375, height: 812 });
-  await expect(page.locator('#ats-content h1')).toBeInViewport();
-  await page.getByRole('button', { name: 'Open navigation' }).click();
-  const panel = page.locator('#ats-nav-panel');
-  await expect(panel).toHaveClass(/\bshow\b/); // slide-in finished, focus is inside
-  await expect(panel.getByRole('button', { name: 'Sign out' })).toBeVisible();
-  await expect(panel.locator('nav')).toHaveCount(0);
-  await page.keyboard.press('Escape');
-  await expect(panel).toBeHidden();
-  await expect(page.locator('.offcanvas-backdrop')).toHaveCount(0);
-  await page.setViewportSize({ width: 1280, height: 720 });
-
-  await setOwnPassword(page);
-
-  // The boosted redirect re-renders the sidebar and top bar out of band, so the full shell is back.
-  await expect(sidebar.getByRole('link', { name: 'Jobs' })).toBeVisible();
-  await expect(page.locator('#ats-global-search')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Notifications' })).toBeVisible();
+  const page = await signInAs(browser, viewer.email, NEW);
+  await expect(page.locator('#ats-sidebar')).toBeVisible();
 
   const nav = page.locator('#ats-sidebar');
   for (const hidden of ['Integrations', 'Audit log', 'Users', 'Pipelines', 'Organisation']) {
@@ -218,8 +239,8 @@ test('viewer must set a password, then is read-only', async ({ page: owner, brow
 });
 
 test('recruiter can manage jobs but not admin screens', async ({ browser }) => {
-  const page = await signInAs(browser, recruiter.email, TEMP);
-  await setOwnPassword(page);
+  const page = await signInAs(browser, recruiter.email, NEW);
+  await expect(page.locator('#ats-sidebar')).toBeVisible();
   await page.goto('/Jobs');
   await expect(page.getByRole('link', { name: 'New job' })).toBeVisible();
   // With jobs.manage every row keeps its menu.
@@ -239,9 +260,10 @@ test('deactivating signs the user out at once', async ({ page, browser }) => {
   await expect(summary(page).getByText('Deactivated')).toBeVisible();
   // A deactivated user offers only Reactivate; the details stay editable.
   await expect(page.getByRole('button', { name: 'Reactivate' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Reset password' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Send reset link' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Deactivate' })).toHaveCount(0);
   await expect(page.locator('#Details_Email')).toBeEditable();
+  await waitForMail(viewer.email, 'was deactivated');
 
   await viewerPage.goto('/Dashboard');
   await expect(viewerPage).toHaveURL(/\/Account\/Login/);
@@ -319,9 +341,9 @@ test("owner's own Edit page allows the name only, links to Change password and h
   await expect(security.getByRole('heading', { name: 'Password' })).toBeVisible();
   await expect(security.getByRole('link', { name: 'Change password' })).toHaveAttribute('href', '/Profile/ChangePassword');
   await expect(security).not.toHaveClass(/ats-danger-zone/);
-  await expect(page.getByText('Changing the email or role signs the user out.')).toHaveCount(0);
+  await expect(page.getByText('A new email address applies once they confirm it from that mailbox.')).toHaveCount(0);
   await expect(page.getByRole('heading', { name: /Danger zone|Account access/ })).toHaveCount(0);
-  for (const name of ['Reset password', 'Deactivate', 'Reactivate']) {
+  for (const name of ['Send reset link', 'Deactivate', 'Reactivate']) {
     await expect(page.getByRole('button', { name })).toHaveCount(0);
   }
 
@@ -348,32 +370,55 @@ test("owner's own Edit page allows the name only, links to Change password and h
   }
 });
 
-test('owner edits a name and email: the open session ends and the new email signs in', async ({ page, browser }) => {
-  const editeePage = await signInAs(browser, editee.email, TEMP);
-  await expect(editeePage).toHaveURL(/\/Profile\/ChangePassword/);
+test('owner edits a name and email: the email changes only once confirmed from the new mailbox', async ({ page, browser }) => {
+  const editeePage = await acceptInvite(browser, (await waitForMail(editee.email, INVITE_SUBJECT)).link!, NEW);
 
   await openEdit(page, editee);
-  await expect(page.getByText('Changing the email or role signs the user out.')).toBeVisible();
+  await expect(page.getByText(
+    'Changing the role or email signs the user out. A new email address applies once they confirm it from that mailbox.')).toBeVisible();
   await page.locator('#Details_DisplayName').fill(edited.name);
   await page.locator('#Details_Email').fill(edited.email.toUpperCase());
   await page.getByRole('button', { name: 'Save changes' }).click();
-  await expect(page.getByText(`${edited.name} updated. They are signed out.`)).toBeVisible();
+  await expect(page.getByText(
+    `${edited.name} updated. They are signed out. Verification sent to ${edited.email}. The address changes when they confirm.`)).toBeVisible();
   await expect(page).toHaveURL(/\/Users\/Edit\/\d+$/);
   await expect(summary(page).getByText(edited.name)).toBeVisible();
-  await expect(summary(page).getByText(edited.email)).toBeVisible();
+  await expect(summary(page).getByText(editee.email)).toBeVisible();
+  await page.goto(findUserUrl(editee.email));
+  await expect(page.locator('.ats-trow', { hasText: editee.email })).toHaveCount(1);
 
   await page.goto(`/Audit?q=${encodeURIComponent(editee.email)}`);
-  await expect(page.getByText(`Updated '${editee.email}': email to '${edited.email}', name`)).toBeVisible();
+  await expect(page.getByText(`Updated '${editee.email}': name`)).toBeVisible();
+  await expect(page.getByText(`Requested an email change from '${editee.email}' to '${edited.email}'`)).toBeVisible();
 
-  await editeePage.goto('/Profile/ChangePassword');
+  const notice = await waitForMail(editee.email, 'Email address change requested');
+  expect(notice.text).toContain(edited.email);
+  const verify = await waitForMail(edited.email, 'Confirm your new email address');
+
+  // Opened signed out, in its own context; the GET only renders, the POST confirms.
+  const linkCtx = await browser.newContext({ baseURL, ignoreHTTPSErrors: true });
+  const linkPage = await linkCtx.newPage();
+  await linkPage.goto(verify.link!);
+  await expect(linkPage.getByText(edited.email)).toBeVisible();
+  await linkPage.getByRole('button', { name: 'Confirm new address' }).click();
+  await expect(linkPage).toHaveURL(/\/Account\/Login/);
+  await expect(linkPage.getByText('Your email address has been changed. Sign in with your new address.')).toBeVisible();
+  await linkPage.goto(verify.link!);
+  await expect(linkPage.getByText(INVALID_EMAIL_LINK)).toBeVisible();
+  await linkCtx.close();
+
+  await page.goto(findUserUrl(edited.email));
+  await expect(page.locator('.ats-trow', { hasText: edited.email })).toHaveCount(1);
+
+  await editeePage.goto('/Dashboard');
   await expect(editeePage).toHaveURL(/\/Account\/Login/);
   await editeePage.context().close();
 
-  const old = await signInAs(browser, editee.email, TEMP);
+  const old = await signInAs(browser, editee.email, NEW);
   await expect(old).toHaveURL(/\/Account\/Login/);
   await old.context().close();
-  const renamed = await signInAs(browser, edited.email, TEMP);
-  await expect(renamed).toHaveURL(/\/Profile\/ChangePassword/);
+  const renamed = await signInAs(browser, edited.email, NEW);
+  await expect(renamed.locator('#ats-sidebar')).toBeVisible();
   await renamed.context().close();
 });
 
@@ -392,44 +437,44 @@ test('a role change signs an open session out at once', async ({ page, browser }
   await recruiterPage.context().close();
 });
 
-test('an admin password reset signs an open session out and forces a change at next sign-in', async ({ page, browser }) => {
+// Decision D1: an Owner never types a password for someone else; they send the Forgot password email.
+// No path creates a temporary-password user any more, so the forced-change shell is no longer reachable here.
+test('an owner sends a reset link: the open session stays and the link sets a new password', async ({ page, browser }) => {
   const openPage = await signInAs(browser, recruiter.email, NEW);
   await expect(openPage.locator('#ats-sidebar')).toBeVisible();
 
   await openEdit(page, recruiter);
-  await page.locator('#Reset_TemporaryPassword').fill(RESET);
-  await page.getByRole('button', { name: 'Reset password' }).click();
-  await acceptConfirm(page, `Reset the password for ${recruiter.name}? They are signed out at once.`);
-  await expect(page.getByText(`Password reset for ${recruiter.name}. They are signed out and must set a new one at next sign-in.`)).toBeVisible();
+  await expect(page.locator('#ats-content input[type="password"]')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Send reset link' }).click();
+  await acceptConfirm(page, `Send a password reset link to ${recruiter.name}?`);
+  await expect(page.getByText(`Reset link sent to ${recruiter.email}.`)).toBeVisible();
   await expect(page).toHaveURL(/\/Users\/Edit\/\d+$/);
 
+  // Sending changes neither the password nor the stamp.
+  await openPage.goto('/Dashboard');
+  await expect(openPage.locator('#ats-sidebar')).toBeVisible();
+
+  const mail = await waitForMail(recruiter.email, RESET_SUBJECT);
+  const linkPage = await (await browser.newContext({ baseURL, ignoreHTTPSErrors: true })).newPage();
+  await linkPage.goto(mail.link!);
+  await linkPage.locator('#NewPassword').fill(RESET);
+  await linkPage.locator('#ConfirmPassword').fill(RESET);
+  await linkPage.getByRole('button', { name: 'Set new password' }).click();
+  await expect(linkPage).toHaveURL(/\/Account\/Login/);
+  await expect(linkPage.locator('.alert-success')).toContainText('Your password has been reset.');
+  await linkPage.context().close();
+
+  // Using the link rotates the stamp, so the open session ends; the new password signs in.
   await openPage.goto('/Dashboard');
   await expect(openPage).toHaveURL(/\/Account\/Login/);
   await openPage.context().close();
-
   const recruiterPage = await signInAs(browser, recruiter.email, RESET);
-  await expect(recruiterPage).toHaveURL(/\/Profile\/ChangePassword/);
-  await expect(recruiterPage.locator('#CurrentPassword')).toBeVisible();
-  await recruiterPage.goto('/Jobs');
-  await expect(recruiterPage).toHaveURL(/\/Profile\/ChangePassword/);
+  await expect(recruiterPage.locator('#ats-sidebar')).toBeVisible();
+  await expect(recruiterPage).not.toHaveURL(/\/Profile\/ChangePassword/);
   await recruiterPage.context().close();
-});
 
-test('a rejected reset redirects back to Edit, so a refresh does not re-post', async ({ page }) => {
-  await openEdit(page, recruiter);
-  const editUrl = page.url();
-  // Whitespace passes the browser's required check but not the server's.
-  await page.locator('#Reset_TemporaryPassword').fill('   ');
-  await page.getByRole('button', { name: 'Reset password' }).click();
-  await acceptConfirm(page);
-  await expect(page.locator('.alert-danger')).toContainText('Enter a temporary password.');
-  expect(page.url()).toBe(editUrl);
-  await expect(page.locator('#Reset_TemporaryPassword')).toHaveValue('');
-
-  const res = await page.reload();
-  expect(res?.status()).toBe(200);
-  await expect(page.locator('h1')).toHaveText(/Edit user/);
-  await expect(page.locator('.alert-danger')).toHaveCount(0);
+  await page.goto(`/Audit?q=${encodeURIComponent(recruiter.email)}`);
+  await expect(page.getByText(`Sent a password reset link to '${recruiter.email}'`)).toBeVisible();
 });
 
 test.afterAll(async ({ browser }) => {

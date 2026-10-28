@@ -13,7 +13,8 @@ Personas:
 
 ---
 
-### [ ] FEAT-1 · Password reset / forgot-password — Priority: High · Effort: M
+### [x] FEAT-1 · Password reset / forgot-password — Priority: High · Effort: M
+**Status (28 October 2026):** done. Forgot password and reset by emailed stateless link (1 h, stamp-bound, consumed by POST, rate limited); see the notifications skill.
 **Files:** `src/Ats.Web/Controllers/AccountController.cs` — only `Register`, `Login`, `Logout` exist.
 **Problem:** A user who forgets their password is permanently locked out; no self-service recovery. A
 hard blocker for any real user base.
@@ -25,7 +26,8 @@ Rate-limit the request endpoint (SEC-2).
 
 ---
 
-### [ ] FEAT-2 · User / team management + invitations — Priority: High · Effort: L
+### [x] FEAT-2 · User / team management + invitations — Priority: High · Effort: L
+**Status (28 October 2026):** done. The Users screen and role-aware UI came with RBAC; invitations by email (7 d link, resend), Owner-sent reset link and verified email change were added by the email plan.
 **Files:** no `Users`/`Team` controller (`ls src/Ats.Web/Controllers` — none); the only user is the
 self-registered Owner (`OnboardingStore.CreateTenantGraphAsync`).
 **Problem:** A tenant Owner cannot add colleagues — every tenant is effectively single-user. There is
@@ -57,7 +59,8 @@ server-side.
 
 ---
 
-### [ ] FEAT-4 · Email / notification capability — Priority: High · Effort: M
+### [x] FEAT-4 · Email / notification capability — Priority: High · Effort: M
+**Status (28 October 2026):** done, as `IEmailOutbox` plus a Worker queue with MailKit (not `IEmailSender`); dev uses Gmail with `RedirectAllTo` or a pickup directory. Hiring-team mail for new applications and stage moves flows. Production still needs a transactional provider.
 **Files:** none — no `IEmailSender`/SMTP/SendGrid implementation exists, despite `CLAUDE.md` /
 `Ats.Worker` describing "notifications".
 **Problem:** No transactional email at all → blocks FEAT-1 (reset), FEAT-2 (invites), email
@@ -113,7 +116,7 @@ tenant's data.
 
 ## Exit criteria
 - [ ] Password reset, user invitations, and role-aware UI work end-to-end.
-- [ ] Transactional email is in place (dev-safe sender); notifications flow.
+- [x] Transactional email is in place (dev-safe sender); notifications flow. (28 October 2026)
 - [ ] EN/NL localisation available; no mixed-language strings.
 - [ ] The must-have candidate lifecycle actions have no dead-ends.
 - [ ] Tenant suspension + GDPR export/delete exist.

@@ -3,6 +3,7 @@ using Ats.Application.Candidates;
 using Ats.Application.Common;
 using Ats.Application.Integration;
 using Ats.Application.Jobs;
+using Ats.Application.Notifications;
 using Ats.Domain.Entities;
 using Ats.Domain.Enums;
 
@@ -32,11 +33,13 @@ public sealed class ApplicationService : IApplicationService
     private readonly ICurrentUser _currentUser;
     private readonly IOutboxEnqueuer _outbox;
     private readonly IJobScope _scope;
+    private readonly IHiringNotifier _notifier;
 
     public ApplicationService(IApplicationRepository repo, ICandidateRepository candidates, ICurrentUser currentUser,
-        IOutboxEnqueuer outbox, IJobScope scope)
+        IOutboxEnqueuer outbox, IJobScope scope, IHiringNotifier notifier)
     {
         _repo = repo; _candidates = candidates; _currentUser = currentUser; _outbox = outbox; _scope = scope;
+        _notifier = notifier;
     }
 
     private Task<bool> InScopeAsync(int jobId, CancellationToken ct) =>
@@ -147,7 +150,7 @@ public sealed class ApplicationService : IApplicationService
 
     public async Task<OperationResult> MoveStageAsync(int jobId, int applicationId, int toStageId, byte[] rowVersion, CancellationToken ct = default)
     {
-        var application = await _repo.GetAsync(applicationId, ct);
+        var application = await _repo.GetWithCandidateAsync(applicationId, ct);   // candidate name for the email
         if (application is null || application.JobId != jobId || !await InScopeAsync(jobId, ct))
             return OperationResult.Fail("Application not found.");
 
@@ -175,11 +178,18 @@ public sealed class ApplicationService : IApplicationService
 
         await _outbox.StageAsync(application.Id, toStageId, ct);
 
+        var job = await _repo.GetJobAsync(jobId, ct);
+        await _notifier.StageStageChangedAsync(jobId, job?.Title ?? "", CandidateName(application.Candidate), target.Name,
+            _currentUser.UserId, ct);
+
         _repo.SetExpectedRowVersion(application, rowVersion);
         var ok = await _repo.TrySaveChangesAsync(ct);
         return ok ? OperationResult.Ok
                   : OperationResult.Fail("This application was changed by someone else. Reload the board and try again.");
     }
+
+    private static string CandidateName(Candidate? candidate) =>
+        candidate is null ? "" : $"{candidate.FirstName} {candidate.LastName}".Trim();
 
     public async Task<OperationResult> RemoveAsync(int applicationId, CancellationToken ct = default)
     {

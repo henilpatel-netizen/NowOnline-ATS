@@ -1166,7 +1166,6 @@
 
 .ats-danger-zone .ats-action-item { border-top-color: var(--no-danger-border); }
 .ats-action-item > .ats-cell-stack { flex: 1 1 14rem; }
-.ats-action-form { flex: 1 1 100%; }
 
 .ats-action-title {
   font-size: .9375rem;

@@ -41,7 +41,7 @@ Solution: `Ats.slnx` (modern XML solution format, .NET 10 default; projects unde
 | `Ats.Application` | Use-case services, abstractions (`ITenantContext`, `IIdentityService`), validators. |
 | `Ats.Infrastructure` | EF Core `AtsDbContext`, tenancy filters + interceptor, Identity impl, DI. |
 | `Ats.Web` | MVC back-office (root: `/Jobs`, `/Candidates`, `/Board`, ...) + public career site (`Careers` area, `/careers/{slug}`). |
-| `Ats.Worker` | Background host: outbox delivery, notifications. |
+| `Ats.Worker` | Background host: outbox delivery, email delivery. |
 | `Ats.Tests` | xUnit tests for pure Application-layer logic and the `Ats.Web` authorization wiring (policies, controller attributes); no database. Under `tests/`. |
 
 ## Build / run
@@ -83,8 +83,10 @@ Controllers -> Application services -> repositories -> EF Core (Infrastructure).
 ## Multi-tenancy (CRITICAL)
 Shared DB + `TenantId` discriminator. Every tenant entity extends `TenantEntity` / implements
 `ITenantEntity`. Isolation is enforced automatically by the global query filter + `SaveChanges`
-interceptor in `AtsDbContext`; do NOT hand-set `TenantId` except in the documented onboarding path.
-Bypass the filter only with `IgnoreQueryFilters()` at sign-in, session validation and onboarding (documented). Full rule:
+interceptor in `AtsDbContext`; do NOT hand-set `TenantId` outside the six documented places in
+`.claude/rules/multi-tenancy.md`.
+The filter is bypassed (or `TenantId` set by hand) only in the six documented spots (sign-in and session
+validation, onboarding, the career-site slug middleware, the outbox worker claim, the account store). Full rule:
 `.claude/rules/multi-tenancy.md`.
 
 ## Database migrations
@@ -122,6 +124,9 @@ four phases (`docs/plans/2026-07-30-ats-redesign-phase-{1..4}-*.md`).
   has no ASP.NET dependency. Details: architecture skill.
 - **Business rules need tests.** `tests/Ats.Tests` uses hand-rolled fakes (no database). Mutation-check
   a new suite that passes first time.
+- **Email:** stage through `IEmailOutbox` in the same unit of work as the change; never send SMTP from web
+  code; build links from `Integration:CareerSiteBaseUrl`, never the request host; SMTP secrets live in
+  user-secrets, never in files. Details: notifications skill.
 - **Authorization is permission-based.** Gate actions with `[Authorize(Policy = AtsPermission.X)]` and
   controls with `User.Can(AtsPermission.X)`; never role names. A fallback policy requires sign-in, so
   public endpoints need `[AllowAnonymous]`. Sign-in cookies are issued only through `AtsSignIn`; any change
@@ -146,4 +151,5 @@ four phases (`docs/plans/2026-07-30-ats-redesign-phase-{1..4}-*.md`).
 | Integration | `.claude/skills/integration/SKILL.md` | Vacancy push, outbox, worker, ReferralTool client, settings |
 | Audit | `.claude/skills/audit/SKILL.md` | Audit log (user and account entries, search), dashboard metrics, integration test tools |
 | Authorization | `.claude/skills/authorization/SKILL.md` | Permissions, role map, policies, fallback policy, gating actions and controls, job scoping (HiringManager), users (list, Edit page, update rules), sessions |
+| Notifications | `.claude/skills/notifications/SKILL.md` | Email queue, Worker delivery, account links (reset, invite, email change), hiring-team notifications, dev SMTP and e2e mailbox |
 | Orchestration | `.claude/skills/ats-ship/SKILL.md` | `/ats-ship`: implement, parallel review, done-gate, no git |

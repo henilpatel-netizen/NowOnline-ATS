@@ -1,5 +1,50 @@
-import { expect, type Locator, type Page } from '@playwright/test';
+import { expect, type Browser, type Locator, type Page } from '@playwright/test';
 import { acceptConfirm } from './confirm';
+import { waitForMail } from './mailbox';
+
+// Same origin the config uses; contexts made with browser.newContext() do not inherit it.
+const baseURL = process.env.ATS_BASE_URL ?? 'https://localhost:7044';
+
+export const INVITE_SUBJECT = 'You are invited to join';
+
+/** Invites a user from /Users/Create (no password: they choose one from the emailed link). */
+export async function inviteUser(page: Page, u: { name: string; email: string }, role: string): Promise<void> {
+  await page.goto('/Users/Create');
+  await page.locator('#DisplayName').fill(u.name);
+  await page.locator('#Email').fill(u.email);
+  await page.locator('#Role').selectOption(role);
+  await page.getByRole('button', { name: 'Send invitation' }).click();
+  await expect(page.locator('.alert-success')).toContainText(`Invitation sent to ${u.email.toLowerCase()}.`);
+}
+
+/**
+ * Opens an invite link in a fresh browser context (the Owner's session is left alone), sets `password`
+ * and returns the page, signed in as the invited user. The caller closes its context.
+ */
+export async function acceptInvite(browser: Browser, link: string, password: string): Promise<Page> {
+  const ctx = await browser.newContext({ baseURL, ignoreHTTPSErrors: true });
+  const page = await ctx.newPage();
+  await page.goto(link);
+  await page.locator('#NewPassword').fill(password);
+  await page.locator('#ConfirmPassword').fill(password);
+  await page.getByRole('button', { name: 'Set password and sign in' }).click();
+  await expect(page.locator('#ats-sidebar')).toBeVisible({ timeout: 15_000 });
+  return page;
+}
+
+/** Invites a user, accepts the emailed invite with a generated password and returns that password. */
+export async function addUser(page: Page, u: { name: string; email: string }, role: string): Promise<string> {
+  await inviteUser(page, u, role);
+  return acceptLatestInvite(page, u.email);
+}
+
+async function acceptLatestInvite(page: Page, email: string): Promise<string> {
+  const mail = await waitForMail(email, INVITE_SUBJECT);
+  const password = `Invite-${Date.now()}-pass`;
+  const invited = await acceptInvite(page.context().browser()!, mail.link!, password);
+  await invited.context().close();
+  return password;
+}
 
 /** The Users list searched for `q` under every status, so one email finds its row whatever the user's state. */
 export const findUserUrl = (q: string) => `/Users?status=All&q=${encodeURIComponent(q)}`;
@@ -25,7 +70,7 @@ export async function ownEditUrl(page: Page): Promise<string> {
 }
 
 // One fixed Viewer per state, reused across runs so the list does not grow. The password is generated
-// when the user is first created and only ever exists in the local database.
+// when the invite is accepted and only ever exists in the local database.
 const FIXTURES = {
   active: { name: 'E2E Fixture Active', email: 'e2e-fixture-active@example.test' },
   deactivated: { name: 'E2E Fixture Deactivated', email: 'e2e-fixture-deactivated@example.test' },
@@ -37,13 +82,7 @@ export async function otherEditUrl(page: Page, state: 'active' | 'deactivated'):
   await page.goto(findUserUrl(u.email));
   const row = page.locator('.ats-trow', { hasText: u.email });
   if (!(await row.count())) {
-    await page.goto('/Users/Create');
-    await page.locator('#DisplayName').fill(u.name);
-    await page.locator('#Email').fill(u.email);
-    await page.locator('#Role').selectOption('Viewer');
-    await page.locator('#TemporaryPassword').fill(`Fixture-${Date.now()}-pass`);
-    await page.getByRole('button', { name: 'Add user' }).click();
-    await expect(page.locator('.alert-success')).toBeVisible();
+    await addUser(page, u, 'Viewer');
     await page.goto(findUserUrl(u.email));
     await expect(row).toHaveCount(1);
   }
@@ -51,6 +90,15 @@ export async function otherEditUrl(page: Page, state: 'active' | 'deactivated'):
   if (!href) throw new Error(`No Users row for ${u.email}.`);
 
   await page.goto(href);
+  // A fixture left invite-pending by an interrupted run: send a fresh invite and accept it.
+  const resend = page.getByRole('button', { name: 'Resend invite' });
+  if (await resend.count()) {
+    await resend.click();
+    await acceptConfirm(page);
+    await expect(page.locator('.alert-success')).toBeVisible();
+    await acceptLatestInvite(page, u.email);
+    await page.goto(href);
+  }
   const toggle = page.getByRole('button', { name: state === 'active' ? 'Reactivate' : 'Deactivate' });
   if (await toggle.count()) {
     await toggle.click();
@@ -77,13 +125,8 @@ export async function ensurePagerFixtures(page: Page): Promise<void> {
     await page.goto(findUserUrl(email));
     const row = page.locator('.ats-trow', { hasText: email });
     if (!(await row.count())) {
-      await page.goto('/Users/Create');
-      await page.locator('#DisplayName').fill(`E2E Pager ${n}`);
-      await page.locator('#Email').fill(email);
-      await page.locator('#Role').selectOption('Viewer');
-      await page.locator('#TemporaryPassword').fill(`Fixture-${Date.now()}-pass`);
-      await page.getByRole('button', { name: 'Add user' }).click();
-      await expect(page.locator('.alert-success')).toBeVisible();
+      // Never signed in, so the invite is left unaccepted.
+      await inviteUser(page, { name: `E2E Pager ${n}`, email }, 'Viewer');
       await page.goto(findUserUrl(email));
     }
     if (!(await row.getByText('Deactivated', { exact: true }).count())) {

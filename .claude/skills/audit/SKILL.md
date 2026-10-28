@@ -19,9 +19,14 @@ All have `EntityType` "User" and `EntityRef` = the user id. Summaries never cont
 
 | Action | Written by | Summary |
 |---|---|---|
-| `UserCreated` | `UsersController.Create` | `Added '<email>' as <role>` |
-| `UserUpdated` | `UsersController.Edit` | built by `UserAuditSummary.Updated` from the stored record before and after, listing only what changed (email, role, name), plus "removed from N hiring teams" when a role change away from HiringManager cleared links |
-| `UserPasswordReset` | `UsersController.ResetPassword` | `Reset password for '<email>'` |
+| `UserCreated` | `UsersController.Create` | `Invited '<email>' as <role>` |
+| `UserInviteResent` | `UsersController.ResendInvite` | `Resent the invitation to '<email>'` |
+| `UserInviteAccepted` | `InvitationService.AcceptAsync` (via `IAccountStore.Audit`, by the user) | `Accepted the invitation and set a password` |
+| `UserUpdated` | `UsersController.Edit` | built by `UserAuditSummary.Updated` from the stored record before and after, listing only what changed (email, role, name; for an accepted user the email is never in it, see `UserEmailChangeRequested`); not written when the only change is a pending email, plus "removed from N hiring teams" when a role change away from HiringManager cleared links |
+| `UserEmailChangeRequested` | `UsersController.Edit` (accepted user, after the verification mail is staged) | `Requested an email change from '<old>' to '<new>'` |
+| `UserEmailChanged` | `EmailChangeService.ConfirmAsync` (via `IAccountStore.Audit`, by the user) | `Changed email from '<old>' to '<new>' by confirmation link` |
+| `UserPasswordResetSent` | `UsersController.ResetPassword` (Send reset link) | `Sent a password reset link to '<email>'` |
+| `UserPasswordReset` | `AccountRecoveryService.ResetAsync` (via `IAccountStore.Audit`, by the user) | `Password reset by email link` |
 | `UserDeactivated` / `UserReactivated` | `UsersController.Deactivate` / `Reactivate` | `Deactivated '<email>'` / `Reactivated '<email>'` |
 | `PasswordChanged` | `ProfileController.ChangePassword` | `Changed own password` |
 

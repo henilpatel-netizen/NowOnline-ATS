@@ -1,0 +1,17 @@
+@model Ats.Web.Models.ConfirmEmailViewModel
+@{ ViewData["Title"] = "Confirm your new email address"; }
+<h1 class="h4 mb-3 text-center">Confirm your new email address</h1>
+@if (Model.NewEmail is not { } newEmail)
+{
+    <p role="alert">This link is invalid or has expired. Ask your administrator to change the address again.</p>
+    <a asp-action="Login" class="btn btn-primary w-100">Go to sign in</a>
+}
+else
+{
+    <p class="mb-3">Your sign-in address changes to <strong class="text-break">@newEmail</strong>. You are signed out everywhere and sign in again with the new address.</p>
+    <form asp-action="ConfirmEmail" method="post">
+        <div asp-validation-summary="ModelOnly" role="alert" class="text-danger small mb-2"></div>
+        <input type="hidden" asp-for="Token" />
+        <button type="submit" class="btn btn-primary w-100">Confirm new address</button>
+    </form>
+}

@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Greeting" xml:space="preserve">
+    <value>Hello {0},</value>
+  </data>
+  <data name="GreetingGeneric" xml:space="preserve">
+    <value>Hello,</value>
+  </data>
+  <data name="LinkFallback" xml:space="preserve">
+    <value>If the button does not work, copy this link into your browser:</value>
+  </data>
+  <data name="IgnoreIfNotRequested" xml:space="preserve">
+    <value>If you did not request this, ignore this email.</value>
+  </data>
+  <data name="ContactAdministrator" xml:space="preserve">
+    <value>If you did not expect this, contact your administrator.</value>
+  </data>
+  <data name="Expires1Hour" xml:space="preserve">
+    <value>This link expires in 1 hour.</value>
+  </data>
+  <data name="Expires24Hours" xml:space="preserve">
+    <value>This link expires in 24 hours.</value>
+  </data>
+  <data name="Expires7Days" xml:space="preserve">
+    <value>This link expires in 7 days.</value>
+  </data>
+  <data name="PasswordReset_Subject" xml:space="preserve">
+    <value>Reset your password for {0}</value>
+  </data>
+  <data name="PasswordReset_Body" xml:space="preserve">
+    <value>We received a request to reset the password of your {0} account.</value>
+  </data>
+  <data name="PasswordReset_Action" xml:space="preserve">
+    <value>Reset password</value>
+  </data>
+  <data name="Invite_Subject" xml:space="preserve">
+    <value>You are invited to join {0}</value>
+  </data>
+  <data name="Invite_Body" xml:space="preserve">
+    <value>{0} has invited you to join {1}. Set a password to activate your account.</value>
+  </data>
+  <data name="Invite_Action" xml:space="preserve">
+    <value>Accept invitation</value>
+  </data>
+  <data name="Invite_Ignore" xml:space="preserve">
+    <value>If you did not expect this invitation, ignore this email.</value>
+  </data>
+  <data name="EmailChangeVerify_Subject" xml:space="preserve">
+    <value>Confirm your new email address for {0}</value>
+  </data>
+  <data name="EmailChangeVerify_Body" xml:space="preserve">
+    <value>Confirm that you want to use this email address for your {0} account.</value>
+  </data>
+  <data name="EmailChangeVerify_Action" xml:space="preserve">
+    <value>Confirm email address</value>
+  </data>
+  <data name="EmailChangeNotice_Subject" xml:space="preserve">
+    <value>Email address change requested for {0}</value>
+  </data>
+  <data name="EmailChangeNotice_Body" xml:space="preserve">
+    <value>A change of the email address of your {0} account to {1} was requested. It takes effect once the new address is confirmed.</value>
+  </data>
+  <data name="PasswordChanged_Subject" xml:space="preserve">
+    <value>Your password for {0} was changed</value>
+  </data>
+  <data name="PasswordChanged_Body" xml:space="preserve">
+    <value>The password of your {0} account was changed.</value>
+  </data>
+  <data name="AccountDeactivated_Subject" xml:space="preserve">
+    <value>Your account for {0} was deactivated</value>
+  </data>
+  <data name="AccountDeactivated_Body" xml:space="preserve">
+    <value>Your {0} account was deactivated. You can no longer sign in.</value>
+  </data>
+  <data name="NewApplication_Subject" xml:space="preserve">
+    <value>New application for {0}</value>
+  </data>
+  <data name="NewApplication_Body" xml:space="preserve">
+    <value>{0} applied for {1} at {2}.</value>
+  </data>
+  <data name="NewApplication_Action" xml:space="preserve">
+    <value>View application</value>
+  </data>
+  <data name="StageChanged_Subject" xml:space="preserve">
+    <value>{0} moved to {1}</value>
+  </data>
+  <data name="StageChanged_Body" xml:space="preserve">
+    <value>{0} moved to the {1} stage for {2} at {3}.</value>
+  </data>
+  <data name="StageChanged_Action" xml:space="preserve">
+    <value>View application</value>
+  </data>
+</root>

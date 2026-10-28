@@ -108,55 +108,87 @@ candidates and CVs. Scoping is separate from tenancy (no global filter on `Job`;
   `TrySaveAsync` on update); name required, max 200;
   passwords required (not blank or whitespace-only), max 128 characters (`UserService.MaxPasswordLength`;
   hashing very long inputs is a DoS risk), no minimum length (removed by decision on 1 October 2026, to be
-  reinstated later); a new password must differ from the current one; new and reset users must change their
-  password; no self deactivate or self admin reset; an admin password reset of a deactivated user is refused
-  ("Reactivate the user first."). Deactivation is the only removal.
+  reinstated later); a new password must differ from the current one; no self deactivate. Deactivation is the
+  only removal; it emails the user an `AccountDeactivated` notice in the same save (not an invite-pending user,
+  who never had access; reactivation sends nothing).
+- **Invites** (decision D1, 28 October 2026; replaced Owner-typed temporary passwords): `UserService.CreateAsync` creates
+  the user invite-pending (`PasswordHash` "", `AppUser.IsInvitePending`), then the controller calls
+  `IInvitationService.SendInviteAsync` (`Ats.Application/Accounts`, registered by Web because it needs `IAccountTokens`).
+  A pending user cannot sign in (`IdentityService` rejects an empty hash), is shown "Invited", has no Send reset link
+  and is not counted as an active Owner (`CountActiveOwnersAsync`, `IsLastActiveOwnerAsync`). Resend rotates the stamp
+  (earlier links die); so do deactivation and an email or role change. Accept (`/Account/AcceptInvite`, anonymous,
+  GET only renders, POST rate-limited "account-token") checks the token stamp, user active and pending, tenant active,
+  then sets the password, rotates the stamp and signs the user in.
 - Users screen (`UsersController`, `users.manage`):
   - **List** (`Users/Index`): read model `IUserListQuery` (`*ListQuery` convention). Search `q` matches name or
     email (`LikePattern`), status chips `UserStatusFilter` Active (default) / Deactivated / All, paged 20
     (`Paging.Clamp`). Each row has one Edit icon; the name is the row link. Create is a separate page.
   - **Edit** (`GET/POST Users/Edit/{id}`): header card (avatar, status, role, added), Details card (name, email,
-    role), then for another user a **Danger zone** (reset password, deactivate) when active, or **Account
+    role), then for another user a **Danger zone** (send reset link, deactivate) when active, or **Account
     access** (reactivate) when deactivated. Details stay editable when deactivated. On your own record the
     Details card edits the **name only** (email and role shown in a `<dl>`) and a **Security** card links to
-    Change password. Every POST redirects back to Edit (PRG); flashes name the user. A reset validation error
-    travels in `TempData["Error"]`, never the password.
+    Change password. Every POST redirects back to Edit (PRG); flashes name the user; errors travel in
+    `TempData["Error"]`.
+  - **Send reset link** (`POST Users/ResetPassword/{id}`, decision D1: Owners no longer type temporary passwords):
+    `IAccountRecoveryService.SendResetLinkAsync(userId, actingUserId)` loads the user through the tenant-filtered
+    `IUserRepository` and sends the same email as Forgot password. It changes neither the password nor the
+    `SecurityStamp`, so the user stays signed in (deactivate a compromised account instead). Refused, in the
+    service, for self ("Use Change password for your own account."), a deactivated user ("Reactivate the user
+    first."), an invite-pending user ("This user has not accepted their invitation yet. Use Resend invite.") and an
+    unknown id. Hidden for pending users.
   - **Update rules** (`UserService.UpdateAsync(UpdateUserInput, actingUserId)` returns `UserUpdateResult`:
     `Result`, `ChangedFields` of `UserField`, `SignedOut`):
 
     | Rule | Detail |
     |---|---|
     | Self | Only the name may change; a changed email or role returns "You can only change your own name here." and saves nothing |
-    | Email | Uniqueness is checked only when the normalised email changed; a unique-index race on save gives the same duplicate message |
+    | Email | Uniqueness is checked only when the normalised email changed; a unique-index race on save gives the same duplicate message. An accepted user's new address is NOT saved: it returns as `PendingEmail` (not in `ChangedFields`) for the email-change flow below; a deactivated accepted user's email change is refused ("Reactivate the user before changing their email address."). An invite-pending user's email changes at once |
     | Role | Must be in `AtsRole.Assignable` (a stored role outside it passes while unchanged); demoting the last active Owner fails |
-    | Stamp | `SecurityStamp` rotates when email or role changed (`SignedOut`); a name-only change does not |
+    | Stamp | `SecurityStamp` rotates when a saved email or role changed (`SignedOut`); a name-only change or a pending email does not (the later `RequestAsync` rotates it) |
     | No-op | Nothing changed: `Ok`, no save, no rotation; the controller flashes "No changes to save." and audits nothing |
     | Transaction | Load, checks and save run in one serialisable `InTransactionAsync` |
 
+  - **Email change** (M4, 28 October 2026): when `PendingEmail` is set, `UsersController.Edit` calls
+    `IEmailChangeService.RequestAsync(userId, newEmail, actingUserId)` (`Ats.Application/Accounts`, registered by Web:
+    it needs `IAccountTokens`). A second save, after the update: it reads the user under the tenant filter, **rotates
+    the stamp** (signing the user out and killing every earlier verify link) and mints the token with it, and stages
+    `EmailChangeVerify` (link `/Account/ConfirmEmail?token=`, 24 h, the token carries `NewEmail`) to the new address
+    and `EmailChangeNotice` to the old one. Flash "They are signed out. Verification sent to <new>. The address changes
+    when they confirm." ("They are signed out." appears once when a role change in the same save said it already.)
+    UserService stays free of Web-registered services (the Worker validates it at start-up). For an invite-pending
+    user the controller calls `IInvitationService.SendInviteAsync` instead ("Invitation sent to <new>."); the stamp
+    rotation in the update kills the old invite link. Confirm (anonymous, GET only renders, POST rate-limited
+    "account-token") re-checks the token, user active and accepted, stamp, tenant active and global uniqueness
+    (`IAccountStore.EmailTakenAsync`, then `IAccountStore.TrySaveAsync` translating the `IX_Users_Email` race), sets the
+    email, rotates the stamp and redirects to Login. It does not sign the browser out: the stamp already ends the
+    user's sessions and the browser may belong to someone else.
   - `SetActiveAsync` returns `UserActiveResult(Result, Changed)`; setting the state a user already has is a
     no-op (no save, no stamp rotation, no audit). `ChangeRoleAsync` no longer exists.
   - An own-name change re-issues the cookie (`IIdentityService.GetSessionAsync` + `AtsSignIn`) so the sidebar
     shows the new name; it does not rotate the stamp.
   - A name-only change by another Owner does not rotate the stamp either, so that user's sidebar shows the old
     name until their next sign-in (by design).
-- Accepted behaviour: an Owner can reset another Owner's password (and so sign in as them). It is not
-  blocked; the reset is audited as `UserPasswordReset`.
+- An Owner can send another Owner a reset link; only the mailbox owner can use it. Audited as
+  `UserPasswordResetSent`.
 - Last Owner: at least one active Owner must remain. The check and save run in a SERIALIZABLE transaction
   (`UserRepository.InTransactionAsync`, inside the EF execution strategy). Concurrent demotions deadlock and
   the retry sees one Owner and fails. The `Users(TenantId, Role, IsActive)` index keeps the range locks inside one tenant.
 - `AppUser.SecurityStamp` rotates on every role or email change, deactivate, reactivate (when the state
-  actually changes), admin reset and own password change (`UserService`). A changed email signs the user out;
+  actually changes), own password change (`UserService`), an email-change request (`EmailChangeService.RequestAsync`)
+  and a password set through an email link. A confirmed email change signs the user out;
   they sign in again with the new address. `SessionValidator` (cookie `OnValidatePrincipal`) checks stamp, user active and
   tenant active on every request except `[AllowAnonymous]` endpoints; a mismatch rejects and signs out.
   It reads through `IdentityService.GetSessionAsync(userId, tenantId)` (documented filter bypass).
 - `AtsSignIn` is the only way to issue the cookie (claims: NameIdentifier, Name, Role, `tenant_id`,
   `security_stamp`, `must_change_password`). `ValidateCredentialsAsync` rejects inactive users.
-- `MustChangePassword`: `RequirePasswordChangeFilter` holds the user on `/Profile/ChangePassword`. Exempt:
+- `MustChangePassword`: `RequirePasswordChangeFilter` holds the user on `/Profile/ChangePassword`. Since
+  decision D1 nothing sets the flag; it stays for users who already hold a temporary password, and is no longer
+  covered by e2e. Exempt:
   Profile, Account, Home and any area. Non-boosted htmx requests get `HX-Redirect`. While held, the sidebar
   has no nav links and the top bar has no search or notifications (`SidebarNavViewComponent`,
   `TopBarViewComponent`); the brand, user block and Sign out stay.
-- Audit: UserCreated, UserUpdated, UserPasswordReset, UserDeactivated, UserReactivated, PasswordChanged
-  (details in the audit skill). Audit summaries never contain passwords; update, reset and activation
+- Audit: UserCreated, UserUpdated, UserEmailChangeRequested, UserEmailChanged, UserPasswordResetSent, UserPasswordReset (by email link), UserDeactivated, UserReactivated, PasswordChanged
+  (details in the audit skill). Audit summaries never contain passwords; update, reset-link and activation
   entries describe the user from the stored record (`UserAuditSummary` for updates).
 
 ## Known limits

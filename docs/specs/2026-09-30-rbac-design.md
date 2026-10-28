@@ -46,7 +46,10 @@ Date: 30 September 2026. Status: phases 1, 2 and 3 implemented.
    reactivate, last-Owner guard, `SecurityStamp` session revocation, audit entries. HiringManager was not
    assignable until phase 3 (`AtsRole.Assignable`).
    - Decision (30 September 2026): an Owner sets a temporary password and the user must change it at first
-     sign-in. Email invites follow when email is integrated.
+     sign-in. **Superseded by D1 (28 October 2026):** users are invited by email (set their own password
+     through a link) and an Owner sends a reset link instead of typing a password. `MustChangePassword` and
+     the forced-change filter stay for legacy users who still hold a temporary password; new code never sets
+     it. See `docs/plans/2026-10-28-email-notifications.md` and the notifications skill.
    - Passwords (temporary and own): required, maximum 128 characters (hashing very long inputs is a
      denial-of-service risk). Decision (1 October 2026): the 12-character minimum is removed for now, to
      be reinstated later.

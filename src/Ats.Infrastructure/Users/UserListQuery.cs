@@ -18,7 +18,7 @@ public sealed class UserListQuery : IUserListQuery
         page = Paging.Clamp(page, total, pageSize);
         var items = await q
             .Skip(Paging.Offset(page, pageSize)).Take(pageSize)
-            .Select(u => new UserListItem(u.Id, u.DisplayName, u.Email, u.Role, u.IsActive, u.CreatedAt))
+            .Select(u => new UserListItem(u.Id, u.DisplayName, u.Email, u.Role, u.IsActive, u.CreatedAt, u.PasswordHash == ""))
             .ToListAsync(ct);
         return new PagedResult<UserListItem>(items, page, pageSize, total);
     }
